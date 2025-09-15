@@ -24,7 +24,9 @@
   },
   "dependencies": {
     "@auth/sveltekit": "latest",
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.18.1",
+    "sveltekit-superforms": "^2.27.1",
+    "zod": "^3.25.76"
   },
   "type": "module"
 }
