@@ -2,6 +2,7 @@
     import { superForm } from 'sveltekit-superforms';
     import { zodClient } from 'sveltekit-superforms/adapters';
     import { registrationSchema } from '$lib/validation/schemas';
+    import { page } from '$app/stores';
 
     export let data;
 
@@ -18,12 +19,15 @@
 
 <div class="register-container">
     <h1>Complete Your Profile</h1>
-    {#if $form.email}
+    <!-- {#if $form.email}
         <p>Email: {$form.email}</p>
-    {/if}
+    {/if} -->
+
+        <p>Email: {$page.data.session?.user.email}</p>
+
 
     <form method="POST" use:enhance>
-        <input type="hidden" name="email" bind:value={$form.email} />
+        <input type="hidden" name="email" value={$page.data.session?.user.email} />
 
         <div class="form-group">
             <label for="username">Choose a username</label>
@@ -39,7 +43,7 @@
             {/if}
         </div>
 
-        <button type="submit" disabled={$submitting}>
+        <button type="submit" disabled={$submitting || !$page.data.session}>
             {$submitting ? 'Creating profile...' : 'Complete Registration'}
         </button>
     </form>

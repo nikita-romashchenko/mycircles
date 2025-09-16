@@ -1,5 +1,6 @@
 import { SvelteKitAuth } from "@auth/sveltekit"
 import Google from "@auth/sveltekit/providers/google"
+import Apple from "@auth/sveltekit/providers/apple"
 import { env } from "$env/dynamic/private"
 import type { DefaultSession } from "@auth/core/types"
 
@@ -29,11 +30,15 @@ mongoose.connect(env.MONGODB_URI || 'mongodb://localhost:27017/mycircles')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err))
 
+
+//TODO: Add apple provider
 export const { handle, signIn, signOut } = SvelteKitAuth({
   trustHost: true,
   providers: [
-    Google
+    Google({clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET}),
+    Apple({clientId: env.AUTH_APPLE_ID, clientSecret: env.AUTH_APPLE_SECRET})
   ],
+  secret: env.AUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile }) {
       try {

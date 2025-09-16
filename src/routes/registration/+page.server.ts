@@ -14,10 +14,10 @@ if (mongoose.connection.readyState === 0) {
     .catch(err => console.error('MongoDB connection error:', err));
 }
 
-export const load: PageServerLoad = async ({ url, locals }) => {
+
+export const load: PageServerLoad = async ({ locals }) => {
   const session = await locals.auth();
-  const emailFromUrl = url.searchParams.get('email');
-  const email = emailFromUrl || session?.user?.email;
+  const email = session?.user?.email;
 
   if (!email) {
     throw redirect(302, '/signin');
@@ -38,7 +38,8 @@ export const load: PageServerLoad = async ({ url, locals }) => {
 };
 
 export const actions: Actions = {
-  default: async ({ request }) => {
+  default: async ({ request, locals }) => {
+    const session = await locals.auth();
     const form = await superValidate(request, zod(registrationSchema));
 
     if (!form.valid) {
