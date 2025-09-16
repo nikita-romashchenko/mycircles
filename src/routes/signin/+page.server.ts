@@ -11,7 +11,7 @@ import { zod } from 'sveltekit-superforms/adapters';
 
 export const load: PageServerLoad = async ({ locals }) => {
   // Initialize form with email
-  const form = await superValidate({  }, zod(signInSchema));
+  const form = await superValidate({}, zod(signInSchema));
 
   return {
     form

@@ -21,15 +21,15 @@
   <!-- TODO: add sign up form -->
   <form method="POST" use:enhance>
     <button type="submit" disabled={$submitting}>
-      {$submitting ? 'Signing In...' : 'Sign In'}
+      {$submitting ? 'Submitting...' : 'Submit'}
     </button>
   </form>
 
   <hr />
 
   <!-- OAuth buttons -->
-  <SignIn provider="google">Sign in with Google</SignIn>
-  <SignIn provider="apple">Sign in with Apple</SignIn>
+  <SignIn provider="google">Continue with Google</SignIn>
+  <SignIn provider="apple">Continue with Apple</SignIn>
 </div>
 
 <style>

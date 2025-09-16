@@ -52,10 +52,10 @@ export const actions: Actions = {
       console.log('Registration attempt:', { email, username });
 
       // Check if username is already taken
-      const existingUser = await Profile.findOne({ username });
-      if (existingUser) {
-        return fail(400, { message: 'Username is already taken' });
-      }
+      // const existingUser = await Profile.findOne({ username });
+      // if (existingUser) {
+      //   return fail(400, { message: 'Username is already taken' });
+      // }
 
       // Check if user already has a profile
       const existingProfile = await Profile.findOne({ email });

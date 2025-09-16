@@ -3,7 +3,7 @@ import mongoose from 'mongoose';
 // Define Profile Schema
 const ProfileSchema = new mongoose.Schema({
   name: { type: String, default: '' },
-  username: { type: String, unique: true, sparse: true }, // @todo check if profile exists
+  username: { type: String, unique: false, sparse: true }, // @todo check if profile exists
   email: { type: String, required: true, unique: true },
   safeAddress: { type: String, default: '0x' },
   description: { type: String, default: '' },

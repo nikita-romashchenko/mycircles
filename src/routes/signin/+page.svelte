@@ -51,20 +51,17 @@
     </div>
 
     <button type="submit" disabled={$submitting}>
-      {$submitting ? 'Signing In...' : 'Sign In'}
+      {$submitting ? 'Submitting...' : 'Submit'}
     </button>
   </form>
 
   <hr />
 
   <!-- OAuth buttons -->
-  <SignIn>
-    <div slot="submitButton" class="buttonPrimary">Sign in</div>
-  </SignIn>
   <SignIn provider="google">
     <div slot="submitButton" class="buttonPrimary">Continue with Google</div>
   </SignIn>
-  <SignIn provider="apple">Sign in with Apple</SignIn>
+  <SignIn provider="apple">Continue with Apple</SignIn>
 </div>
 
 <style>
