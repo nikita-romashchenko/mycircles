@@ -26,7 +26,9 @@
   "dependencies": {
     "@auth/sveltekit": "latest",
     "@aws-sdk/client-s3": "^3.888.0",
-    "mongoose": "^8.18.1"
+    "mongoose": "^8.18.1",
+    "sveltekit-superforms": "^2.27.1",
+    "zod": "^3.25.76"
   },
   "type": "module"
 }
