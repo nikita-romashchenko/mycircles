@@ -1,7 +1,18 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import type { RequestHandler } from './$types';
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
+import type { RequestHandler } from "./$types"
 import { env } from "$env/dynamic/private"
+import { randomUUID } from "crypto"
+import { Post } from "$lib/models/Post"
+import { MediaItem } from "$lib/models/MediaItem"
+import mongoose from "mongoose"
+import sizeOf from "image-size"
+import exifr from "exifr"
 
+// Connect to MongoDB
+await mongoose
+  .connect(env.MONGODB_URI || "mongodb://localhost:27017/mycircles")
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err))
 
 const s3 = new S3Client({
   endpoint: env.MINIO_ENDPOINT,
@@ -11,28 +22,108 @@ const s3 = new S3Client({
     accessKeyId: env.MINIO_ACCESS_KEY_ID,
     secretAccessKey: env.MINIO_SECRET_ACCESS_KEY,
   },
-});
+})
 
+export const POST: RequestHandler = async ({ request, locals }) => {
+  try {
+    const session = await locals.auth()
+    const formData = await request.formData()
+    const file = formData.get("file") as File
 
-export const POST: RequestHandler = async ({ request }) => {
-  const formData = await request.formData();
-  const file = formData.get("file") as File;
+    if (!file) {
+      return new Response(JSON.stringify({ error: "No file uploaded" }), {
+        status: 400,
+      })
+    }
 
-  if (!file) {
-    return new Response(JSON.stringify({ error: "No file uploaded" }), { status: 400 });
+    // Generate UUID filename
+    const ext = file.name.split(".").pop()
+    const fileName = `${randomUUID()}.${ext}`
+
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
+    const bucket = env.MINIO_BUCKET || "uploads"
+    const uploadParams = {
+      Bucket: bucket,
+      Key: fileName,
+      Body: buffer,
+      ContentType: file.type,
+    }
+
+    // Upload to MinIO
+    await s3.send(new PutObjectCommand(uploadParams))
+
+    const fileUrl = `${env.MINIO_ENDPOINT}/${bucket}/${fileName}`
+
+    // Save Post
+    const userId = session?.user.profileId
+    if (!userId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+      })
+    }
+
+    const postDoc = await Post.create({
+      userId,
+      type: "image",
+      caption: formData.get("caption") || "",
+      mediaItems: [], // will populate after creating MediaItem
+    })
+
+    // Extract image dimensions
+    let width: number | undefined
+    let height: number | undefined
+    try {
+      const dimensions = sizeOf(buffer)
+      width = dimensions.width
+      height = dimensions.height
+    } catch (err) {
+      console.warn("Could not get image dimensions", err)
+    }
+
+    // Extract EXIF metadata (optional)
+    let exifData: Record<string, any> | undefined
+    try {
+      exifData = await exifr.parse(buffer)
+    } catch (err) {
+      console.warn("Could not extract EXIF data", err)
+    }
+
+    // Save MediaItem
+    const mediaItem = await MediaItem.create({
+      postId: postDoc._id,
+      url: fileUrl,
+      metadata: {
+        originalName: file.name,
+        fileName,
+        size: buffer.length,
+        mimeType: file.type,
+        bucket,
+        key: fileName,
+        width,
+        height,
+        exif: exifData,
+      },
+    })
+
+    // Link MediaItem to Post
+    postDoc.mediaItems.push(mediaItem._id)
+    await postDoc.save()
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        post: postDoc,
+        mediaItem,
+      }),
+      { status: 201 },
+    )
+  } catch (err: any) {
+    console.error("Upload error:", err)
+    return new Response(
+      JSON.stringify({ error: "Upload failed", details: err.message }),
+      { status: 500 },
+    )
   }
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  const uploadParams = {
-    Bucket: env.MINIO_BUCKET || "uploads",
-    Key: file.name,
-    Body: buffer,
-    ContentType: file.type,
-  };
-
-  await s3.send(new PutObjectCommand(uploadParams));
-
-  return new Response(JSON.stringify({ url: `${env.MINIO_ENDPOINT}/${uploadParams.Bucket}/${file.name}` }));
-};
+}

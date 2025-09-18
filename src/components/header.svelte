@@ -32,6 +32,9 @@
       <li class="navItem"><a href="/">Home</a></li>
       <li class="navItem"><a href="/protected">Protected</a></li>
       <li class="navItem"><a href="/media">Media</a></li>
+      <li class="navItem">
+        <a href={`/${$page.data.session?.user.profileId}`}>Profile</a>
+      </li>
     </ul>
   </nav>
 </header>
