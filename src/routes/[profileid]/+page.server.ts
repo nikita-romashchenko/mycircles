@@ -4,6 +4,7 @@ import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
 import { Profile } from "$lib/models/Profile"
+import type { Post as PostType, Profile as ProfileType } from "$lib/types"
 
 // Connect to MongoDB
 await mongoose
@@ -42,8 +43,8 @@ export const load: PageServerLoad = async ({ params }) => {
     console.log(`ExpectedPosts: ${posts}`)
 
     return {
-      posts: JSON.parse(JSON.stringify(posts)),
-      profile: JSON.parse(JSON.stringify(profile)),
+      posts: JSON.parse(JSON.stringify(posts)) as PostType[],
+      profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)

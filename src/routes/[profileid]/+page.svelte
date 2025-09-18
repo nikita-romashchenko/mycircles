@@ -1,9 +1,11 @@
 <script lang="ts">
+  import type { Post as PostType, Profile as ProfileType } from "$lib/types"
+
   import { page } from "$app/stores"
   import { onMount } from "svelte"
 
-  let posts = $page.data.posts || []
-  let profile = $page.data.profile || undefined
+  let posts: PostType[] | [] = $page.data.posts || []
+  let profile: ProfileType | undefined = $page.data.profile || undefined
 
   let file: any
 

@@ -7,6 +7,10 @@ import { MediaItem } from "$lib/models/MediaItem"
 import mongoose from "mongoose"
 import sizeOf from "image-size"
 import exifr from "exifr"
+import sharp from "sharp"
+// TODO remove temporary HEIC/HEIF support later
+// @ts-ignore
+import heicConvert from "heic-convert"
 
 // Connect to MongoDB
 await mongoose
@@ -37,18 +41,32 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
 
     // Generate UUID filename
-    const ext = file.name.split(".").pop()
-    const fileName = `${randomUUID()}.${ext}`
+    const ext = file.name.split(".").pop()?.toLowerCase()
+    const fileName = `${randomUUID()}.jpeg`
 
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    let buffer = Buffer.from(arrayBuffer)
+
+    // TODO: remove temporary HEIC/HEIF support later
+    if (ext === "heic" || ext === "heif") {
+      console.log("Converting HEIC/HEIF to JPEG via heic-convert")
+      buffer = await heicConvert({
+        buffer,
+        format: "JPEG",
+        quality: 1.0,
+      })
+    }
+
+    const processedBuffer = await sharp(buffer, { limitInputPixels: false }) // HEIC input
+      .jpeg({ quality: 80 })
+      .toBuffer()
 
     const bucket = env.MINIO_BUCKET || "uploads"
     const uploadParams = {
       Bucket: bucket,
       Key: fileName,
-      Body: buffer,
-      ContentType: file.type,
+      Body: processedBuffer,
+      ContentType: "image/jpeg",
     }
 
     // Upload to MinIO
