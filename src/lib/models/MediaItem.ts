@@ -13,6 +13,7 @@ const MediaItemSchema = new mongoose.Schema({
     width: Number,
     height: Number,
     duration: Number, // for video/audio
+    exif: { type: mongoose.Schema.Types.Mixed }, // store EXIF metadata as flexible object
   },
 })
 
