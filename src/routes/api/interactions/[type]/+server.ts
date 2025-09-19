@@ -29,14 +29,13 @@ export async function POST({ request, params, locals }: RequestEvent) {
   }
 
   try {
-    const interaction = await Interaction.findOneAndUpdate(
+    const result = await Interaction.updateOne(
       { userId, postId, type },
-      {},
-      { upsert: true, new: true },
+      { $setOnInsert: { userId, postId, type } }, // only set on insert
+      { upsert: true },
     )
 
-    // Only increment counter if the interaction was newly created
-    if (interaction.isNew) {
+    if (result.upsertedCount > 0) {
       const counterField = type === "like" ? "likesCount" : "repostsCount"
       await Post.findByIdAndUpdate(postId, { $inc: { [counterField]: 1 } })
     }
