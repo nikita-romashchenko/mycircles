@@ -15,6 +15,8 @@ const PostSchema = new mongoose.Schema({
     enum: ["public", "private", "friends"],
     default: "public",
   },
+  likesCount: { type: Number, default: 0 },
+  repostsCount: { type: Number, default: 0 },
 })
 
 export const Post = mongoose.models.Post || mongoose.model("Post", PostSchema)

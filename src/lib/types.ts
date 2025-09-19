@@ -30,4 +30,6 @@ export interface Post {
   createdAt: string
   mediaItems: MediaItem[]
   visibility: "public" | "private" | "friends"
+  likesCount: number
+  repostsCount: number
 }
