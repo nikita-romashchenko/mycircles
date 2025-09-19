@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Post as PostType } from "$lib/types"
   import { page } from "$app/stores"
+  import PostCard from "$components/Post/PostCard.svelte"
 
   let posts: PostType[] | [] = $page.data.posts || []
 
@@ -16,7 +17,8 @@
 
   <div class="space-y-8">
     {#each posts as post}
-      <div class="rounded-lg p-4 shadow-md">
+      <PostCard {post} />
+      <!-- <div class="rounded-lg p-4 shadow-md">
         <div class="mb-2 text-gray-600 text-sm">
           <a href={`/${post.userId}`} class="text-blue-600"
             >User ID: {post.userId}</a
@@ -38,7 +40,7 @@
         {#if post.caption}
           <p class="text-gray-800">{post.caption}</p>
         {/if}
-      </div>
+      </div> -->
     {/each}
   </div>
 </main>
