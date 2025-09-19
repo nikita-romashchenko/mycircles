@@ -16,9 +16,12 @@
 
   <div class="space-y-8">
     {#each posts as post}
-      <div class="border rounded-lg p-4 shadow-sm">
+      <div class="rounded-lg p-4 shadow-md">
         <div class="mb-2 text-gray-600 text-sm">
-          <span>User ID: {post.userId}</span> &middot;
+          <a href={`/${post.userId}`} class="text-blue-600"
+            >User ID: {post.userId}</a
+          >
+          &middot;
           <span>Created: {formatDate(post.createdAt)}</span>
         </div>
 
