@@ -25,7 +25,7 @@ export const load: PageServerLoad = async ({ params }) => {
     }
 
     // Check if profile exists
-    const profile = await Profile.findById(profileid)
+    const profile = await Profile.findById(profileid).select("-privateKey")
     if (!profile) {
       return { posts: [], error: "Profile not found" }
     }
