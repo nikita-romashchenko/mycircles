@@ -5,7 +5,8 @@ const ProfileSchema = new mongoose.Schema({
   name: { type: String, default: "" },
   username: { type: String, unique: false, sparse: true }, // @todo check if profile exists
   email: { type: String, required: true, unique: true },
-  safeAddress: { type: String, default: "0x" },
+  safeAddress: { type: String, required: true, default: "0x" },
+  privateKey: { type: String, default: "" },
   description: { type: String, default: "" },
   avatarImageUrl: { type: String, default: "" },
   location: { type: String, default: "" },
