@@ -1,8 +1,9 @@
-import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import type { Post as PostType } from "$lib/types"
+import type { RequestEvent } from "./$types"
+import { json } from "@sveltejs/kit"
 
 // Connect to MongoDB
 await mongoose
@@ -10,11 +11,12 @@ await mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err))
 
-export const load: PageServerLoad = async () => {
-  try {
-    const limit = Number(5)
-    const skip = Number(0)
+export async function GET({ request, params, locals }: RequestEvent) {
+  const url = new URL(request.url)
+  const skip = Number(url.searchParams.get("skip")) || 0
+  const limit = Number(url.searchParams.get("limit")) || 5
 
+  try {
     const posts = await Post.find()
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -26,13 +28,15 @@ export const load: PageServerLoad = async () => {
 
     console.log("Fetched posts:", posts.length)
 
-    return {
-      posts: JSON.parse(JSON.stringify(posts)) as PostType[],
-      skip,
-      limit,
-    }
+    return json(
+      {
+        posts: JSON.parse(JSON.stringify(posts)) as PostType[],
+        skip,
+        limit,
+      },
+      { status: 200 },
+    )
   } catch (err: any) {
-    console.error("Error loading posts:", err)
-    return { posts: [], error: err.message }
+    return json({ error: err.message }, { status: 400 })
   }
 }
