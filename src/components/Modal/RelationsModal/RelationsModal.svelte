@@ -4,6 +4,8 @@
   import type { Relation } from "$lib/types"
 
   export let open = false
+  export let onLinkClick: () => void
+
   // export let safeAddress = ""
   export let contents: Relation[][] = [[], [], []] // mutuals, trusted by, trusts
 
@@ -13,5 +15,5 @@
 </script>
 
 <Modal bind:open>
-  <Tabs tabs={["mutuals", "trusted by", "trusts"]} {contents} />
+  <Tabs tabs={["mutuals", "trusted by", "trusts"]} {contents} {onLinkClick} />
 </Modal>

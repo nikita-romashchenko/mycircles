@@ -3,8 +3,8 @@ import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
-import { Profile } from "$lib/models/Profile"
 import type { Post as PostType, Profile as ProfileType } from "$lib/types"
+import { Profile } from "$lib/models/Profile"
 
 // Connect to MongoDB
 await mongoose
@@ -15,39 +15,36 @@ await mongoose
 /**
  * Loads all posts for a profile by profileId slug.
  */
-export const load: PageServerLoad = async ({ params, parent, depends }) => {
-  depends("posts")
-
-  const { profileid } = params
+export const load: PageServerLoad = async ({ params, parent }) => {
+  const { profileid, postid } = params
   const parentData = await parent()
   const session = parentData.session
 
   try {
     // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(profileid)) {
-      return { posts: [], error: "Invalid profile ID" }
+    if (!mongoose.Types.ObjectId.isValid(postid)) {
+      return { posts: [], error: "Invalid post ID" }
     }
 
-    // Check if profile exists
+    // Fetch post
+    const post = await Post.findById(postid).populate({
+      path: "mediaItems",
+      select: "url", // only get URLs, exclude metadata
+    })
+    if (!post) {
+      return { posts: [], error: "Post not found" }
+    }
+
+    // Fetch profile
     const profile = await Profile.findById(profileid).select("-privateKey")
     if (!profile) {
       return { posts: [], error: "Profile not found" }
     }
 
-    console.log(`ExpectedProfile: ${profile}`)
-
-    // Fetch posts
-    const posts = await Post.find({ userId: profile._id })
-      .sort({ createdAt: -1 }) // newest first
-      .populate({
-        path: "mediaItems",
-        select: "url", // only get URLs, exclude metadata
-      })
-
-    console.log(`ExpectedPosts: ${posts}`)
+    console.log(`ExpectedPost: ${post}`)
 
     return {
-      posts: JSON.parse(JSON.stringify(posts)) as PostType[],
+      post: JSON.parse(JSON.stringify(post)) as PostType,
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
       isOwnProfile: session?.user?.profileId === profileid,
     }

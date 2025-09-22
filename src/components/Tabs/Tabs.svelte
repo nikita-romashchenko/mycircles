@@ -4,6 +4,7 @@
   export let tabs: string[] = []
   export let contents: Relation[][] = [[], [], []]
   let activeTab = 0
+  export let onLinkClick: () => void
 </script>
 
 <div class="w-full">
@@ -29,6 +30,7 @@
         <a
           href={`/${relation.profile.profileId}`}
           class="my-2 flex flex-row gap-4 items-center"
+          on:click={() => onLinkClick?.()}
         >
           <!-- TODO: Add actual user avatars -->
           <img
