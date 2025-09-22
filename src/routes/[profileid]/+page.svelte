@@ -190,14 +190,17 @@
           </svg>
         </div>
       {/if}
+
       {#each posts as post}
         {#if post.mediaItems.length > 0}
           <!-- TODO: Replace with Post svelte component so that it accepts post variable and displays image/video/album correctly-->
-          <img
-            class="w-full aspect-square object-cover rounded"
-            src={post.mediaItems[0].url}
-            alt={`Post ${post._id}`}
-          />
+          <a href="/{post.userId}/p/{post._id}">
+            <img
+              class="w-full aspect-square object-cover rounded"
+              src={post.mediaItems[0].url}
+              alt={`Post ${post._id}`}
+            />
+          </a>
         {/if}
       {/each}
     </div>

@@ -33,34 +33,7 @@
     liked = !liked
   }
 
-  async function handleRepost() {
-    if (!reposted) {
-      try {
-        await fetch("/api/interactions/repost", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId: post._id }),
-        })
-      } catch (err) {
-        console.error("Error reposting post", err)
-      }
-    } else {
-      try {
-        await fetch("/api/interactions/repost", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ postId: post._id }),
-        })
-      } catch (err) {
-        console.error("Error unreposting post", err)
-      }
-    }
-
-    reposted = !reposted
-  }
-
   $: mainMedia = post?.mediaItems?.[0]
-  $: isAlbum = post?.type === "album" && post?.mediaItems?.length > 1
 </script>
 
 {#if post}
@@ -93,12 +66,14 @@
       <!-- TODO: Think of a better way to add alt to img for better SEO / indexing -->
       {#if post.type === "image"}
         {#if mainMedia}
-          <img
-            class="w-full rounded-md cursor-pointer"
-            src={mainMedia.url}
-            alt={post.caption ?? "Post image"}
-            loading="lazy"
-          />
+          <a href="/{post.userId}/p/{post._id}">
+            <img
+              class="w-full rounded-md cursor-pointer"
+              src={mainMedia.url}
+              alt={post.caption ?? "Post image"}
+              loading="lazy"
+            />
+          </a>
         {/if}
       {:else if post.type === "album"}
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -132,15 +107,6 @@
           on:click={handleLike}
         >
           {liked ? "Liked" : "Like"}
-        </button>
-
-        <button
-          class="cursor-pointer px-3 py-1 rounded text-white {reposted
-            ? 'bg-green-700'
-            : 'bg-green-500'} hover:bg-green-600"
-          on:click={handleRepost}
-        >
-          {reposted ? "Reposted" : "Repost"}
         </button>
       </section>
     {/if}

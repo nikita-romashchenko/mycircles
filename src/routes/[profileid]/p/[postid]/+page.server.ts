@@ -5,6 +5,7 @@ import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
 import type { Post as PostType, Profile as ProfileType } from "$lib/types"
 import { Profile } from "$lib/models/Profile"
+import { Interaction } from "$lib/models/Interaction"
 
 // Connect to MongoDB
 await mongoose
@@ -15,7 +16,9 @@ await mongoose
 /**
  * Loads all posts for a profile by profileId slug.
  */
-export const load: PageServerLoad = async ({ params, parent }) => {
+export const load: PageServerLoad = async ({ params, parent, depends }) => {
+  depends("like")
+
   const { profileid, postid } = params
   const parentData = await parent()
   const session = parentData.session
@@ -41,12 +44,19 @@ export const load: PageServerLoad = async ({ params, parent }) => {
       return { posts: [], error: "Profile not found" }
     }
 
+    const interaction = await Interaction.findOne({
+      userId: session?.user?.profileId,
+      postId: post._id,
+      type: "like",
+    })
+
     console.log(`ExpectedPost: ${post}`)
 
     return {
       post: JSON.parse(JSON.stringify(post)) as PostType,
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
       isOwnProfile: session?.user?.profileId === profileid,
+      isLiked: !!interaction,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)
