@@ -7,26 +7,39 @@
   import { page } from "$app/stores"
   import { onMount } from "svelte"
   import RelationsModal from "$components/Modal/RelationsModal/RelationsModal.svelte"
+  import UploadMediaModal from "$components/Modal/UploadMediaModal/UploadMediaModal.svelte"
   import { browser } from "$app/environment"
   import { invalidate } from "$app/navigation"
+  import { superForm } from "sveltekit-superforms"
 
-  let open = false
-  $: posts = $page.data.posts as PostType[]
-  $: profile = $page.data.profile as ProfileType
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
+  const { form } = superForm($page.data.form, { dataType: "json" })
+
+  let relationsModalOpen = false
+  let uploadModalOpen = false
   let file: any
   let contents: Relation[][] = [[], [], []]
 
+  $: console.log("Form:", form)
+  $: posts = $page.data.posts as PostType[]
+  $: profile = $page.data.profile as ProfileType
+  $: isOwnProfile = $page.data.isOwnProfile as boolean
   $: if (browser && profile?.safeAddress) {
     fetchRelations(profile.safeAddress)
   }
 
-  const openModal = () => {
-    open = true
+  // RelationsModal state
+  const openRelationsModal = () => {
+    relationsModalOpen = true
   }
 
   const handleLinkClick = () => {
-    open = false
+    relationsModalOpen = false
+  }
+
+  // UploadMediaModal state
+  const openUploadMediaModal = () => {
+    console.log("Opening upload modal")
+    uploadModalOpen = true
   }
 
   async function handleUpload(e: Event) {
@@ -93,7 +106,10 @@
           <hr />
           <p class="text-gray-500">{$page.data.session?.user.profileId}</p>
         </div>
-        <button on:click={openModal} class="flex flex-row gap-6 cursor-pointer">
+        <button
+          on:click={openRelationsModal}
+          class="flex flex-row gap-6 cursor-pointer"
+        >
           <div class="flex flex-col">
             <p>mutuals</p>
             <p>{contents[0].length}</p>
@@ -121,7 +137,10 @@
           <hr />
           <p class="text-gray-500">{profile._id}</p>
         </div>
-        <button on:click={openModal} class="flex flex-row gap-6 cursor-pointer">
+        <button
+          on:click={openRelationsModal}
+          class="flex flex-row gap-6 cursor-pointer"
+        >
           <div class="flex flex-col">
             <p>mutuals</p>
             <p>{contents[0].length}</p>
@@ -140,7 +159,8 @@
 
     <!-- Upload bttn section -->
     {#if isOwnProfile}
-      <div class="mt-4 flex flex-row justify-center items-center">
+      <div class="mt-4 flex flex-row justify-center items-center gap-10">
+        <!-- TODO: Remove old upload functionality -->
         <div class="flex flex-col items-center justify-center mt-4">
           <input
             id="file-upload"
@@ -175,6 +195,26 @@
           {#if file}
             <p class="mt-2 text-gray-700 text-sm">Selected: {file.name}</p>
           {/if}
+        </div>
+        <div class="flex flex-col items-center justify-center mt-4">
+          <button
+            class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+            on:click={openUploadMediaModal}
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 4v16m8-8H4"
+              />
+            </svg>
+          </button>
         </div>
       </div>
     {/if}
@@ -216,4 +256,10 @@
     </div>
   </div>
 
-  <RelationsModal bind:open onLinkClick={handleLinkClick} {contents} />{/if}
+  <RelationsModal
+    bind:open={relationsModalOpen}
+    onLinkClick={handleLinkClick}
+    {contents}
+  />
+  <UploadMediaModal {form} bind:open={uploadModalOpen} />
+{/if}

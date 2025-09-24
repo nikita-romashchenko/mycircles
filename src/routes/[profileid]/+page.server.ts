@@ -2,9 +2,14 @@ import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
-import { MediaItem } from "$lib/models/MediaItem"
 import { Profile } from "$lib/models/Profile"
 import type { Post as PostType, Profile as ProfileType } from "$lib/types"
+import { superValidate } from "sveltekit-superforms"
+import { zod } from "sveltekit-superforms/adapters"
+import { z } from "zod"
+import { message } from "sveltekit-superforms"
+import { fail } from "@sveltejs/kit"
+import { UploadMediaSchema } from "$lib/validation/schemas"
 
 // Connect to MongoDB
 await mongoose
@@ -21,6 +26,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const { profileid } = params
   const parentData = await parent()
   const session = parentData.session
+  const form = await superValidate(zod(UploadMediaSchema))
 
   try {
     // Validate ObjectId
@@ -50,9 +56,26 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       posts: JSON.parse(JSON.stringify(posts)) as PostType[],
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
       isOwnProfile: session?.user?.profileId === profileid,
+      form,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)
     return { posts: [], error: err.message }
   }
+}
+
+//Posting form data action
+export const actions = {
+  default: async ({ request }) => {
+    const form = await superValidate(request, zod(UploadMediaSchema))
+    console.log(form)
+
+    if (!form.valid) {
+      return fail(400, { form })
+    }
+
+    // TODO: Do something with the validated form.data
+
+    return message(form, "Form posted successfully!")
+  },
 }
