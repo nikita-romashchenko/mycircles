@@ -49,7 +49,7 @@
       >
     </header>
 
-    <section class="px-4 pb-4">
+    <section>
       <!-- TODO: Add video support -->
       <!-- {#if post.type === "video"}
         {#if mainMedia}
@@ -68,7 +68,7 @@
         {#if mainMedia}
           <a href="/{post.userId}/p/{post._id}">
             <img
-              class="w-full rounded-md cursor-pointer"
+              class="w-full cursor-pointer"
               src={mainMedia.url}
               alt={post.caption ?? "Post image"}
               loading="lazy"
@@ -79,7 +79,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {#each post.mediaItems as m}
             <img
-              class="w-full h-32 object-cover rounded-md cursor-pointer"
+              class="w-full h-32 object-cover cursor-pointer"
               src={m.url}
               alt={post.caption ?? "Album image"}
               loading="lazy"
@@ -89,25 +89,9 @@
       {/if}
     </section>
 
-    <section class="px-4 pb-4 text-gray-800">
-      <p>{post.caption}</p>
-    </section>
-
-    <section class="px-4 pb-4 text-gray-800">
-      <span>❤️ {liked ? post.likesCount + 1.0 : post.likesCount}</span>
-      <span>🔁 {reposted ? post.repostsCount + 1.0 : post.repostsCount}</span>
-    </section>
-
-    {#if showActions}
-      <section class="flex gap-2 px-4 pb-4">
-        <button
-          class="cursor-pointer px-3 py-1 rounded text-white {liked
-            ? 'bg-blue-700'
-            : 'bg-blue-500'} hover:bg-blue-600"
-          on:click={handleLike}
-        >
-          {liked ? "Liked" : "Like"}
-        </button>
+    {#if post.caption}
+      <section class="px-4 pt-4 pb-4 text-gray-800">
+        <p>{post.caption}</p>
       </section>
     {/if}
   </article>

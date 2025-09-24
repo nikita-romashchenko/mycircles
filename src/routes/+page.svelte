@@ -12,7 +12,7 @@
   $: skip = posts.length
 
   async function loadMore() {
-    if (loading || allLoaded) return
+    if (loading) return
     loading = true
 
     try {
@@ -27,6 +27,7 @@
         allLoaded = true
       } else {
         posts = [...posts, ...data.posts]
+        allLoaded = false
         console.log("Loaded more posts, total now:", posts.length)
       }
     } catch (err) {

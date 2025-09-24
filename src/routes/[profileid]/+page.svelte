@@ -46,19 +46,29 @@
     await invalidate("posts")
   }
 
+  function sortRelations(relations: Relation[]): Relation[] {
+    return [...relations].sort((a, b) => {
+      if (a.profile && !b.profile) return -1
+      if (!a.profile && b.profile) return 1
+      return 0
+    })
+  }
+
   async function fetchRelations(address: string) {
     try {
       const res = await fetch(`/api/circles/relations?address=${address}`)
       if (!res.ok) throw new Error("Failed to fetch relations")
 
       const data: Relation[] = await res.json()
-      const mutuals = data.filter(
-        (item: any) => item.relation === "mutuallyTrusts",
+      const mutuals = sortRelations(
+        data.filter((item) => item.relationItem.relation === "mutuallyTrusts"),
       )
-      const trustedBy = data.filter(
-        (item: any) => item.relation === "trustedBy",
+      const trustedBy = sortRelations(
+        data.filter((item) => item.relationItem.relation === "trustedBy"),
       )
-      const trusts = data.filter((item: any) => item.relation === "trusts")
+      const trusts = sortRelations(
+        data.filter((item) => item.relationItem.relation === "trusts"),
+      )
       contents = [mutuals || [], trustedBy || [], trusts || []]
     } catch (err) {
       console.error("Error fetching relations:", err)

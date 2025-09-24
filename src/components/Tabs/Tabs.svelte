@@ -26,28 +26,49 @@
 
   <div class="p-4">
     {#if contents[activeTab]}
-      {#each contents[activeTab] as relation}
-        <a
-          href={`/${relation.profile.profileId}`}
-          class="my-2 flex flex-row gap-4 items-center"
-          on:click={() => onLinkClick?.()}
-        >
-          <!-- TODO: Add actual user avatars -->
-          <img
-            alt="User avatar"
-            src="https://picsum.photos/200"
-            class="w-8 h-8 rounded-full"
-            loading="lazy"
-          />
-          <div class="flex flex-col gap-2">
-            <span>{relation.profile.username}</span>
-            <hr />
-            <span class="text-gray-500 text-sm"
-              >{relation.profile.safeAddress}</span
+      {#if contents[activeTab].length === 0}
+        <p class="text-gray-500">No data found.</p>
+      {:else}
+        {#each contents[activeTab] as relation}
+          {#if !relation.profile}
+            <div
+              class="my-2 flex flex-row gap-4 items-center opacity-60 border border-gray-300 rounded-md p-2"
             >
-          </div>
-        </a>
-      {/each}
+              <!-- TODO: Add actual user avatars -->
+              <img
+                alt="User avatar"
+                src="https://picsum.photos/200"
+                class="w-8 h-8 rounded-full grayscale"
+                loading="lazy"
+              />
+              <div class="flex flex-col gap-2 text-gray-400">
+                <span>{relation.relationItem.subjectAvatar}</span>
+              </div>
+            </div>
+          {:else}
+            <a
+              href={`/${relation.profile.profileId}`}
+              class="my-2 flex flex-row gap-4 items-center border border-gray-300 rounded-md p-2"
+              on:click={() => onLinkClick?.()}
+            >
+              <!-- TODO: Add actual user avatars -->
+              <img
+                alt="User avatar"
+                src="https://picsum.photos/200"
+                class="w-8 h-8 rounded-full"
+                loading="lazy"
+              />
+              <div class="flex flex-col gap-2">
+                <span>{relation.profile.username}</span>
+                <hr />
+                <span class="text-gray-500 text-sm"
+                  >{relation.profile.safeAddress}</span
+                >
+              </div>
+            </a>
+          {/if}
+        {/each}
+      {/if}
     {/if}
   </div>
 </div>

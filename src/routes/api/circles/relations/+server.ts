@@ -63,12 +63,11 @@ export async function GET({ request, params, locals }: RequestEvent) {
     )
 
     // Attach profile to relations and filter out missing profiles
-    const relationsWithProfiles = relations
-      .map((item) => ({
-        relation: item.relation,
-        profile: profileMap[item.objectAvatar.toLowerCase()],
-      }))
-      .filter((item) => item.profile) // remove relations with no profile
+    const relationsWithProfiles = relations.map((item) => ({
+      relationItem: item,
+      profile: profileMap[item.objectAvatar.toLowerCase()],
+    }))
+    // .filter((item) => item.profile) // remove relations with no profile
 
     return json(relationsWithProfiles, { status: 200 })
   } catch (err: any) {

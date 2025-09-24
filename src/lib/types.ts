@@ -40,8 +40,17 @@ export interface RelationProfile {
   profileId: string
 }
 
+export interface RelationItem {
+  subjectAvatar: string
+  relation: string
+  objectAvatar: string
+  timestamp: number
+  versions: number[]
+  versionSpecificRelations: Record<string, string>
+}
+
 // add profile picture link later
 export interface Relation {
-  relation: string
-  profile: RelationProfile
+  relationItem: RelationItem
+  profile?: RelationProfile
 }
