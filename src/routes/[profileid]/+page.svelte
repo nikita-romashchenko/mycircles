@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+  import { run } from "svelte/legacy"
 
   import type {
     Post as PostType,
@@ -18,7 +18,6 @@
   let uploadModalOpen = $state(false)
   let file: any = $state()
   let contents: Relation[][] = $state([[], [], []])
-
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -82,7 +81,7 @@
   }
   run(() => {
     console.log("Form:", form)
-  });
+  })
   let posts = $derived($page.data.posts as PostType[])
   let profile = $derived($page.data.profile as ProfileType)
   let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
@@ -90,7 +89,7 @@
     if (browser && profile?.safeAddress) {
       fetchRelations(profile.safeAddress)
     }
-  });
+  })
 </script>
 
 <!-- TODO: add something like a spinner if no profile or error screen -->
@@ -201,6 +200,7 @@
           {/if}
         </div>
         <div class="flex flex-col items-center justify-center mt-4">
+          <!-- svelte-ignore a11y_consider_explicit_label -->
           <button
             class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
             onclick={openUploadMediaModal}

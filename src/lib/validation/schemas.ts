@@ -25,6 +25,8 @@ export const registrationSchema = z.object({
   email: emailSchema,
 })
 
+export type RegistrationData = z.infer<typeof registrationSchema>
+
 export const signInSchema = z.object({
   email: emailSchema,
   password: passwordSchema,
@@ -43,62 +45,29 @@ export const signUpSchema = z
   })
 signUpSchema
 
-export type RegistrationData = z.infer<typeof registrationSchema>
-
 // UploadMediaModal form schema
-// export const uploadMediaSchema = z.object({
-//   media: z
-//     .union([
-//       // Single image
-//       z.object({
-//         type: z.literal("image"),
-//         file: z.instanceof(File),
-//       }),
-
-//       // Single video
-//       z.object({
-//         type: z.literal("video"),
-//         file: z.instanceof(File),
-//       }),
-
-//       // Album of images
-//       z.object({
-//         type: z.literal("album"),
-//         files: z
-//           .array(z.instanceof(File))
-//           .min(1, "Album must have at least 1 image"),
-//       }),
-//     ])
-//     .nullable()
-//     .default(null),
-//   caption: z.preprocess(
-//     (val) => (typeof val === "string" && val.trim() !== "" ? val : ""),
-//     z.string().max(2200, "Caption must be at most 2200 characters"),
-//   ),
-//   visibility: z.enum(["public", "private", "friends"]).default("public"),
-//   location: z
-//     .object({
-//       display_name: z.string().max(200),
-//       lat: z.string(),
-//       lon: z.string(),
-//       address: z
-//         .object({
-//           country: z.string().optional(),
-//           state: z.string().optional(),
-//           city: z.string().optional(),
-//           postcode: z.string().optional(),
-//         })
-//         .optional(),
-//     })
-//     .nullable()
-//     .default(null),
-// })
-
 export const uploadMediaSchema = z.object({
-  media: z.instanceof(File, { message: "Please upload a file." }).array(),
-  caption: z.string(),
+  media: z.array(z.instanceof(File)).min(1, "Post must have at least 1 image"),
+  caption: z.preprocess(
+    (val) => (typeof val === "string" && val.trim() !== "" ? val : ""),
+    z.string().max(2200, "Caption must be at most 2200 characters"),
+  ),
   visibility: z.enum(["public", "private", "friends"]).default("public"),
-  location: z.string(),
+  // location: z
+  //   .object({
+  //     displayName: z.string(),
+  //     lat: z.string(),
+  //     lon: z.string(),
+  //   })
+  //   .optional(),
+  location: z.string().optional(),
 })
+
+// export const uploadMediaSchema = z.object({
+//   media: z.instanceof(File, { message: "Please upload a file." }).array(),
+//   caption: z.string(),
+//   visibility: z.enum(["public", "private", "friends"]).default("public"),
+//   location: z.string(),
+// })
 
 export type UploadMediaSchema = typeof uploadMediaSchema

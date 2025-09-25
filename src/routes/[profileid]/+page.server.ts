@@ -69,11 +69,14 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 export const actions = {
   default: async ({ request }) => {
     const form = await superValidate(request, zod(uploadMediaSchema))
-    console.log(form)
+    console.log("Form: ", form)
+    console.log("Form Errors: ", form.errors)
 
     if (!form.valid) {
       return fail(400, { form })
     }
+
+    console.log("Form data is valid:", form.data)
 
     // TODO: Do something with the validated form.data
 
