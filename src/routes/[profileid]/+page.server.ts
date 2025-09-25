@@ -19,7 +19,10 @@ import sharp from "sharp"
 // @ts-ignore
 import heicConvert from "heic-convert"
 import { randomUUID } from "crypto"
-import { processMedia, ProcessMediaError } from "$lib/utils/mediaUploadUtils"
+import {
+  processAndUploadMedia,
+  ProcessMediaError,
+} from "$lib/utils/mediaUploadUtils"
 
 // Connect to MongoDB
 await mongoose
@@ -108,7 +111,7 @@ export const actions = {
         })
       }
 
-      const result = await processMedia(formData)
+      const result = await processAndUploadMedia(formData)
 
       if (!result.success) {
         return new Response(
@@ -119,24 +122,7 @@ export const actions = {
         )
       }
 
-      // Extract image dimensions
-      let width: number | undefined
-      let height: number | undefined
-      try {
-        const dimensions = sizeOf(buffer)
-        width = dimensions.width
-        height = dimensions.height
-      } catch (err) {
-        console.warn("Could not get image dimensions", err)
-      }
-
-      // Extract EXIF metadata (optional)
-      let exifData: Record<string, any> | undefined
-      try {
-        exifData = await exifr.parse(buffer)
-      } catch (err) {
-        console.warn("Could not extract EXIF data", err)
-      }
+      const { type, processedMedia } = result
 
       // Save Post
       const userId = session?.user.profileId
@@ -148,31 +134,59 @@ export const actions = {
 
       const postDoc = await Post.create({
         userId,
-        type: "image",
+        type: type,
         caption: formData.get("caption") || "",
         mediaItems: [], // will populate after creating MediaItem
       })
 
+      const bucket = env.MINIO_BUCKET || "uploads"
       // Save MediaItem
-      const mediaItem = await MediaItem.create({
-        postId: postDoc._id,
-        url: fileUrl,
-        metadata: {
-          originalName: file.name,
-          fileName,
-          size: buffer.length,
-          mimeType: file.type,
-          bucket,
-          key: fileName,
-          width,
-          height,
-          exif: exifData,
-        },
-      })
+      if (type === "image") {
+        const file = processedMedia[0]
+        const mediaItem = await MediaItem.create({
+          postId: postDoc._id,
+          url: processedMedia[0].fileUrl,
+          metadata: {
+            originalName: file.originalName,
+            fileName: file.fileName,
+            size: file.buffer.length,
+            mimeType: file.mimeType,
+            bucket,
+            key: file.fileName,
+            width: file.width,
+            height: file.height,
+            exif: file.exifData,
+          },
+        })
 
-      // Link MediaItem to Post
-      postDoc.mediaItems.push(mediaItem._id)
-      await postDoc.save()
+        // Link MediaItem to Post
+        postDoc.mediaItems.push(mediaItem._id)
+        await postDoc.save()
+      } else if (type === "album") {
+        for (const file of processedMedia) {
+          const mediaItem = await MediaItem.create({
+            postId: postDoc._id,
+            url: processedMedia[0].fileUrl,
+            metadata: {
+              originalName: file.originalName,
+              fileName: file.fileName,
+              size: file.buffer.length,
+              mimeType: file.mimeType,
+              bucket,
+              key: file.fileName,
+              width: file.width,
+              height: file.height,
+              exif: file.exifData,
+            },
+          })
+
+          // Link MediaItem to Post
+          postDoc.mediaItems.push(mediaItem._id)
+          await postDoc.save()
+        }
+      } else if (type === "video") {
+        throw new Error("Video posts are not supported yet.")
+      }
 
       return message(form, "Form posted successfully!")
     } catch (err: any) {

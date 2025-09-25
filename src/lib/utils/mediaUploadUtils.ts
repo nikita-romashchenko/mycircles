@@ -30,9 +30,15 @@ export class ProcessMediaError extends Error {
 
 interface ProcessedMedia {
   processedBuffer: Buffer
+  buffer: Buffer
   fileName: string
+  originalName: string
   contentType: string
   fileUrl: string
+  width: number | undefined
+  height: number | undefined
+  exifData: Record<string, any> | undefined
+  mimeType: string
 }
 
 const s3 = new S3Client({
@@ -67,10 +73,39 @@ const processImage = async (image: File) => {
     .jpeg({ quality: 80 })
     .toBuffer()
 
-  return { processedBuffer, fileName, contentType: "image/jpeg" }
+  // Extract image dimensions
+  let width: number | undefined
+  let height: number | undefined
+  try {
+    const dimensions = sizeOf(buffer)
+    width = dimensions.width
+    height = dimensions.height
+  } catch (err) {
+    console.warn("Could not get image dimensions", err)
+  }
+
+  // Extract EXIF metadata (optional)
+  let exifData: Record<string, any> | undefined
+  try {
+    exifData = await exifr.parse(buffer)
+  } catch (err) {
+    console.warn("Could not extract EXIF data", err)
+  }
+
+  return {
+    processedBuffer,
+    buffer,
+    fileName,
+    originalName: image.name,
+    contentType: "image/jpeg",
+    width,
+    height,
+    exifData,
+    mimeType: image.type,
+  }
 }
 
-export const processMedia = async (formData: FormData) => {
+export const processAndUploadMedia = async (formData: FormData) => {
   try {
     const media = formData.getAll("media") as File[]
     const bucket = env.MINIO_BUCKET || "uploads"
