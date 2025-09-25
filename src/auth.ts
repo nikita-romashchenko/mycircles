@@ -1,6 +1,7 @@
 import { SvelteKitAuth } from "@auth/sveltekit"
 import Google from "@auth/sveltekit/providers/google"
-import Apple from "@auth/sveltekit/providers/apple"
+import type { Provider } from "@auth/sveltekit/providers"
+
 import Credentials from "@auth/sveltekit/providers/credentials"
 import { env } from "$env/dynamic/private"
 import type { DefaultSession } from "@auth/core/types"
@@ -8,7 +9,7 @@ import type { DefaultSession } from "@auth/core/types"
 import mongoose from 'mongoose'
 import Safe from '@safe-global/protocol-kit'
 import { Profile } from '$lib/models/Profile';
-import { safeAuthService } from '$lib/auth/SafeAuthService';
+import { authService } from '$lib/auth/AuthService';
 
 declare module "@auth/sveltekit" {
   interface Session {
@@ -17,6 +18,8 @@ declare module "@auth/sveltekit" {
       safeAddress?: string;
       username?: string;
       controllingEOA?: string;
+      privateKey?: string;
+      sessionType?: 'oauth2' | 'metamask' | 'privatekey';
     } & DefaultSession["user"]
   }
 }
@@ -27,6 +30,7 @@ declare module "@auth/core/jwt" {
     safeAddress?: string;
     username?: string;
     controllingEOA?: string;
+    authProvider?: string;
   }
 }
 
@@ -35,72 +39,61 @@ mongoose.connect(env.MONGODB_URI || 'mongodb://localhost:27017/mycircles')
   .then(() => console.log('Connected to MongoDB'))
   .catch(err => console.error('MongoDB connection error:', err))
 
-
-//TODO: Add apple provider
 console.log('Initializing SvelteKitAuth with providers...');
+
 export const { handle, signIn, signOut } = SvelteKitAuth({
+  debug: true,
   trustHost: true,
   providers: [
     Google({clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET}),
-    Apple({clientId: env.AUTH_APPLE_ID, clientSecret: env.AUTH_APPLE_SECRET}),
-
-    // Flow 1: Direct private key login with automatic Safe discovery
+    // Safe credentials authentication
     Credentials({
-      id: "safe-pk",
-      name: "Safe Private Key",
       credentials: {
-        privateKey: { label: "Private Key", type: "password" }
+        message: { },
+        signature: { },
+        walletOwner: { },
+        safeAddress: { }
       },
-      async authorize(credentials) {
+      authorize: async (credentials) => {
         try {
-          console.log('Safe-PK authorize called with private key');
+          console.log('Safe credentials authorize called with:', credentials);
 
-          if (!credentials?.privateKey) {
-            console.log('Missing private key, returning null');
+          if (!credentials?.message || !credentials?.signature || !credentials?.walletOwner || !credentials?.safeAddress) {
+            console.log('Missing required credentials (message, signature, walletOwner, safeAddress), returning null');
             return null;
           }
 
-          // Get Safe addresses controlled by this private key
-          console.log('Getting Safe addresses for private key...');
-          const safeInfo = await safeAuthService.getSafeAddressesForPrivateKey(credentials.privateKey as string);
+          const message = credentials.message as string;
+          const signature = credentials.signature as string;
+          const walletOwner = credentials.walletOwner as string;
+          const safeAddress = credentials.safeAddress as string;
 
-          if (!safeInfo.controlledSafes || safeInfo.controlledSafes.length === 0) {
-            console.log('No Safe addresses found for private key');
-            return null;
-          }
-
-          // Use the first Safe address
-          const selectedSafeAddress = safeInfo.controlledSafes[0];
-          console.log('Auto-selected first Safe:', selectedSafeAddress);
-
-          // Generate challenge and sign automatically
-          console.log('Generating challenge...');
-          const challenge = safeAuthService.generateChallenge();
-
-          // Create Safe signature using protocol-kit
-          console.log('Initializing Safe protocol-kit...');
-          const protocolKit = await Safe.init({
-            provider: env.RPC_URL,
-            signer: credentials.privateKey as string,
-            safeAddress: selectedSafeAddress
+          console.log('Authenticating with Safe credentials:', {
+            safeAddress,
+            walletOwner: walletOwner.slice(0, 8) + '...'
           });
 
-          console.log('Creating and signing message...');
-          const safeMessage = await protocolKit.createMessage(challenge.message);
-          const signedSafeMessage = await protocolKit.signMessage(safeMessage);
-          const encodedSignature = signedSafeMessage.encodedSignatures();
-
-          console.log('Authenticating with SafeAuthService...');
-          const result = await safeAuthService.authenticateWithPrivateKey(
-            credentials.privateKey as string,
-            selectedSafeAddress,
-            encodedSignature,
-            challenge.message
+          const result = await authService.authenticateWithCredentials(
+            message,
+            signature,
+            walletOwner,
+            safeAddress
           );
 
           console.log('Authentication result:', result);
 
           if (result.success && result.user) {
+            // Get the private key from the profile for the session
+            let privateKey = null;
+            try {
+              const profile = await Profile.findOne({ safeAddress: result.user.safeAddress });
+              if (profile && profile.privateKey) {
+                privateKey = profile.privateKey;
+              }
+            } catch (error) {
+              console.error('Error fetching private key for session:', error);
+            }
+
             const userObj = {
               id: result.user.safeAddress,
               email: result.user.email,
@@ -118,66 +111,43 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           console.log('Authentication failed, returning null');
           return null;
         } catch (error) {
-          console.error('Error in Safe-PK authorize function:', error);
+          console.error('Error in Safe credentials authorize function:', error);
           return null;
         }
       }
     })
   ],
   secret: env.AUTH_SECRET,
+  pages: {
+    signIn: "/signin",
+  },
   callbacks: {
     async signIn({ user, account, profile }) {
+      console.log("-------- we are here ---------")
       try {
         // For Google OAuth, check if this is a Safe wallet user
-        if (account?.provider === 'google') {
-          const existingProfile = await Profile.findOne({
-            email: user.email,
-            $and: [
-              { safeAddress: { $exists: true, $ne: null } },
-              { safeAddress: { $ne: '0x' } },
-              { privateKey: { $exists: true, $ne: null } },
-              { privateKey: { $ne: '' } }
-            ]
-          });
+        if (account?.provider === 'google' && user.email) {
+          const safeUserInfo = await authService.getSafeUserInfo(user.email);
 
-          if (existingProfile) {
-            // This is a Safe wallet user - prepare data for Safe verification
-            console.log("Found Safe wallet user, preparing Safe verification...");
+          if (safeUserInfo) {
+            console.log("Found Safe wallet user, redirecting to client-side signature flow");
 
-            const challenge = safeAuthService.generateChallenge();
-            const privateKey = existingProfile.privateKey;
-            const safeAddress = existingProfile.safeAddress;
-            // Implement Safe signature using @safe-global/protocol-kit
-            const protocolKit = await Safe.init({
-              provider: env.RPC_URL,
-              signer: privateKey,
-              safeAddress: safeAddress
-            })
+            // Store the Safe info for the client to use
+            // The client will need to create a challenge, sign it, and then complete auth
+            user.safeAddress = safeUserInfo.safeAddress;
+            user.profileId = safeUserInfo.profile._id.toString();
+            user.username = safeUserInfo.profile.username;
+            user.name = safeUserInfo.profile.name;
+            user.privateKey = safeUserInfo.privateKey;
 
-            const safeMessage = await protocolKit.createMessage(challenge.message)
-            const signedSafeMessage = await protocolKit.signMessage(safeMessage)
-            const encodedSignature = signedSafeMessage.encodedSignatures();
-
-            // Verify the signature
-            const verificationResult = await safeAuthService.authenticateWithGoogle(
-              user.email!,
-              encodedSignature,
-              challenge.message
-            );
-
-            if (!verificationResult.success) {
-              console.error("Safe verification failed:", verificationResult.error);
-              return false;
-            }
-
-            console.log("Safe verification successful for Google user");
+            console.log("Google user with Safe - client needs to complete signature flow");
             return true;
           }
         }
 
         // Regular OAuth flow for non-Safe users
         const existingProfile = await Profile.findOne({ email: user.email })
-
+        // @todo redirect to setup profile name
         if (!existingProfile) {
           // Create a temporary profile for new users so they can complete registration
           console.log("User doesn't exist, creating temporary profile");
@@ -196,9 +166,14 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         return false
       }
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, account }) {
       // This runs whenever a JWT is created, updated, or accessed
-      console.log("JWT callback - userdata:", user, "trigger:", trigger)
+      console.log("JWT callback - userdata:", user, "trigger:", trigger, "account:", account)
+
+      // Track the authentication provider
+      if (account) {
+        token.authProvider = account.provider;
+      }
 
       // For Safe wallet authentication, user object contains all needed data
       if (user && (user as any).safeAddress) {
@@ -207,10 +182,13 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         token.username = (user as any).username
         token.controllingEOA = (user as any).controllingEOA
         token.email = user.email
+        token.privateKey = (user as any).privateKey
         console.log("JWT updated with Safe wallet data:", {
           safeAddress: token.safeAddress,
           username: token.username,
-          controllingEOA: token.controllingEOA
+          controllingEOA: token.controllingEOA,
+          hasPrivateKey: !!token.privateKey,
+          authProvider: token.authProvider
         })
         return token
       }
@@ -241,14 +219,21 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
     async session({ session, token }) {
       // Send properties to the client
       if (token) {
+        console.log("current token: ", token)
         session.user.profileId = token.profileId
         session.user.safeAddress = token.safeAddress
         session.user.email = token.email || session.user.email
         session.user.username = token.username
         session.user.controllingEOA = token.controllingEOA
+        session.user.privateKey = token.privateKey
+        // Add session type information for client-side storage
+        if (token.privateKey && token.authProvider == 'google') {
+          session.user.sessionType = 'oauth2'; // Google OAuth with private key
+        }
       }
       console.log('Session with custom data:', session)
       return session
     }
   }
 })
+

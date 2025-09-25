@@ -2,6 +2,8 @@ import { ethers } from 'ethers';
 import mongoose from 'mongoose';
 import { Profile } from '$lib/models/Profile';
 import { env } from '$env/dynamic/private';
+import { safeApiService } from '$lib/services/SafeApiService';
+import Safe, { hashSafeMessage } from '@safe-global/protocol-kit';
 
 // Connect to MongoDB if not already connected
 if (mongoose.connection.readyState === 0) {
@@ -14,12 +16,20 @@ export interface AuthResult {
   success: boolean;
   user?: {
     safeAddress: string;
-    username: string;
+    username?: string;
     profileId: string;
-    name: string;
-    privateKey: string;
+    name?: string;
+    controllingEOA?: string;
+    email?: string;
+    privateKey?: string;
   };
   error?: string;
+}
+
+export interface AuthChallenge {
+  nonce: string;
+  message: string;
+  timestamp: number;
 }
 
 export interface SessionData {
@@ -40,14 +50,112 @@ export class AuthService {
   }
 
   /**
+   * Get Safe addresses controlled by a private key/EOA
+   */
+  async getSafeAddressesForOwner(ownerAddress: string): Promise<string[]> {
+    return safeApiService.getSafesForOwner(ownerAddress);
+  }
+
+  /**
+   * Verify Safe ownership using the Safe API
+   */
+  async verifySafeOwnership(safeAddress: string, ownerAddress: string): Promise<boolean> {
+    try {
+      const controlledSafes = await this.getSafeAddressesForOwner(ownerAddress);
+      return controlledSafes.map((s: string) => s.toLowerCase()).includes(safeAddress.toLowerCase());
+    } catch (error) {
+      console.error('Safe ownership verification error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Verify signature using Safe Protocol Kit (EIP-1271 compatible)
+   */
+  async verifySafeSignature(
+    safeAddress: string,
+    signature: string,
+    message: string
+  ): Promise<boolean> {
+    try {
+      const protocolKit = await Safe.init({
+        provider: env.RPC_URL,
+        safeAddress: safeAddress
+      });
+
+      const isValidSafeSignature = await protocolKit.isValidSignature(
+        hashSafeMessage(message),
+        signature
+      );
+
+      return isValidSafeSignature;
+    } catch (error) {
+      console.error('Safe signature verification error:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Validate message timestamp (max 5 minutes old)
+   */
+  validateMessageTimestamp(message: string): boolean {
+    const messageMatch = message.match(/Timestamp: (\d+)/);
+    if (!messageMatch) {
+      return false;
+    }
+
+    const messageTimestamp = parseInt(messageMatch[1]);
+    const age = Date.now() - messageTimestamp;
+    return age <= 5 * 60 * 1000; // 5 minutes
+  }
+
+  /**
+   * Get Safe user info for Google OAuth (without full authentication)
+   */
+  async getSafeUserInfo(googleEmail: string): Promise<{
+    safeAddress: string;
+    privateKey: string;
+    profile: any
+  } | null> {
+    try {
+      const profile = await Profile.findOne({
+        email: googleEmail,
+        $and: [
+          { safeAddress: { $exists: true, $ne: null } },
+          { safeAddress: { $ne: '0x' } },
+          { privateKey: { $exists: true, $ne: null } },
+          { privateKey: { $ne: '' } }
+        ]
+      });
+
+      if (!profile) {
+        return null;
+      }
+
+      return {
+        safeAddress: profile.safeAddress,
+        privateKey: profile.privateKey,
+        profile
+      };
+    } catch (error) {
+      console.error('Error getting Safe user info:', error);
+      return null;
+    }
+  }
+
+  /**
    * Google OAuth login flow: verify user exists with safeAddress and privateKey
    */
   async authenticateWithGoogle(googleEmail: string): Promise<AuthResult> {
     try {
       const profile = await Profile.findOne({
         email: googleEmail,
-        safeAddress: { $exists: true, $ne: null },
-        privateKey: { $exists: true, $ne: null }
+        $and: [
+          { safeAddress: { $exists: true, $ne: null } },
+          { safeAddress: { $ne: '0x' } },
+          { privateKey: { $exists: true, $ne: null } },
+          { privateKey: { $ne: '' } }
+        ]
       });
 
       if (!profile) {
@@ -57,6 +165,9 @@ export class AuthService {
         };
       }
 
+      const wallet = new ethers.Wallet(profile.privateKey);
+      const ownerAddress = wallet.address;
+
       return {
         success: true,
         user: {
@@ -64,6 +175,8 @@ export class AuthService {
           username: profile.username,
           profileId: profile._id.toString(),
           name: profile.name,
+          controllingEOA: ownerAddress,
+          email: googleEmail,
           privateKey: profile.privateKey
         }
       };
@@ -77,33 +190,49 @@ export class AuthService {
   }
 
   /**
-   * Private key login flow: extract safes, verify ownership
+   * Authenticate with wallet owner, safe address, signature and message
    */
-  async authenticateWithPrivateKey(privateKey: string, selectedSafeAddress: string): Promise<AuthResult> {
+  async authenticateWithCredentials(
+    message: string,
+    signature: string,
+    walletOwner: string,
+    safeAddress: string
+  ): Promise<AuthResult> {
     try {
-      // Validate private key format
-      if (!privateKey.match(/^0x[a-fA-F0-9]{64}$/)) {
+      // Validate message timestamp
+      if (!this.validateMessageTimestamp(message)) {
         return {
           success: false,
-          error: 'Invalid private key format'
+          error: 'Message timestamp is too old or invalid'
         };
       }
 
-      // Get wallet address from private key
-      const wallet = new ethers.Wallet(privateKey);
-      const walletAddress = wallet.address;
+      // Verify the signature using Safe Protocol Kit
+      const isValidSignature = await this.verifySafeSignature(
+        safeAddress,
+        signature,
+        message
+      );
 
-      // Verify the private key controls the selected safe
-      const controlsSafe = await this.verifyPrivateKeyControlsSafe(privateKey, selectedSafeAddress);
-      if (!controlsSafe) {
+      if (!isValidSignature) {
         return {
           success: false,
-          error: 'Private key does not control the selected Safe address'
+          error: 'Invalid signature or Safe ownership'
         };
       }
 
-      // Find profile by safeAddress
-      const profile = await Profile.findOne({ safeAddress: selectedSafeAddress });
+      // Verify that the wallet owner actually controls this safe
+      const isOwner = await this.verifySafeOwnership(safeAddress, walletOwner);
+      if (!isOwner) {
+        return {
+          success: false,
+          error: 'Wallet does not control this Safe'
+        };
+      }
+
+      // Check if profile exists for this Safe address
+      const profile = await Profile.findOne({ safeAddress: safeAddress });
+
       if (!profile) {
         return {
           success: false,
@@ -111,32 +240,26 @@ export class AuthService {
         };
       }
 
-      // Verify the stored private key matches
-      if (profile.privateKey !== privateKey) {
-        return {
-          success: false,
-          error: 'Private key does not match stored key for this Safe'
-        };
-      }
-
       return {
         success: true,
         user: {
-          safeAddress: profile.safeAddress,
+          safeAddress: safeAddress,
           username: profile.username,
           profileId: profile._id.toString(),
           name: profile.name,
-          privateKey: profile.privateKey
+          controllingEOA: walletOwner,
+          email: profile.email || undefined
         }
       };
     } catch (error) {
-      console.error('Private key auth error:', error);
+      console.error('Credentials authentication error:', error);
       return {
         success: false,
         error: 'Authentication failed'
       };
     }
   }
+
 
   /**
    * Verify private key signature against stored profile
@@ -205,47 +328,11 @@ export class AuthService {
   }
 
   /**
-   * Get Safe addresses controlled by a private key
-   */
-  async getSafeAddressesForPrivateKey(privateKey: string): Promise<string[]> {
-    try {
-      const wallet = new ethers.Wallet(privateKey);
-      const walletAddress = wallet.address;
-      const checksumAddress = ethers.getAddress(walletAddress);
-
-      const response = await fetch(`https://safe-transaction-gnosis-chain.safe.global/api/v1/owners/${checksumAddress}/safes/`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch Safe addresses');
-      }
-
-      const data = await response.json();
-      return data.safes || [];
-    } catch (error) {
-      console.error('Error fetching Safe addresses:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Verify that a private key controls a specific Safe address
-   */
-  private async verifyPrivateKeyControlsSafe(privateKey: string, safeAddress: string): Promise<boolean> {
-    try {
-      const controlledSafes = await this.getSafeAddressesForPrivateKey(privateKey);
-      return controlledSafes.map(s => s.toLowerCase()).includes(safeAddress.toLowerCase());
-    } catch (error) {
-      console.error('Error verifying Safe control:', error);
-      return false;
-    }
-  }
-
-  /**
    * Create session data for authenticated user
    */
   createSessionData(user: AuthResult['user']): SessionData {
-    if (!user) {
-      throw new Error('Cannot create session data without user');
+    if (!user || !user.username) {
+      throw new Error('Cannot create session data without user or username');
     }
 
     return {
@@ -276,10 +363,10 @@ export class AuthService {
   /**
    * Generate authentication challenge
    */
-  generateChallenge(): { nonce: string; message: string; timestamp: number } {
+  generateChallenge(): AuthChallenge {
     const nonce = crypto.randomUUID();
     const timestamp = Date.now();
-    const message = `Sign this message to authenticate with MyCircles.\n\nNonce: ${nonce}\nTimestamp: ${timestamp}`;
+    const message = `Sign this message to authenticate with MyCircles.\n\nNonce: ${nonce}\nTimestamp: ${timestamp}\nDomain: mycircles.app`;
 
     return { nonce, message, timestamp };
   }

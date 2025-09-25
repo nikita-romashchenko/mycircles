@@ -19,35 +19,3 @@ export function requireAuth(event: RequestEvent) {
 export function getOptionalSession(event: RequestEvent) {
   return sessionManager.getSession(event.cookies);
 }
-
-/**
- * Middleware to require signature verification for sensitive operations
- */
-export async function requireSignatureAuth(
-  event: RequestEvent,
-  signature: string,
-  message: string
-) {
-  const session = requireAuth(event);
-
-  const isValid = await sessionManager.verifyUserSignature(
-    event.cookies,
-    signature,
-    message
-  );
-
-  if (!isValid) {
-    throw json({ error: 'Invalid signature' }, { status: 403 });
-  }
-
-  return session;
-}
-
-/**
- * Helper to redirect unauthenticated users to login
- */
-export function redirectToLogin(url: URL) {
-  if (!url.pathname.startsWith('/safe-login')) {
-    throw redirect(302, '/safe-login');
-  }
-}

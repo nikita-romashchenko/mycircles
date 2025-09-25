@@ -11,7 +11,7 @@ export const load: PageServerLoad = async ({ cookies, locals }) => {
 
   // If neither authentication method is present, redirect to login
   if (!oauthSession && !safeSession) {
-    throw redirect(302, '/safe-login');
+    throw redirect(302, '/signin');
   }
 
   // Return authentication status and user data

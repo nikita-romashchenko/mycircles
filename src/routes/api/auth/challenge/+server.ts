@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { safeAuthService } from '$lib/auth/SafeAuthService';
+import { authService } from '$lib/auth/AuthService';
 
 export const GET: RequestHandler = async () => {
   try {
-    const challenge = safeAuthService.generateChallenge();
+    const challenge = authService.generateChallenge();
 
     return json(challenge);
   } catch (error) {
