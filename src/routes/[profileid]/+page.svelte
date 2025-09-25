@@ -213,11 +213,13 @@
         {#if post.mediaItems.length > 0}
           <!-- TODO: Replace with Post svelte component so that it accepts post variable and displays image/video/album correctly-->
           <a href="/{post.userId}/p/{post._id}">
-            <img
-              class="w-full aspect-square object-cover rounded"
-              src={post.mediaItems[0].url}
-              alt={`Post ${post._id}`}
-            />
+            {#each post.mediaItems as mediaItem, index}
+              <img
+                class="w-full aspect-square object-cover rounded"
+                src={mediaItem.url}
+                alt={`Post ${post._id}`}
+              />
+            {/each}
           </a>
         {/if}
       {/each}

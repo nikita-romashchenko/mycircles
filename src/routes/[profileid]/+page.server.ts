@@ -90,7 +90,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 //Posting form data action
 export const actions = {
   default: async ({ request, locals }) => {
-    const form = await superValidate(request, zod(uploadMediaSchema))
+    const formData = await request.formData()
+    const form = await superValidate(formData, zod(uploadMediaSchema))
     console.log("Form: ", form)
 
     if (!form.valid) {
@@ -102,7 +103,6 @@ export const actions = {
     // TODO: Do something with the validated form.data
     try {
       const session = await locals.auth()
-      const formData = await request.formData()
       const media = formData.getAll("media") as File[]
 
       if (media.length === 0) {
@@ -112,6 +112,7 @@ export const actions = {
       }
 
       const result = await processAndUploadMedia(formData)
+      console.log("Media processing result:", result)
 
       if (!result.success) {
         return new Response(
@@ -166,7 +167,7 @@ export const actions = {
         for (const file of processedMedia) {
           const mediaItem = await MediaItem.create({
             postId: postDoc._id,
-            url: processedMedia[0].fileUrl,
+            url: file.fileUrl,
             metadata: {
               originalName: file.originalName,
               fileName: file.fileName,
