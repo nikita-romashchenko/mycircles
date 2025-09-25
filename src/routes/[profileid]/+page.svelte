@@ -163,42 +163,6 @@
     <!-- Upload bttn section -->
     {#if isOwnProfile}
       <div class="mt-4 flex flex-row justify-center items-center gap-10">
-        <!-- TODO: Remove old upload functionality -->
-        <div class="flex flex-col items-center justify-center mt-4">
-          <input
-            id="file-upload"
-            type="file"
-            class="hidden"
-            onchange={handleUpload}
-          />
-          <label
-            for="file-upload"
-            class="w-10 h-10 bg-blue-500 text-white rounded-full flex items-center justify-center hover:bg-blue-600 transition-colors"
-          >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </label>
-          <!-- <label
-            for="file-upload"
-            class="cursor-pointer bg-blue-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
-          >
-            Upload File
-          </label> -->
-          {#if file}
-            <p class="mt-2 text-gray-700 text-sm">Selected: {file.name}</p>
-          {/if}
-        </div>
         <div class="flex flex-col items-center justify-center mt-4">
           <!-- svelte-ignore a11y_consider_explicit_label -->
           <button
