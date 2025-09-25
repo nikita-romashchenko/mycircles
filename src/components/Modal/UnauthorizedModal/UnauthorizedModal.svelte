@@ -1,7 +1,11 @@
 <script lang="ts">
   import Modal from "$components/Modal/Modal.svelte"
 
-  export let open = false
+  interface Props {
+    open?: boolean;
+  }
+
+  let { open = $bindable(false) }: Props = $props();
 </script>
 
 <Modal bind:open>

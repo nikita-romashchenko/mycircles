@@ -2,6 +2,7 @@ import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
+import { MediaItem } from "$lib/models/MediaItem"
 import type { Post as PostType } from "$lib/types"
 
 // Connect to MongoDB

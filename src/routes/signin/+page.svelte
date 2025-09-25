@@ -5,7 +5,11 @@
   import { page } from '$app/stores';
   import { SignIn } from "@auth/sveltekit/components"
 
-  export let data;
+  interface Props {
+    data: any;
+  }
+
+  let { data }: Props = $props();
 
   // Initialize superForm
   const { form, errors, enhance, submitting } = superForm(data.form, {
@@ -59,7 +63,9 @@
 
   <!-- OAuth buttons -->
   <SignIn provider="google">
-    <div slot="submitButton" class="buttonPrimary">Continue with Google</div>
+    {#snippet submitButton()}
+        <div  class="buttonPrimary">Continue with Google</div>
+      {/snippet}
   </SignIn>
   <SignIn provider="apple">Continue with Apple</SignIn>
 </div>

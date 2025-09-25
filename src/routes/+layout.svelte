@@ -3,12 +3,17 @@
   import Header from "$components/header.svelte";
   import Footer from "$components/footer.svelte";
   
-  export let data;
+  interface Props {
+    data: any;
+    children?: import('svelte').Snippet;
+  }
+
+  let { data, children }: Props = $props();
 </script>
 
 <div class="container">
   <Header />
-  <slot />
+  {@render children?.()}
   <Footer />
 </div>
 

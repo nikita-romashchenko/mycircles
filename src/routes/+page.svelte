@@ -4,12 +4,12 @@
   import PostCard from "$components/Post/PostCard.svelte"
   import { onMount } from "svelte"
 
-  let posts: PostType[] = $page.data.posts
+  let posts: PostType[] = $state($page.data.posts)
   const limit = 5
-  let loading = false
-  let allLoaded = false
+  let loading = $state(false)
+  let allLoaded = $state(false)
 
-  $: skip = posts.length
+  let skip = $derived(posts.length)
 
   async function loadMore() {
     if (loading) return
@@ -37,7 +37,7 @@
     }
   }
 
-  let sentinel: HTMLDivElement
+  let sentinel: HTMLDivElement = $state()
 
   onMount(() => {
     const observer = new IntersectionObserver(

@@ -4,7 +4,11 @@
   import { registrationSchema } from "$lib/validation/schemas"
   import { page } from "$app/stores"
 
-  export let data
+  interface Props {
+    data: any;
+  }
+
+  let { data }: Props = $props();
 
   const { form, errors, enhance, submitting } = superForm(data.form, {
     validators: zodClient(registrationSchema),

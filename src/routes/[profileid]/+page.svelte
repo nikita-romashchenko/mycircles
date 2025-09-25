@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { run } from 'svelte/legacy';
+
   import type {
     Post as PostType,
     Profile as ProfileType,
@@ -12,18 +14,11 @@
   import { invalidate } from "$app/navigation"
 
   let form = $page.data.form
-  let relationsModalOpen = false
-  let uploadModalOpen = false
-  let file: any
-  let contents: Relation[][] = [[], [], []]
+  let relationsModalOpen = $state(false)
+  let uploadModalOpen = $state(false)
+  let file: any = $state()
+  let contents: Relation[][] = $state([[], [], []])
 
-  $: console.log("Form:", form)
-  $: posts = $page.data.posts as PostType[]
-  $: profile = $page.data.profile as ProfileType
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
-  $: if (browser && profile?.safeAddress) {
-    fetchRelations(profile.safeAddress)
-  }
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -85,6 +80,17 @@
       console.error("Error fetching relations:", err)
     }
   }
+  run(() => {
+    console.log("Form:", form)
+  });
+  let posts = $derived($page.data.posts as PostType[])
+  let profile = $derived($page.data.profile as ProfileType)
+  let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
+  run(() => {
+    if (browser && profile?.safeAddress) {
+      fetchRelations(profile.safeAddress)
+    }
+  });
 </script>
 
 <!-- TODO: add something like a spinner if no profile or error screen -->
@@ -105,7 +111,7 @@
           <p class="text-gray-500">{$page.data.session?.user.profileId}</p>
         </div>
         <button
-          on:click={openRelationsModal}
+          onclick={openRelationsModal}
           class="flex flex-row gap-6 cursor-pointer"
         >
           <div class="flex flex-col">
@@ -136,7 +142,7 @@
           <p class="text-gray-500">{profile._id}</p>
         </div>
         <button
-          on:click={openRelationsModal}
+          onclick={openRelationsModal}
           class="flex flex-row gap-6 cursor-pointer"
         >
           <div class="flex flex-col">
@@ -164,7 +170,7 @@
             id="file-upload"
             type="file"
             class="hidden"
-            on:change={handleUpload}
+            onchange={handleUpload}
           />
           <label
             for="file-upload"
@@ -197,7 +203,7 @@
         <div class="flex flex-col items-center justify-center mt-4">
           <button
             class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-            on:click={openUploadMediaModal}
+            onclick={openUploadMediaModal}
           >
             <svg
               class="w-5 h-5"

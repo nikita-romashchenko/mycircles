@@ -1,11 +1,18 @@
 <script lang="ts">
+  import { run, createBubbler, preventDefault } from 'svelte/legacy';
+
+  const bubble = createBubbler();
   import { superForm, filesProxy } from "sveltekit-superforms"
   import Modal from "$components/Modal/Modal.svelte"
   import type { SuperValidated, Infer } from "sveltekit-superforms"
   import type { UploadMediaSchema } from "$lib/validation/schemas"
 
-  export let open = false
-  export let pageForm: SuperValidated<Infer<UploadMediaSchema>>
+  interface Props {
+    open?: boolean;
+    pageForm: SuperValidated<Infer<UploadMediaSchema>>;
+  }
+
+  let { open = $bindable(false), pageForm }: Props = $props();
 
   const { form, errors, enhance } = superForm(pageForm)
 
@@ -16,12 +23,14 @@
   const files = filesProxy(form, "media")
 
   // Reactive array of preview URLs
-  let previews: string[] = []
+  let previews: string[] = $state([])
 
   // Reactive update when files change
-  $: if ($files.length > 0) {
-    previews = Array.from($files).map((file: File) => URL.createObjectURL(file))
-  }
+  run(() => {
+    if ($files.length > 0) {
+      previews = Array.from($files).map((file: File) => URL.createObjectURL(file))
+    }
+  });
 
   function removeFile(index: number) {
     const arr = Array.from($files)
@@ -40,12 +49,12 @@
     <label for="media">Media</label>
     <!-- Drop zone container -->
     <!-- TODO: this is not good for accessibility -->
-    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
 
     <div
       class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
-      on:dragover|preventDefault
-      on:drop|preventDefault
+      ondragover={preventDefault(bubble('dragover'))}
+      ondrop={preventDefault(bubble('drop'))}
     >
       <!-- File input covers the whole div -->
       <input
@@ -61,14 +70,14 @@
         <div class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto">
           {#each previews as src, i}
             <!-- TODO: this is not good for accessibility -->
-            <!-- svelte-ignore a11y-click-events-have-key-events -->
-            <!-- svelte-ignore a11y-no-noninteractive-element-interactions -->
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
             <img
               {src}
               alt="Uploaded media"
               class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
               loading="lazy"
-              on:click={() => removeFile(i)}
+              onclick={() => removeFile(i)}
               title="Click to remove"
             />
           {/each}
