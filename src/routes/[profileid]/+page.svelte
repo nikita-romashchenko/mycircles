@@ -10,10 +10,8 @@
   import UploadMediaModal from "$components/Modal/UploadMediaModal/UploadMediaModal.svelte"
   import { browser } from "$app/environment"
   import { invalidate } from "$app/navigation"
-  import { superForm } from "sveltekit-superforms"
 
-  const { form } = superForm($page.data.form, { dataType: "json" })
-
+  let form = $page.data.form
   let relationsModalOpen = false
   let uploadModalOpen = false
   let file: any
@@ -261,5 +259,5 @@
     onLinkClick={handleLinkClick}
     {contents}
   />
-  <UploadMediaModal {form} bind:open={uploadModalOpen} />
+  <UploadMediaModal pageForm={form} bind:open={uploadModalOpen} />
 {/if}

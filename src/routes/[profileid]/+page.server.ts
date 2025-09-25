@@ -9,7 +9,7 @@ import { zod } from "sveltekit-superforms/adapters"
 import { z } from "zod"
 import { message } from "sveltekit-superforms"
 import { fail } from "@sveltejs/kit"
-import { UploadMediaSchema } from "$lib/validation/schemas"
+import { uploadMediaSchema } from "$lib/validation/schemas"
 
 // Connect to MongoDB
 await mongoose
@@ -26,7 +26,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const { profileid } = params
   const parentData = await parent()
   const session = parentData.session
-  const form = await superValidate(zod(UploadMediaSchema))
+  const form = await superValidate(zod(uploadMediaSchema))
 
   try {
     // Validate ObjectId
@@ -67,7 +67,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 //Posting form data action
 export const actions = {
   default: async ({ request }) => {
-    const form = await superValidate(request, zod(UploadMediaSchema))
+    const form = await superValidate(request, zod(uploadMediaSchema))
     console.log(form)
 
     if (!form.valid) {
