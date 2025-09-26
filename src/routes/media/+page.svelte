@@ -2,7 +2,7 @@
   import { onMount } from "svelte";
   import { page } from "$app/stores"
 
-  let files: { key: string; url: string }[] = [];
+  let files: { key: string; url: string }[] = $state([]);
 
   onMount(async () => {
     const res = await fetch("/api/files");
@@ -33,7 +33,7 @@
     signed in.
   </p>
   <p>Session expiry: {$page.data.session?.expires}</p>
-  <input type="file" on:change={handleUpload} />
+  <input type="file" onchange={handleUpload} />
   <h2>Uploaded Files</h2>
   <div class="grid">
     {#each files as file}

@@ -6,7 +6,11 @@
   import { SignIn } from "@auth/sveltekit/components"
 
 
-  export let data;
+  interface Props {
+    data: any;
+  }
+
+  let { data }: Props = $props();
 
   // Initialize superForm
   const { form, errors, enhance, submitting } = superForm(data.form, {

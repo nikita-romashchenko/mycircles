@@ -4,5 +4,16 @@ import { defineConfig } from "vite";
 
 export default defineConfig({
   server: { port: 3000 },
-  plugins: [tailwindcss(), sveltekit()]
+  plugins: [tailwindcss(), sveltekit()],
+  define: {
+    global: 'globalThis',
+  },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+    }
+  },
+  optimizeDeps: {
+    include: ['buffer']
+  }
 });

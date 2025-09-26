@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { Post } from "$lib/types"
 
-  export let post: Post
-  export let showActions: boolean = true
+  interface Props {
+    post: Post;
+    showActions?: boolean;
+  }
+
+  let { post, showActions = true }: Props = $props();
 
   let liked = false
   let reposted = false
@@ -33,7 +37,7 @@
     liked = !liked
   }
 
-  $: mainMedia = post?.mediaItems?.[0]
+  let mainMedia = $derived(post?.mediaItems?.[0])
 </script>
 
 {#if post}

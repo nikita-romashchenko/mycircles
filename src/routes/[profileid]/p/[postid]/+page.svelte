@@ -4,11 +4,11 @@
   import type { Post as PostType } from "$lib/types"
   import type { Profile as ProfileType } from "$lib/types"
 
-  let liked = $page.data.isLiked as boolean
+  let liked = $state($page.data.isLiked as boolean)
 
-  $: post = $page.data.post as PostType
-  $: profile = $page.data.profile as ProfileType
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
+  let post = $derived($page.data.post as PostType)
+  let profile = $derived($page.data.profile as ProfileType)
+  let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
 
   async function handleLike() {
     if (!liked) {
@@ -77,8 +77,8 @@
       {/if}
     {:else if post.type === "video"}
       {#if post.mediaItems.length > 0}
-        <!-- svelte-ignore a11y-media-has-caption -->
-        <video src={post.mediaItems[0].url} controls class="w-full" />
+        <!-- svelte-ignore a11y_media_has_caption -->
+        <video src={post.mediaItems[0].url} controls class="w-full"></video>
       {/if}
     {:else if post.type === "album"}
       <div class="grid grid-cols-2 gap-2 p-2">
@@ -103,14 +103,14 @@
     >
       {#if liked}
         <button
-          on:click={handleLike}
+          onclick={handleLike}
           class="flex items-center gap-1 rounded-md bg-red-500 text-white hover:bg-red-400 px-3 py-1 cursor-pointer"
         >
           Liked
         </button>
       {:else}
         <button
-          on:click={handleLike}
+          onclick={handleLike}
           class="flex items-center gap-1 rounded-md border-2 border-red-500 text-red-500 hover:border-red-400 hover:text-red-400 px-3 py-1 cursor-pointer"
         >
           Like

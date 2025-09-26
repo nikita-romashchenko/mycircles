@@ -1,5 +1,10 @@
 <script lang="ts">
-  export let open = false
+  interface Props {
+    open?: boolean;
+    children?: import('svelte').Snippet;
+  }
+
+  let { open = $bindable(false), children }: Props = $props();
 
   const close = () => {
     open = false
@@ -17,12 +22,12 @@
         type="button"
         class="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
         aria-label="Close modal"
-        on:click={close}
+        onclick={close}
       >
         ✕
       </button>
 
-      <slot />
+      {@render children?.()}
     </div>
   </div>
 {/if}

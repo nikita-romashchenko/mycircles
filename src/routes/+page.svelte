@@ -4,11 +4,12 @@
   import PostCard from "$components/Post/PostCard.svelte"
   import { onMount } from "svelte"
 
-  let posts: PostType[] = $page.data.posts
+  let posts: PostType[] = []
   const limit = 5
   let loading = false
   let allLoaded = false
 
+  $: posts = $page.data.posts
   $: skip = posts.length
 
   async function loadMore() {

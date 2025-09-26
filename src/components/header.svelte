@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores"
+  import { page } from "$app/state"
   import { SignIn, SignOut } from "@auth/sveltekit/components"
 </script>
 
@@ -8,21 +8,25 @@
     <div class="nojs-show loaded">
       <img
         alt="User avatar"
-        src={$page.data?.session?.user?.image ??
+        src={page.data?.session?.user?.image ??
           `https://api.dicebear.com/9.x/thumbs/svg?seed=${Math.floor(Math.random() * 100000) + 1}&randomizeIds=true`}
         class="avatar"
       />
-      {#if $page.data.session}
+      {#if page.data.session}
         <span class="signedInText">
-          {$page.data.session.user?.email ?? $page.data.session.user?.name}
+          {page.data.session.user?.email ?? page.data.session.user?.name}
         </span>
         <SignOut>
-          <div slot="submitButton" class="buttonPrimary">Sign out</div>
+          {#snippet submitButton()}
+                    <div  class="buttonPrimary">Sign out</div>
+                  {/snippet}
         </SignOut>
       {:else}
         <span class="notSignedInText">You are not signed in</span>
         <SignIn>
-          <div slot="submitButton" class="buttonPrimary">Sign in</div>
+          {#snippet submitButton()}
+                    <div  class="buttonPrimary">Sign in</div>
+                  {/snippet}
         </SignIn>
       {/if}
     </div>
@@ -33,7 +37,7 @@
       <li class="navItem"><a href="/protected">Protected</a></li>
       <li class="navItem"><a href="/media">Media</a></li>
       <li class="navItem">
-        <a href={`/${$page.data.session?.user.profileId}`}>Profile</a>
+        <a href={`/${page.data.session?.user.profileId}`}>Profile</a>
       </li>
     </ul>
   </nav>

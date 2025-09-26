@@ -3,11 +3,15 @@
   import Tabs from "$components/Tabs/Tabs.svelte"
   import type { Relation } from "$lib/types"
 
-  export let open = false
-  export let onLinkClick: () => void
 
   // export let safeAddress = ""
-  export let contents: Relation[][] = [[], [], []] // mutuals, trusted by, trusts
+  interface Props {
+    open?: boolean;
+    onLinkClick: () => void;
+    contents?: Relation[][];
+  }
+
+  let { open = $bindable(false), onLinkClick, contents = [[], [], []] }: Props = $props();
 
   // $: if (open) {
   //   fetchRelations()
