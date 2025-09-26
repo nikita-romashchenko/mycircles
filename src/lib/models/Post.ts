@@ -17,6 +17,7 @@ const PostSchema = new mongoose.Schema({
   },
   likesCount: { type: Number, default: 0 },
   repostsCount: { type: Number, default: 0 },
+  location: { type: Object },
 })
 
 export const Post = mongoose.models.Post || mongoose.model("Post", PostSchema)

@@ -33,3 +33,24 @@ export interface Post {
   likesCount: number
   repostsCount: number
 }
+
+export interface RelationProfile {
+  safeAddress: string
+  username: string
+  profileId: string
+}
+
+export interface RelationItem {
+  subjectAvatar: string
+  relation: string
+  objectAvatar: string
+  timestamp: number
+  versions: number[]
+  versionSpecificRelations: Record<string, string>
+}
+
+// add profile picture link later
+export interface Relation {
+  relationItem: RelationItem
+  profile?: RelationProfile
+}
