@@ -4,20 +4,14 @@
   import Footer from "$components/footer.svelte";
   import AuthDataManager from "$lib/components/AuthDataManager.svelte";
 
-  interface Props {
-    data: any;
-    children?: import('svelte').Snippet;
-  }
-
-  let { data, children }: Props = $props();
-
+  export let data: any;
 </script>
 
 <AuthDataManager />
 
 <div class="container">
   <Header />
-  {@render children?.()}
+  <slot />
   <Footer />
 </div>
 

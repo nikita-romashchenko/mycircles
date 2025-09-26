@@ -58,10 +58,10 @@
         });
       }
     }
+  }
 
-    if (browser && !session?.user) {
-      clearAuthData();
-    }
+  $: if (browser && !session?.user) {
+    clearAuthData();
   }
 </script>
 

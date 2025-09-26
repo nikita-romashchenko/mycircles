@@ -12,11 +12,7 @@
     SAFES: '/api/safes'
   };
 
-  interface Props {
-    data: any;
-  }
-
-  let { data }: Props = $props();
+  export let data: any;
 
   type AuthMethod = 'private-key' | 'metamask';
 
@@ -294,7 +290,7 @@
           <span>or</span>
         </div>
 
-        <button class="safe-key-button" on:click={handleSafeLogin}>
+        <button class="safe-key-button" onclick={handleSafeLogin}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
             <circle cx="12" cy="16" r="1"/>
@@ -303,7 +299,7 @@
           Sign in with Safe Private Key
         </button>
 
-        <button class="metamask-button" on:click={handleMetaMaskLogin}>
+        <button class="metamask-button" onclick={handleMetaMaskLogin}>
           <svg width="18" height="18" viewBox="0 0 318 318" fill="currentColor">
             <path d="M272.99 44.91L234.48 16.14c-6.37-4.77-15.45-3.43-20.22 2.94L185.47 56.2c-2.99 4-2.24 9.68 1.64 12.75l24.83 19.68c3.88 3.07 9.42 2.4 12.49-1.49l28.79-36.47c4.77-6.37 13.85-7.71 20.22-2.94l29.75 22.27c6.37 4.77 7.71 13.85 2.94 20.22l-36.47 48.62c-2.99 3.99-2.24 9.68 1.64 12.75l30.15 23.88c3.88 3.07 9.42 2.4 12.49-1.49l39.51-49.89c4.77-6.37 13.85-7.71 20.22-2.94l38.51 28.79c6.37 4.77 7.71 13.85 2.94 20.22L272.99 44.91z"/>
           </svg>
@@ -312,7 +308,7 @@
       </div>
     {:else}
       <div class="safe-form">
-        <button class="back-button" on:click={resetForm}>
+        <button class="back-button" onclick={resetForm}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="m12 19-7-7 7-7"/>
             <path d="M19 12H5"/>
@@ -326,7 +322,7 @@
               <label class="form-label">Connected Wallet</label>
               <div class="wallet-address">{walletAddress}</div>
               <div class="method-switcher">
-                <button class="switch-method-button" on:click={() => switchAuthMethod('private-key')}>
+                <button class="switch-method-button" onclick={() => switchAuthMethod('private-key')}>
                   Use Private Key Instead
                 </button>
               </div>
@@ -343,13 +339,13 @@
               class="form-input"
             />
             <div class="method-switcher">
-              <button class="switch-method-button" on:click={() => switchAuthMethod('metamask')}>
+              <button class="switch-method-button" onclick={() => switchAuthMethod('metamask')}>
                 Use MetaMask Instead
               </button>
             </div>
             <button
               class="load-safes-button"
-              on:click={loadSafes}
+              onclick={loadSafes}
               disabled={loading || !privateKey.trim()}
             >
               {loading ? 'Loading...' : 'Load Available Safes'}
@@ -376,7 +372,7 @@
             {#if selectedSafe}
               <button
                 class="signin-button"
-                on:click={signChallengeAndAuthenticate}
+                onclick={signChallengeAndAuthenticate}
                 disabled={loading || !selectedSafe || (authMethod === 'private-key' && !privateKey) || (authMethod === 'metamask' && !walletAddress)}
               >
                 {loading ? 'Authenticating...' : 'Sign in with Safe'}

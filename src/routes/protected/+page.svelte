@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { page } from "$app/stores"
-  export let data;
+  export let data: any;
 </script>
 
 <h1>Protected Page</h1>
