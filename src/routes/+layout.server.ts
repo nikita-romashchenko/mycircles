@@ -26,6 +26,7 @@ export const load: LayoutServerLoad = async (event) => {
       !pathname.startsWith("/signout") &&
       !pathname.startsWith("/api/auth")
     ) {
+      //@todo improve the redirect logic
     }
   }
 

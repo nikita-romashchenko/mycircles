@@ -115,9 +115,7 @@ export class Auth {
         email: googleEmail,
         $and: [
           { safeAddress: { $exists: true, $ne: null } },
-          { safeAddress: { $ne: '0x' } },
-          { privateKey: { $exists: true, $ne: null } },
-          { privateKey: { $ne: '' } }
+          { safeAddress: { $ne: '0x' } }
         ]
       });
 
