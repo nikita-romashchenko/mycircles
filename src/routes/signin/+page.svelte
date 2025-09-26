@@ -8,8 +8,8 @@
   import { storeAuthData } from '$lib/utils/authStorage';
 
   const API_ENDPOINTS = {
-    SAFES: '/api/safes',
-    CHALLENGE: '/api/auth/challenge'
+    CHALLENGE: '/api/auth/challenge',
+    SAFES: '/api/safes'
   };
 
   type AuthMethod = 'private-key' | 'metamask';
@@ -51,22 +51,21 @@
     error = '';
 
     try {
-      const body = authMethod === 'private-key'
-        ? { action: 'getSafesForOwner', privateKey: privateKey.trim() }
-        : { action: 'getSafesForOwner', ownerAddress: targetWalletAddress };
-
       const response = await fetch(API_ENDPOINTS.SAFES, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          action: 'getSafesForOwner',
+          ownerAddress: targetWalletAddress
+        })
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to load safes');
+        throw new Error(data.error || 'Failed to fetch safes');
       }
 
       safes = data.safes || [];
@@ -207,13 +206,13 @@
       const signedSafeMessage = await protocolKit.signMessage(safeMessage);
       signature = signedSafeMessage.encodedSignatures();
 
-
       // Step 2: Authenticate with the signed challenge
       const result = await signIn('credentials', {
         message: challenge.message,
         signature: signature,
         walletOwner: walletOwner,
         safeAddress: selectedSafe.toLowerCase(),
+        authMethod: authMethod,
         redirect: false,
       });
 
@@ -319,7 +318,7 @@
           Back to login options
         </button>
 
-{#if authMethod === 'metamask'}
+    {#if authMethod === 'metamask'}
           <div class="form-section">
             <div class="connected-wallet">
               <label class="form-label">Connected Wallet</label>

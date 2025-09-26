@@ -10,13 +10,9 @@ export const load: PageServerLoad = async ({ locals }) => {
     throw redirect(302, '/signin');
   }
 
-  // Determine auth method based on session data
-  const authMethod = session.user?.safeAddress ? 'safe' : 'oauth';
-
   // Return authentication status and user data
   return {
     authenticated: true,
-    authMethod,
     user: session.user,
     session: session
   };

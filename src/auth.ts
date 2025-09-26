@@ -7,9 +7,8 @@ import { env } from "$env/dynamic/private"
 import type { DefaultSession } from "@auth/core/types"
 
 import mongoose from 'mongoose'
-import Safe from '@safe-global/protocol-kit'
 import { Profile } from '$lib/models/Profile';
-import { authService } from '$lib/auth/AuthService';
+import { authService } from '$lib/services/AuthService';
 
 declare module "@auth/sveltekit" {
   interface Session {
@@ -18,7 +17,6 @@ declare module "@auth/sveltekit" {
       safeAddress?: string;
       username?: string;
       controllingEOA?: string;
-      privateKey?: string;
       sessionType?: 'oauth2' | 'metamask' | 'privatekey';
     } & DefaultSession["user"]
   }
@@ -30,7 +28,6 @@ declare module "@auth/core/jwt" {
     safeAddress?: string;
     username?: string;
     controllingEOA?: string;
-    authProvider?: string;
   }
 }
 
@@ -42,7 +39,9 @@ mongoose.connect(env.MONGODB_URI || 'mongodb://localhost:27017/mycircles')
 console.log('Initializing SvelteKitAuth with providers...');
 
 export const { handle, signIn, signOut } = SvelteKitAuth({
-  debug: true,
+  session: {
+    strategy: "jwt"
+  },
   trustHost: true,
   providers: [
     Google({clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET}),
@@ -52,7 +51,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         message: { },
         signature: { },
         walletOwner: { },
-        safeAddress: { }
+        safeAddress: { },
+        authMethod: {}
       },
       authorize: async (credentials) => {
         try {
@@ -68,11 +68,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           const walletOwner = credentials.walletOwner as string;
           const safeAddress = credentials.safeAddress as string;
 
-          console.log('Authenticating with Safe credentials:', {
-            safeAddress,
-            walletOwner: walletOwner.slice(0, 8) + '...'
-          });
-
           const result = await authService.authenticateWithCredentials(
             message,
             signature,
@@ -83,17 +78,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
           console.log('Authentication result:', result);
 
           if (result.success && result.user) {
-            // Get the private key from the profile for the session
-            let privateKey = null;
-            try {
-              const profile = await Profile.findOne({ safeAddress: result.user.safeAddress });
-              if (profile && profile.privateKey) {
-                privateKey = profile.privateKey;
-              }
-            } catch (error) {
-              console.error('Error fetching private key for session:', error);
-            }
-
             const userObj = {
               id: result.user.safeAddress,
               email: result.user.email,
@@ -102,7 +86,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
               profileId: result.user.profileId,
               safeAddress: result.user.safeAddress,
               username: result.user.username,
-              controllingEOA: result.user.controllingEOA
+              controllingEOA: result.user.controllingEOA,
+              authMethod: credentials?.authMethod
             };
             console.log('Returning user object:', userObj);
             return userObj;
@@ -123,7 +108,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
   },
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log("-------- we are here ---------")
       try {
         // For Google OAuth, check if this is a Safe wallet user
         if (account?.provider === 'google' && user.email) {
@@ -138,7 +122,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
             user.profileId = safeUserInfo.profile._id.toString();
             user.username = safeUserInfo.profile.username;
             user.name = safeUserInfo.profile.name;
-            user.privateKey = safeUserInfo.privateKey;
 
             console.log("Google user with Safe - client needs to complete signature flow");
             return true;
@@ -167,9 +150,6 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
       }
     },
     async jwt({ token, user, trigger, account }) {
-      // This runs whenever a JWT is created, updated, or accessed
-      console.log("JWT callback - userdata:", user, "trigger:", trigger, "account:", account)
-
       // Track the authentication provider
       if (account) {
         token.authProvider = account.provider;
@@ -182,31 +162,8 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         token.username = (user as any).username
         token.controllingEOA = (user as any).controllingEOA
         token.email = user.email
-        token.privateKey = (user as any).privateKey
-        console.log("JWT updated with Safe wallet data:", {
-          safeAddress: token.safeAddress,
-          username: token.username,
-          controllingEOA: token.controllingEOA,
-          hasPrivateKey: !!token.privateKey,
-          authProvider: token.authProvider
-        })
+
         return token
-      }
-
-      // Always refresh profile data from database to get latest username for OAuth
-      if (token.email) {
-        try {
-          const existingProfile = await Profile.findOne({ email: token.email })
-
-          if (existingProfile) {
-            token.profileId = existingProfile._id.toString()
-            token.safeAddress = existingProfile.safeAddress
-            token.username = existingProfile.username
-            console.log("JWT updated with profile data:", { username: token.username })
-          }
-        } catch (error) {
-          console.error('Error fetching profile in jwt callback:', error)
-        }
       }
 
       // Set email on first sign in
@@ -225,10 +182,14 @@ export const { handle, signIn, signOut } = SvelteKitAuth({
         session.user.email = token.email || session.user.email
         session.user.username = token.username
         session.user.controllingEOA = token.controllingEOA
-        session.user.privateKey = token.privateKey
         // Add session type information for client-side storage
-        if (token.privateKey && token.authProvider == 'google') {
-          session.user.sessionType = 'oauth2'; // Google OAuth with private key
+        if (token.authProvider == 'google') {
+          session.user.sessionType = 'oauth2';
+        } else if (
+          token.authProvider == 'credentials' &&
+          (token.authMethod == 'privatekey' || token.authMethod == 'metamask')
+        ) {
+          session.user.sessionType = token.authMethod;
         }
       }
       console.log('Session with custom data:', session)

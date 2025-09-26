@@ -74,19 +74,6 @@ export function clearAuthData(): void {
 }
 
 /**
- * Update session type only
- */
-export function updateSessionType(sessionType: AuthSessionType): void {
-  const existing = getAuthData();
-  if (existing) {
-    storeAuthData({
-      ...existing,
-      sessionType
-    });
-  }
-}
-
-/**
  * Check if user has stored auth data
  */
 export function hasStoredAuthData(): boolean {

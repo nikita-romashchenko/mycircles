@@ -7,7 +7,7 @@
 
 {#if data.authenticated}
   <div class="protected-content">
-    <p>🎉 Welcome! You are successfully authenticated via <strong>{data.authMethod}</strong>.</p>
+    <p>🎉 Welcome! You are successfully authenticated via <strong>{data.user.sessionType}</strong>.</p>
 
     <div class="user-info">
       <h2>User Information</h2>
