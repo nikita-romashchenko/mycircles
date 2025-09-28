@@ -41,9 +41,16 @@ interface ProcessedMedia {
   mimeType: string
 }
 
+interface UploadParams {
+  Bucket: string
+  Key: string
+  Body: Buffer<ArrayBufferLike>
+  ContentType: string
+}
+
 const s3 = new S3Client({
   endpoint: env.MINIO_ENDPOINT,
-  region: env.AWS_REGION,
+  region: "auto",
   forcePathStyle: true, // required for MinIO
   credentials: {
     accessKeyId: env.MINIO_ACCESS_KEY_ID,
@@ -51,7 +58,25 @@ const s3 = new S3Client({
   },
 })
 
-//  form: SuperValidated<Infer<typeof uploadMediaSchema>>,
+const isImage = (file: File) =>
+  file.type.startsWith("image/") ||
+  file.type === "application/octet-stream" ||
+  file.name.toLowerCase().endsWith(".heic") ||
+  file.name.toLowerCase().endsWith(".heif")
+
+const isVideo = (file: File) => file.type.startsWith("video/")
+
+const getMediaType = (files: File[]): "image" | "video" | "album" => {
+  if (files.length === 0) throw new ProcessMediaError("No files provided")
+  if (files.length > 1) return "album"
+
+  const file = files[0]
+  if (isImage(file)) return "image"
+  if (isVideo(file)) return "video"
+
+  throw new ProcessMediaError(`Unsupported file type: ${file.name}`)
+}
+
 const processImage = async (image: File) => {
   const ext = image.name.split(".").pop()?.toLowerCase()
   const fileName = `${randomUUID()}.jpeg`
@@ -109,38 +134,16 @@ export const processAndUploadMedia = async (formData: FormData) => {
   try {
     const media = formData.getAll("media") as File[]
     const bucket = env.MINIO_BUCKET || "uploads"
+    const type: "image" | "video" | "album" = getMediaType(media)
 
-    let processedMedia: ProcessedMedia[] = []
-    let type: "image" | "video" | "album" = "image"
-    if (media.length > 1) {
-      type = "album"
-      for (const file of media) {
-        if (file.type.startsWith("image/")) {
-          const result = await processImage(file)
-          const uploadParams = {
-            Bucket: bucket,
-            Key: result.fileName,
-            Body: result.processedBuffer,
-            ContentType: result.contentType,
-          }
+    console.log(
+      `MEDIA: length ${media.length} | media[0] type: ${media[0].type}`,
+    )
 
-          // Upload to MinIO
-          await s3.send(new PutObjectCommand(uploadParams))
-          const fileUrl = `${env.MINIO_ENDPOINT}/${bucket}/${result.fileName}`
+    const uploadPromises = media.map(async (file) => {
+      if (isImage(file)) {
+        const result = await processImage(file)
 
-          processedMedia.push({ ...result, fileUrl })
-        } else if (file.type.startsWith("video/")) {
-          // TODO: handle video processing
-          type = "video"
-          throw new ProcessMediaError("Video albums are not supported yet.")
-        }
-      }
-    }
-
-    if (media.length === 1) {
-      if (media[0].type.startsWith("image/")) {
-        type = "image"
-        const result = await processImage(media[0])
         const uploadParams = {
           Bucket: bucket,
           Key: result.fileName,
@@ -148,28 +151,28 @@ export const processAndUploadMedia = async (formData: FormData) => {
           ContentType: result.contentType,
         }
 
-        // Upload to MinIO
         await s3.send(new PutObjectCommand(uploadParams))
-        const fileUrl = `${env.MINIO_ENDPOINT}/${bucket}/${result.fileName}`
-
-        processedMedia.push({ ...result, fileUrl })
-      } else if (media[0].type.startsWith("video/")) {
-        // TODO: handle video processing
-        type = "video"
-        throw new ProcessMediaError("Video albums are not supported yet.")
+        const fileUrl = `${env.MINIO_PUBLIC_ENDPOINT}/${result.fileName}`
+        return { ...result, fileUrl }
+      } else if (isVideo(file)) {
+        throw new ProcessMediaError("Video files are not supported yet.")
       } else {
-        throw new Error(`Unsupported file type: ${media[0].name}`)
+        throw new Error(`Unsupported file type: ${file.name}`)
       }
-    }
+    })
+
+    const processedMedia = await Promise.all(uploadPromises)
 
     return { success: true, type, processedMedia }
   } catch (err) {
-    // If it’s not already a ProcessMediaError, wrap it
-    if (!(err instanceof ProcessMediaError)) {
-      throw new ProcessMediaError(
-        err instanceof Error ? err.message : String(err),
-      )
+    if (err instanceof Error) {
+      console.error("Raw media processing error:", err.message)
+      console.error(err.stack)
+      throw new ProcessMediaError(err.message)
+    } else {
+      // Unknown type, just convert to string
+      console.error("Raw media processing error (unknown type):", err)
+      throw new ProcessMediaError(String(err))
     }
-    throw err
   }
 }

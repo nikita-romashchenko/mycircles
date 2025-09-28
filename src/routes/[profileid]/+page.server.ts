@@ -12,13 +12,6 @@ import { z } from "zod"
 import { message } from "sveltekit-superforms"
 import { fail } from "@sveltejs/kit"
 import { uploadMediaSchema } from "$lib/validation/schemas"
-import sizeOf from "image-size"
-import exifr from "exifr"
-import sharp from "sharp"
-// TODO remove temporary HEIC/HEIF support later
-// @ts-ignore
-import heicConvert from "heic-convert"
-import { randomUUID } from "crypto"
 import {
   processAndUploadMedia,
   ProcessMediaError,
@@ -32,7 +25,7 @@ await mongoose
 
 const s3 = new S3Client({
   endpoint: env.MINIO_ENDPOINT,
-  region: env.AWS_REGION,
+  region: "auto",
   forcePathStyle: true, // required for MinIO
   credentials: {
     accessKeyId: env.MINIO_ACCESS_KEY_ID,
@@ -63,8 +56,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       return { posts: [], error: "Profile not found" }
     }
 
-    console.log(`ExpectedProfile: ${profile}`)
-
     // Fetch posts
     const posts = await Post.find({ userId: profile._id })
       .sort({ createdAt: -1 }) // newest first
@@ -72,8 +63,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         path: "mediaItems",
         select: "url", // only get URLs, exclude metadata
       })
-
-    console.log(`ExpectedPosts: ${posts}`)
 
     return {
       posts: JSON.parse(JSON.stringify(posts)) as PostType[],
@@ -142,28 +131,9 @@ export const actions = {
 
       const bucket = env.MINIO_BUCKET || "uploads"
       // Save MediaItem
-      if (type === "image") {
-        const file = processedMedia[0]
-        const mediaItem = await MediaItem.create({
-          postId: postDoc._id,
-          url: processedMedia[0].fileUrl,
-          metadata: {
-            originalName: file.originalName,
-            fileName: file.fileName,
-            size: file.buffer.length,
-            mimeType: file.mimeType,
-            bucket,
-            key: file.fileName,
-            width: file.width,
-            height: file.height,
-            exif: file.exifData,
-          },
-        })
-
-        // Link MediaItem to Post
-        postDoc.mediaItems.push(mediaItem._id)
-        await postDoc.save()
-      } else if (type === "album") {
+      // TODO: Handle videos
+      // TODO: optimize with all-or-nothing MongoDB transaction and promise.all for media uploads
+      if (type === "album" || type === "image") {
         for (const file of processedMedia) {
           const mediaItem = await MediaItem.create({
             postId: postDoc._id,
@@ -188,15 +158,17 @@ export const actions = {
       } else if (type === "video") {
         throw new Error("Video posts are not supported yet.")
       }
+      console.log("Post created with ID:", postDoc._id)
 
       return message(form, "Form posted successfully!")
     } catch (err: any) {
-      console.error("Upload error:", err)
       if (err instanceof ProcessMediaError) {
         return fail(400, { form, error: err.message })
       }
-      return message(form, "Upload failed. Please try again later.", {
-        status: 500,
+
+      return fail(500, {
+        form,
+        error: "Upload failed. Please try again later.",
       })
     }
   },
