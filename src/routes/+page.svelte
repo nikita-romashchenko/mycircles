@@ -3,6 +3,11 @@
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
   import { onMount } from "svelte"
+  // import { myRelationData } from "$lib/stores/globalState"
+
+  // // myRelationData.subscribe((value) => {
+  // //   console.log("myRelationData changed:", value)
+  // // })
 
   let posts: PostType[] = []
   const limit = 5

@@ -5,6 +5,7 @@ import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
 import type { Post as PostType } from "$lib/types"
 import { Interaction } from "$lib/models/Interaction"
+import { getFilteredRelationsWithProfiles } from "$lib/server/relations"
 
 // Connect to MongoDB
 await mongoose
@@ -19,6 +20,13 @@ export const load: PageServerLoad = async ({ parent }) => {
     const session = parentData.session
     const limit = Number(5)
     const skip = Number(0)
+
+    if (!session?.user || !session.user.safeAddress) {
+    }
+
+    // const relationsWithProfiles = await getFilteredRelationsWithProfiles(
+    //   session?.user.safeAddress,
+    // )
 
     const posts = await Post.find()
       .sort({ createdAt: -1 })
