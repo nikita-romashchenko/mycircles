@@ -64,29 +64,6 @@
   <div class="space-y-8">
     {#each posts as post}
       <PostCard {post} />
-      <!-- <div class="rounded-lg p-4 shadow-md">
-        <div class="mb-2 text-gray-600 text-sm">
-          <a href={`/${post.userId}`} class="text-blue-600"
-            >User ID: {post.userId}</a
-          >
-          &middot;
-          <span>Created: {formatDate(post.createdAt)}</span>
-        </div>
-
-        <div class="mb-4 space-y-2">
-          {#each post.mediaItems as media}
-            <img
-              src={media.url}
-              alt="Post media"
-              class="w-full max-h-96 object-cover rounded-md"
-            />
-          {/each}
-        </div>
-
-        {#if post.caption}
-          <p class="text-gray-800">{post.caption}</p>
-        {/if}
-      </div> -->
     {/each}
   </div>
   <div bind:this={sentinel} class="h-8"></div>
@@ -99,9 +76,3 @@
     <p class="text-center mt-4 text-gray-500">No more posts</p>
   {/if}
 </main>
-
-<!-- <style>
-  main {
-    flex: 1;
-  }
-</style> -->

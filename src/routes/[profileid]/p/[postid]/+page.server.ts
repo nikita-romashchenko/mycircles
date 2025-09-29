@@ -53,10 +53,12 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
     console.log(`ExpectedPost: ${post}`)
 
     return {
-      post: JSON.parse(JSON.stringify(post)) as PostType,
+      post: {
+        ...JSON.parse(JSON.stringify(post)),
+        isLiked: !!interaction,
+      } as PostType,
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
       isOwnProfile: session?.user?.profileId === profileid,
-      isLiked: !!interaction,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)

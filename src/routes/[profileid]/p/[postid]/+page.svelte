@@ -4,7 +4,7 @@
   import type { Post as PostType } from "$lib/types"
   import type { Profile as ProfileType } from "$lib/types"
 
-  let liked = $state($page.data.isLiked as boolean)
+  let liked = $state($page.data.post.isLiked)
 
   let post = $derived($page.data.post as PostType)
   let profile = $derived($page.data.profile as ProfileType)

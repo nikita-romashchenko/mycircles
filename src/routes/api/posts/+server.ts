@@ -4,6 +4,7 @@ import { Post } from "$lib/models/Post"
 import type { Post as PostType } from "$lib/types"
 import type { RequestEvent } from "./$types"
 import { json } from "@sveltejs/kit"
+import { Interaction } from "$lib/models/Interaction"
 
 // Connect to MongoDB
 await mongoose
@@ -15,6 +16,7 @@ export async function GET({ request, params, locals }: RequestEvent) {
   const url = new URL(request.url)
   const skip = Number(url.searchParams.get("skip")) || 0
   const limit = Number(url.searchParams.get("limit")) || 5
+  const session = await locals.auth()
 
   try {
     const posts = await Post.find()
@@ -25,12 +27,37 @@ export async function GET({ request, params, locals }: RequestEvent) {
         path: "mediaItems",
         select: "url",
       })
+      .populate({
+        path: "userId",
+        select: "name username",
+      })
 
     console.log("Fetched posts:", posts.length)
 
+    // collect all post IDs
+    const postIds = posts.map((p) => p._id)
+
+    // fetch all likes by this user for these posts
+    const interactions = session?.user
+      ? await Interaction.find({
+          userId: session.user.profileId,
+          postId: { $in: postIds },
+          type: "like",
+        }).lean()
+      : []
+
+    // make a Set for quick lookup
+    const likedPostIds = new Set(interactions.map((i) => i.postId.toString()))
+
+    // add `liked` property to each post
+    const postsWithLikes = posts.map((p) => ({
+      ...p.toObject(),
+      isLiked: likedPostIds.has(p._id.toString()),
+    }))
+
     return json(
       {
-        posts: JSON.parse(JSON.stringify(posts)) as PostType[],
+        posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
         skip,
         limit,
       },

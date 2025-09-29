@@ -22,9 +22,15 @@ interface MediaItem {
   url: string
 }
 
+interface PostProfile {
+  _id: string
+  name: string
+  username: string
+}
+
 export interface Post {
   _id: string
-  userId: string
+  userId: PostProfile
   type: "image" | "video" | "album"
   caption: string
   createdAt: string
@@ -32,6 +38,7 @@ export interface Post {
   visibility: "public" | "private" | "friends"
   likesCount: number
   repostsCount: number
+  isLiked: boolean
 }
 
 export interface RelationProfile {
