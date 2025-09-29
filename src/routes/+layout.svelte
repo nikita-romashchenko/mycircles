@@ -1,10 +1,17 @@
 <script lang="ts">
-  import "../app.css";
-  import Header from "$components/header.svelte";
-  import Footer from "$components/footer.svelte";
-  import AuthDataManager from "$lib/components/AuthDataManager.svelte";
+  import "../app.css"
+  import Header from "$components/header.svelte"
+  import Footer from "$components/footer.svelte"
+  import AuthDataManager from "$lib/components/AuthDataManager.svelte"
+  import { onMount } from "svelte"
+  import { myRelationData } from "$lib/stores/globalState"
 
-  export let data: any;
+  export let data: any
+
+  onMount(() => {
+    // Set the store with the fetched data
+    myRelationData.set(data.relationsWithProfiles)
+  })
 </script>
 
 <AuthDataManager />

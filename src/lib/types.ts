@@ -1,3 +1,5 @@
+import type { TrustRelationRow } from "@circles-sdk/sdk"
+
 export interface ProfileLink {
   name: string
   icon: string
@@ -22,15 +24,13 @@ interface MediaItem {
   url: string
 }
 
-interface PostProfile {
-  _id: string
-  name: string
-  username: string
-}
-
 export interface Post {
   _id: string
-  userId: PostProfile
+  userId: {
+    _id: string
+    name: string
+    username: string
+  }
   type: "image" | "video" | "album"
   caption: string
   createdAt: string
@@ -58,6 +58,6 @@ export interface RelationItem {
 
 // add profile picture link later
 export interface Relation {
-  relationItem: RelationItem
+  relationItem: TrustRelationRow
   profile?: RelationProfile
 }

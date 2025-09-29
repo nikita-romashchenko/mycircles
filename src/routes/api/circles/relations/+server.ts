@@ -8,6 +8,8 @@ import { env } from "$env/dynamic/private"
 import { CirclesData, CirclesRpc } from "@circles-sdk/data"
 import { Profiles } from "@circles-sdk/profiles"
 import { Profile } from "$lib/models/Profile"
+import { getFilteredRelationsWithProfiles } from "$lib/server/relations"
+import type { Relation } from "$lib/types"
 
 interface ProfileDoc {
   _id: ObjectId
@@ -36,40 +38,9 @@ export async function GET({ request, params, locals }: RequestEvent) {
   }
 
   try {
-    // Get aggregated relations
-    const relations = await circlesData.getAggregatedTrustRelations(
-      address.toLowerCase() as `0x${string}`,
-      2,
-    )
-
-    // Extract objectAvatars
-    const objectAvatars = relations.map((item) =>
-      item.objectAvatar.toLowerCase(),
-    )
-    const profiles = await Profile.find(
-      { safeAddress: { $in: objectAvatars } },
-      { safeAddress: 1, username: 1, _id: 1 },
-    ).lean<ProfileDoc[]>()
-
-    const mappedProfiles = profiles.map((p) => ({
-      safeAddress: p.safeAddress,
-      username: p.username,
-      profileId: p._id.toString(),
-    }))
-
-    // Build lookup map
-    const profileMap = Object.fromEntries(
-      mappedProfiles.map((p) => [p.safeAddress, p]),
-    )
-
-    // Attach profile to relations and filter out missing profiles
-    const relationsWithProfiles = relations.map((item) => ({
-      relationItem: item,
-      profile: profileMap[item.objectAvatar.toLowerCase()],
-    }))
-    // .filter((item) => item.profile) // remove relations with no profile
-
-    return json(relationsWithProfiles, { status: 200 })
+    const relationsWithProfiles =
+      await getFilteredRelationsWithProfiles(address)
+    return json(relationsWithProfiles as Relation[], { status: 200 })
   } catch (err: any) {
     return json({ error: err.message }, { status: 400 })
   }
