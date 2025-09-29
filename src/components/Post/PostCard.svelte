@@ -84,16 +84,21 @@
         </Carousel.Root>
       {/if}
     </Card.Content>
-    <Card.Header class="flex flex-row">
-      <img
-        src={"https://picsum.photos/200"}
-        alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
-        class="w-12 h-12 rounded-full object-cover"
-      />
-      <div class="flex flex-col">
-        <Card.Title>{post.userId?.name}</Card.Title>
-        <Card.Description>@{post.userId?.username}</Card.Description>
-      </div>
+    <Card.Header class="flex flex-col gap-2">
+      <a href="/{post.userId?._id}" class="flex flex-row items-center gap-2">
+        <img
+          src={"https://picsum.photos/200"}
+          alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
+          class="w-12 h-12 rounded-full object-cover"
+        />
+        <div class="flex flex-col">
+          <Card.Title>{post.userId?.name}</Card.Title>
+          <Card.Description>@{post.userId?.username}</Card.Description>
+        </div>
+      </a>
+      {#if post.caption}
+        <p>{post.caption}</p>
+      {/if}
     </Card.Header>
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
