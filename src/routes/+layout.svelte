@@ -33,56 +33,39 @@
   //     )
   //   }, 10000)
 
-  onMount(() => {
-    // set data
-    console.log(
-      "Setting relation data in global state:",
-      reactiveState.relations,
-    )
-    reactiveState.relations = data.relationsWithProfiles
+  // onMount(() => {
+  //   // set data
+  //   console.log(
+  //     "Setting relation data in global state:",
+  //     reactiveState.relations,
+  //   )
+  //   reactiveState.relations = data.relationsWithProfiles
 
-    console.log(
-      "Current relation data in global state:",
-      reactiveState.relations,
-    )
+  //   console.log(
+  //     "Current relation data in global state:",
+  //     reactiveState.relations,
+  //   )
 
-    // start timer (e.g., 5s)
-    console.log("Starting timer to clear relation data in 10s")
-    const timer = setTimeout(() => {
-      console.log("Clearing relation data from global state")
-      reactiveState.relations = []
-      console.log(
-        "Current relation data in global state:",
-        reactiveState.relations,
-      )
-    }, 10000)
+  //   // start timer (e.g., 5s)
+  //   console.log("Starting timer to clear relation data in 10s")
+  //   const timer = setTimeout(() => {
+  //     console.log("Clearing relation data from global state")
+  //     reactiveState.relations = []
+  //     console.log(
+  //       "Current relation data in global state:",
+  //       reactiveState.relations,
+  //     )
+  //   }, 10000)
 
-    // cleanup
-    return () => clearTimeout(timer)
-  })
+  //   // cleanup
+  //   return () => clearTimeout(timer)
+  // })
 </script>
 
 <AuthDataManager />
 
 <div class="container">
   <Header />
-  <!-- {#if globalState.myRelationData}
-    <div class="relations-debug">
-      <h3>Relation Data (Debug)</h3>
-      <pre>{JSON.stringify(globalState.myRelationData, null, 2)}</pre>
-    </div>
-  {:else}
-    <p>No relations loaded</p>
-  {/if} -->
-
-  <!-- {#if reactiveState.relations.length > 0}
-    <div class="relations-debug">
-      <h3>Relation Data (Debug)</h3>
-      <pre>{JSON.stringify(reactiveState.relations, null, 2)}</pre>
-    </div>
-  {:else}
-    <p>No relations loaded</p>
-  {/if} -->
   <slot />
   <Footer />
 </div>

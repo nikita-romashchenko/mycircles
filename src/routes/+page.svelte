@@ -3,14 +3,24 @@
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
   import { onMount } from "svelte"
+  import { globalState } from "$lib/stores/state.svelte"
 
   let posts: PostType[] = []
-  const limit = 5
+  const limit = 1
   let loading = false
   let allLoaded = false
 
   $: posts = $page.data.posts
+  $: relations = $page.data.relationsWithProfiles
+
   $: skip = posts.length
+
+  onMount(() => {
+    // set data
+    console.log("Setting relation data in global state:", globalState.relations)
+    globalState.relations = relations
+    console.log("Current relation data in global state:", globalState.relations)
+  })
 
   async function loadMore() {
     if (loading) return
