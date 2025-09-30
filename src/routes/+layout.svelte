@@ -3,9 +3,6 @@
   import Header from "$components/header.svelte"
   import Footer from "$components/footer.svelte"
   import AuthDataManager from "$lib/components/AuthDataManager.svelte"
-  import { onMount } from "svelte"
-  import { globalState } from "$lib/stores/globalState.svelte"
-  import { globalState as reactiveState } from "$lib/stores/state.svelte"
 
   export let data: any
 </script>
@@ -14,10 +11,7 @@
 
 <div class="container">
   <Header />
-  <div class="session-debug">
-    <h3>Relations Data (Debug)</h3>
-    <pre>{JSON.stringify(reactiveState.relations, null, 2)}</pre>
-  </div>
+
   <slot />
   <Footer />
 </div>
