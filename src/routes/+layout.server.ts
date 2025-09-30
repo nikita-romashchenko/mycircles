@@ -1,7 +1,6 @@
 import { getFilteredRelationsWithProfiles } from "$lib/server/relations"
 import type { LayoutServerLoad } from "./$types"
 import { redirect } from "@sveltejs/kit"
-import { myRelationData } from "$lib/stores/globalState"
 import type { Relation } from "$lib/types"
 
 export const load: LayoutServerLoad = async (event) => {
