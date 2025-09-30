@@ -8,17 +8,6 @@ export const load: LayoutServerLoad = async (event) => {
   const pathname = event.url.pathname
   let relationsWithProfiles: Relation[] | undefined = undefined
 
-  // Check if user needs registration (but skip auth-related routes)
-  if (pathname === "/") {
-    if (session?.user && session.user.safeAddress) {
-      relationsWithProfiles = await getFilteredRelationsWithProfiles(
-        session.user.safeAddress,
-      )
-
-      console.log("relationsWithProfiles: ", relationsWithProfiles.length)
-    }
-  }
-
   if (session?.user && !session.user.username) {
     if (
       !pathname.startsWith("/registration") &&
@@ -31,6 +20,5 @@ export const load: LayoutServerLoad = async (event) => {
 
   return {
     session,
-    relationsWithProfiles,
   }
 }
