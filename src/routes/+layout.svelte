@@ -66,23 +66,23 @@
 
 <div class="container">
   <Header />
-  {#if globalState.myRelationData}
+  <!-- {#if globalState.myRelationData}
     <div class="relations-debug">
       <h3>Relation Data (Debug)</h3>
       <pre>{JSON.stringify(globalState.myRelationData, null, 2)}</pre>
     </div>
   {:else}
     <p>No relations loaded</p>
-  {/if}
+  {/if} -->
 
-  {#if reactiveState.relations.length > 0}
+  <!-- {#if reactiveState.relations.length > 0}
     <div class="relations-debug">
       <h3>Relation Data (Debug)</h3>
       <pre>{JSON.stringify(reactiveState.relations, null, 2)}</pre>
     </div>
   {:else}
     <p>No relations loaded</p>
-  {/if}
+  {/if} -->
   <slot />
   <Footer />
 </div>
