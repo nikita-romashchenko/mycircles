@@ -230,7 +230,7 @@
       {/if}
 
       <div class="space-y-8">
-        {#each posts as post}
+        {#each posts as post (post._id)}
           <PostCard {post} session={$page.data.session} />
         {/each}
       </div>
