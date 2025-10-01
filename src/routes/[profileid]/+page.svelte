@@ -12,12 +12,61 @@
   import UploadMediaModal from "$components/Modal/UploadMediaModal/UploadMediaModal.svelte"
   import { browser } from "$app/environment"
   import { invalidate } from "$app/navigation"
+  import PostCard from "$components/Post/PostCard.svelte"
+
+  const limit = 1
 
   let form = $page.data.form
-  let relationsModalOpen = $state(false)
-  let uploadModalOpen = $state(false)
-  let file: any = $state()
-  let contents: Relation[][] = $state([[], [], []])
+  let relationsModalOpen = false
+  let uploadModalOpen = false
+  let contents: Relation[][] = [[], [], []]
+  let loading = false
+  let allLoaded = false
+  let sentinel: HTMLDivElement
+  let posts = $page.data.posts as PostType[]
+  let profile = $page.data.profile as ProfileType
+  let isOwnProfile = $page.data.isOwnProfile as boolean
+
+  $: skip = posts.length
+
+  // async function loadMore() {
+  //   if (loading) return
+  //   loading = true
+
+  //   try {
+  //     const res = await fetch(`/api/posts?skip=${skip}&limit=${limit}`)
+  //     const data = await res.json()
+
+  //     console.log("SERVER Fetched posts:", data)
+  //     console.log("SERVER data.success:", data.success)
+  //     console.log("SERVER data.posts.length:", data.posts.length)
+
+  //     if (!res.ok || !data.posts.length) {
+  //       allLoaded = true
+  //     } else {
+  //       posts = [...posts, ...data.posts]
+  //       allLoaded = false
+  //       console.log("Loaded more posts, total now:", posts.length)
+  //     }
+  //   } catch (err) {
+  //     console.error(err)
+  //   } finally {
+  //     loading = false
+  //   }
+  // }
+
+  // onMount(() => {
+  //   const observer = new IntersectionObserver(
+  //     ([entry]) => {
+  //       if (entry.isIntersecting) loadMore()
+  //     },
+  //     { rootMargin: "200px" }, // trigger slightly before reaching bottom
+  //   )
+
+  //   if (sentinel) observer.observe(sentinel)
+
+  //   return () => observer.disconnect()
+  // })
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -32,23 +81,6 @@
   const openUploadMediaModal = () => {
     console.log("Opening upload modal")
     uploadModalOpen = true
-  }
-
-  async function handleUpload(e: Event) {
-    file = (e.target as HTMLInputElement).files?.[0]
-    if (!file) return
-
-    const formData = new FormData()
-    formData.append("file", file)
-
-    const res = await fetch("/api/upload", {
-      method: "POST",
-      body: formData,
-    })
-
-    const data = await res.json()
-    console.log("File uploaded at:", data.mediaItem.url)
-    await invalidate("posts")
   }
 
   function sortRelations(relations: Relation[]): Relation[] {
@@ -82,9 +114,7 @@
   run(() => {
     console.log("Form:", form)
   })
-  let posts = $derived($page.data.posts as PostType[])
-  let profile = $derived($page.data.profile as ProfileType)
-  let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
+
   run(() => {
     if (browser && profile?.safeAddress) {
       fetchRelations(profile.safeAddress)
@@ -188,41 +218,25 @@
     {/if}
 
     <!-- User posts section -->
-    <div class="mt-4 grid grid-cols-3 gap-4">
-      {#if isOwnProfile}
-        <div
-          class="w-full aspect-square object-cover rounded border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer text-gray-300"
-        >
-          <svg
-            class="w-10 h-10"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </div>
+    <div class="flex-1 max-w-4xl mx-auto p-4">
+      {#if posts.length === 0}
+        <p class="text-gray-500">No posts available.</p>
       {/if}
 
-      {#each posts as post}
-        {#if post.mediaItems.length > 0}
-          <!-- TODO: Replace with Post svelte component so that it accepts post variable and displays image/video/album correctly-->
-          <a href="/{post.userId}/p/{post._id}">
-            {#each post.mediaItems as mediaItem, index}
-              <img
-                class="w-full aspect-square object-cover rounded"
-                src={mediaItem.url}
-                alt={`Post ${post._id}`}
-              />
-            {/each}
-          </a>
-        {/if}
-      {/each}
+      <div class="space-y-8">
+        {#each posts as post}
+          <PostCard {post} session={$page.data.session} />
+        {/each}
+      </div>
+      <div bind:this={sentinel} class="h-8"></div>
+
+      {#if loading}
+        <p class="text-center mt-4 text-gray-500">Loading...</p>
+      {/if}
+
+      {#if allLoaded}
+        <p class="text-center mt-4 text-gray-500">No more posts</p>
+      {/if}
     </div>
   </div>
 

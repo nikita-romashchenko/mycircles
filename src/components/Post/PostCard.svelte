@@ -7,9 +7,10 @@
   interface Props {
     post: Post
     showActions?: boolean
+    session?: any
   }
 
-  let { post, showActions = true }: Props = $props()
+  let { post, showActions = true, session }: Props = $props()
 
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
@@ -92,8 +93,14 @@
           class="w-12 h-12 rounded-full object-cover"
         />
         <div class="flex flex-col">
-          <Card.Title>{post.userId?.name}</Card.Title>
-          <Card.Description>@{post.userId?.username}</Card.Description>
+          <Card.Title
+            >{session ? session?.user.name : post.userId?.name}</Card.Title
+          >
+          <Card.Description
+            >@{session
+              ? session?.user.username
+              : post.userId?.username}</Card.Description
+          >
         </div>
       </a>
       {#if post.caption}
