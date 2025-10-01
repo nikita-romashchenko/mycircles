@@ -22,24 +22,44 @@ export async function GET({ request, params, locals }: RequestEvent) {
   const session = await locals.auth()
 
   try {
-    if (session && session.user && session.user.safeAddress) {
-      console.log("SESSION: User is fully authorized.")
-      const result = await getPersonalizedFeed(limit, skip, session)
-      return json(
-        {
-          posts: result.posts as PostType[],
-          skip,
-          limit,
-        },
-        { status: 200 },
-      )
-    }
+    const posts = await Post.find({ userId: userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({
+        path: "mediaItems",
+        select: "url",
+      })
+      .populate({
+        path: "userId",
+        select: "name username",
+      })
 
-    console.log("SESSION: No valid session / user / userSafeAddress")
-    const result = await getPublicFeed(limit, skip)
+    console.log("Fetched posts:", posts.length)
+
+    // collect all post IDs
+    const postIds = posts.map((p) => p._id)
+
+    // fetch all likes by this user for these posts
+    const interactions = session?.user
+      ? await Interaction.find({
+          userId: session.user.profileId,
+          postId: { $in: postIds },
+          type: "like",
+        }).lean()
+      : []
+
+    // make a Set for quick lookup
+    const likedPostIds = new Set(interactions.map((i) => i.postId.toString()))
+
+    // add `liked` property to each post
+    const postsWithLikes = posts.map((p) => ({
+      ...p.toObject(),
+      isLiked: likedPostIds.has(p._id.toString()),
+    }))
     return json(
       {
-        posts: result.posts as PostType[],
+        posts: postsWithLikes as PostType[],
         skip,
         limit,
       },

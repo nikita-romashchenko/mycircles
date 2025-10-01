@@ -44,6 +44,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
+  const limit = Number(2)
+  const skip = Number(0)
 
   try {
     // Validate ObjectId
@@ -59,10 +61,12 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 
     // Fetch posts
     const posts = await Post.find({ userId: profile._id })
-      .sort({ createdAt: -1 }) // newest first
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate({
         path: "mediaItems",
-        select: "url", // only get URLs, exclude metadata
+        select: "url",
       })
 
     // collect all post IDs

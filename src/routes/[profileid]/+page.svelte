@@ -31,6 +31,49 @@
   $: console.log("posts:", posts)
   $: console.log("page.data.posts:", $page.data.posts)
 
+  async function loadMore() {
+    if (loading) return
+    loading = true
+
+    try {
+      const str = `/api/posts/user?userid=${profile._id}&skip=${skip}&limit=${limit}`
+      console.log("Fetching more posts from:", str)
+      const res = await fetch(
+        `/api/posts/user?userid=${profile._id}&skip=${skip}&limit=${limit}`,
+      )
+      const data = await res.json()
+
+      console.log("SERVER Fetched posts:", data)
+      console.log("SERVER data.success:", data.success)
+      console.log("SERVER data.posts.length:", data.posts.length)
+
+      if (!res.ok || !data.posts.length) {
+        allLoaded = true
+      } else {
+        posts = [...posts, ...data.posts]
+        allLoaded = false
+        console.log("Loaded more posts, total now:", posts.length)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      loading = false
+    }
+  }
+
+  onMount(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) loadMore()
+      },
+      { rootMargin: "200px" }, // trigger slightly before reaching bottom
+    )
+
+    if (sentinel) observer.observe(sentinel)
+
+    return () => observer.disconnect()
+  })
+
   // RelationsModal state
   const openRelationsModal = () => {
     relationsModalOpen = true
