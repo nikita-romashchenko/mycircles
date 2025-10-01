@@ -23,50 +23,13 @@
   let loading = false
   let allLoaded = false
   let sentinel: HTMLDivElement
-  let posts = $page.data.posts as PostType[]
   let profile = $page.data.profile as ProfileType
   let isOwnProfile = $page.data.isOwnProfile as boolean
 
+  $: posts = $page.data.posts as PostType[]
   $: skip = posts.length
-
-  // async function loadMore() {
-  //   if (loading) return
-  //   loading = true
-
-  //   try {
-  //     const res = await fetch(`/api/posts?skip=${skip}&limit=${limit}`)
-  //     const data = await res.json()
-
-  //     console.log("SERVER Fetched posts:", data)
-  //     console.log("SERVER data.success:", data.success)
-  //     console.log("SERVER data.posts.length:", data.posts.length)
-
-  //     if (!res.ok || !data.posts.length) {
-  //       allLoaded = true
-  //     } else {
-  //       posts = [...posts, ...data.posts]
-  //       allLoaded = false
-  //       console.log("Loaded more posts, total now:", posts.length)
-  //     }
-  //   } catch (err) {
-  //     console.error(err)
-  //   } finally {
-  //     loading = false
-  //   }
-  // }
-
-  // onMount(() => {
-  //   const observer = new IntersectionObserver(
-  //     ([entry]) => {
-  //       if (entry.isIntersecting) loadMore()
-  //     },
-  //     { rootMargin: "200px" }, // trigger slightly before reaching bottom
-  //   )
-
-  //   if (sentinel) observer.observe(sentinel)
-
-  //   return () => observer.disconnect()
-  // })
+  $: console.log("posts:", posts)
+  $: console.log("page.data.posts:", $page.data.posts)
 
   // RelationsModal state
   const openRelationsModal = () => {

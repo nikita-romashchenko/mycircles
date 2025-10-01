@@ -16,6 +16,7 @@ import {
   processAndUploadMedia,
   ProcessMediaError,
 } from "$lib/utils/mediaUploadUtils"
+import { Interaction } from "$lib/models/Interaction"
 
 // Connect to MongoDB
 await mongoose
@@ -64,8 +65,29 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         select: "url", // only get URLs, exclude metadata
       })
 
+    // collect all post IDs
+    const postIds = posts.map((p) => p._id)
+
+    // fetch all likes by this user for these posts
+    const interactions = session?.user
+      ? await Interaction.find({
+          userId: session.user.profileId,
+          postId: { $in: postIds },
+          type: "like",
+        }).lean()
+      : []
+
+    // make a Set for quick lookup
+    const likedPostIds = new Set(interactions.map((i) => i.postId.toString()))
+
+    // add `liked` property to each post
+    const postsWithLikes = posts.map((p) => ({
+      ...p.toObject(),
+      isLiked: likedPostIds.has(p._id.toString()),
+    }))
+
     return {
-      posts: JSON.parse(JSON.stringify(posts)) as PostType[],
+      posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
       isOwnProfile: session?.user?.profileId === profileid,
       form,
