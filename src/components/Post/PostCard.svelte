@@ -2,6 +2,7 @@
   import { invalidate } from "$app/navigation"
   import * as Card from "$lib/components/ui/card/index"
   import * as Carousel from "$lib/components/ui/carousel/index"
+  import { Button } from "$lib/components/ui/button"
   import type { Post } from "$lib/types"
 
   interface Props {
@@ -115,19 +116,9 @@
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
     >
       {#if liked}
-        <button
-          onclick={handleLike}
-          class="flex items-center gap-1 rounded-md bg-red-500 text-white hover:bg-red-400 px-3 py-1 cursor-pointer"
-        >
-          Liked
-        </button>
+        <Button onclick={handleLike}>Liked</Button>
       {:else}
-        <button
-          onclick={handleLike}
-          class="flex items-center gap-1 rounded-md border-2 border-red-500 text-red-500 hover:border-red-400 hover:text-red-400 px-3 py-1 cursor-pointer"
-        >
-          Like
-        </button>{/if}
+        <Button variant={"outline"} onclick={handleLike}>Like</Button>{/if}
 
       <span>{likesCount} {likesCount > 1 ? "likes" : "like"}</span>
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>

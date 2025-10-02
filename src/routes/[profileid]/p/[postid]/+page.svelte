@@ -1,6 +1,7 @@
 <script lang="ts">
   import { invalidate } from "$app/navigation"
   import { page } from "$app/stores"
+  import { Button } from "$lib/components/ui/button"
   import type { Post as PostType } from "$lib/types"
   import type { Profile as ProfileType } from "$lib/types"
 
@@ -102,19 +103,10 @@
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm border-t"
     >
       {#if liked}
-        <button
-          onclick={handleLike}
-          class="flex items-center gap-1 rounded-md bg-red-500 text-white hover:bg-red-400 px-3 py-1 cursor-pointer"
-        >
-          Liked
-        </button>
+        <Button onclick={handleLike}>Liked</Button>
       {:else}
-        <button
-          onclick={handleLike}
-          class="flex items-center gap-1 rounded-md border-2 border-red-500 text-red-500 hover:border-red-400 hover:text-red-400 px-3 py-1 cursor-pointer"
-        >
-          Like
-        </button>{/if}
+        <Button variant={"outline"} onclick={handleLike}>Like</Button>
+      {/if}
 
       <span>{post.likesCount} likes</span>
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>

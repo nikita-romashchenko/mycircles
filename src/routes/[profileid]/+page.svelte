@@ -13,6 +13,7 @@
   import { browser } from "$app/environment"
   import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
+  import { Button } from "$lib/components/ui/button"
 
   const limit = 1
 
@@ -201,7 +202,7 @@
       <div class="mt-4 flex flex-row justify-center items-center gap-10">
         <div class="flex flex-col items-center justify-center mt-4">
           <!-- svelte-ignore a11y_consider_explicit_label -->
-          <button
+          <Button
             class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
             onclick={openUploadMediaModal}
           >
@@ -218,7 +219,7 @@
                 d="M12 4v16m8-8H4"
               />
             </svg>
-          </button>
+          </Button>
         </div>
       </div>
     {/if}
