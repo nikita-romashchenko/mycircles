@@ -2,8 +2,8 @@
   import * as Dialog from "$lib/components/ui/dialog"
   import { superForm, filesProxy } from "sveltekit-superforms"
   import { Input } from "$lib/components/ui/input"
-  import { Label } from "$lib/components/ui/Label"
   import { Button } from "$lib/components/ui/button"
+  import Label from "$lib/components/ui/label/label.svelte"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"

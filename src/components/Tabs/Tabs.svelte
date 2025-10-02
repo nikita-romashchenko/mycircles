@@ -3,12 +3,12 @@
 
   let activeTab = $state(0)
   interface Props {
-    tabs?: string[];
-    contents?: Relation[][];
-    onLinkClick: () => void;
+    tabs?: string[]
+    contents?: Relation[][]
+    onLinkClick: () => void
   }
 
-  let { tabs = [], contents = [[], [], []], onLinkClick }: Props = $props();
+  let { tabs = [], contents = [[], [], []], onLinkClick }: Props = $props()
 </script>
 
 <div class="w-full">
@@ -46,7 +46,7 @@
                 loading="lazy"
               />
               <div class="flex flex-col gap-2 text-gray-400">
-                <span>{relation.relationItem.subjectAvatar}</span>
+                <span>{relation.relationItem.objectAvatar}</span>
               </div>
             </div>
           {:else}

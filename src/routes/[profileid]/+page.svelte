@@ -15,6 +15,7 @@
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
+  import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
 
   const limit = 1
 
@@ -252,7 +253,13 @@
     </div>
   </div>
 
-  <RelationsModal
+  <!-- <RelationsModal
+    bind:open={relationsModalOpen}
+    onLinkClick={handleLinkClick}
+    {contents}
+  /> -->
+
+  <RelationsDialog
     bind:open={relationsModalOpen}
     onLinkClick={handleLinkClick}
     {contents}
