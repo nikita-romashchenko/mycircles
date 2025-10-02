@@ -14,6 +14,7 @@
   import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
+  import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
 
   const limit = 1
 
@@ -256,5 +257,6 @@
     onLinkClick={handleLinkClick}
     {contents}
   />
-  <UploadMediaModal pageForm={form} bind:open={uploadModalOpen} />
+  <!-- <UploadMediaModal pageForm={form} bind:open={uploadModalOpen} /> -->
+  <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
 {/if}

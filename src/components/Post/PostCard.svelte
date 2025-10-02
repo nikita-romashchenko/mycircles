@@ -70,13 +70,17 @@
           </a>
         {/if}
       {:else if post.type === "album"}
-        <Carousel.Root class="w-full max-w-xs">
-          <Carousel.Content>
+        <Carousel.Root opts={{ loop: true }} class="mx-auto w-full relative ">
+          <Carousel.Content class="">
             {#each post.mediaItems as m}
-              <Carousel.Item>
-                <a href="/{post.userId?._id}/p/{post._id}">
+              <Carousel.Item class="">
+                <a
+                  href="/{session
+                    ? session.user.profileId
+                    : post.userId?._id}/p/{post._id}"
+                >
                   <img
-                    class="w-full h-32 object-cover cursor-pointer"
+                    class="w-full object-cover cursor-pointer"
                     src={m.url}
                     alt={post.caption ?? "Album image"}
                     loading="lazy"
@@ -85,8 +89,12 @@
               </Carousel.Item>
             {/each}
           </Carousel.Content>
-          <Carousel.Previous />
-          <Carousel.Next />
+          <Carousel.Previous
+            class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 z-10"
+          />
+          <Carousel.Next
+            class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-1 z-10"
+          />
         </Carousel.Root>
       {/if}
     </Card.Content>
