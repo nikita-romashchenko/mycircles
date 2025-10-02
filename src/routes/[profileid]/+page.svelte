@@ -17,6 +17,10 @@
 
   const limit = 1
 
+  let posts: PostType[] = []
+  let profile: ProfileType
+  let isOwnProfile: boolean
+
   let form = $page.data.form
   let relationsModalOpen = false
   let uploadModalOpen = false
@@ -24,11 +28,11 @@
   let loading = false
   let allLoaded = false
   let sentinel: HTMLDivElement
-  let profile = $page.data.profile as ProfileType
-  let isOwnProfile = $page.data.isOwnProfile as boolean
 
+  $: profile = $page.data.profile as ProfileType
   $: posts = $page.data.posts as PostType[]
   $: skip = posts.length
+  $: isOwnProfile = $page.data.isOwnProfile as boolean
   $: console.log("posts:", posts)
   $: console.log("page.data.posts:", $page.data.posts)
 
