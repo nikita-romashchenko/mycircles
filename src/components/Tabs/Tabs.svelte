@@ -28,7 +28,7 @@
     {/each}
   </div>
 
-  <div class="p-4">
+  <div class="p-4 h-[28vh] overflow-auto">
     {#if contents[activeTab]}
       {#if contents[activeTab].length === 0}
         <p class="text-gray-500">No data found.</p>
