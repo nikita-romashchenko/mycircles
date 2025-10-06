@@ -38,9 +38,11 @@
 
   function handleEditorChange(editorState: EditorState) {
     console.log("Editor state changed:", editorState)
-    const json = JSON.stringify(editorState)
+    const json = editorState.toJSON()
     console.log("JSON:", json)
-    $caption = json
+    const jsonString = JSON.stringify(json)
+    console.log("jsonString:", jsonString)
+    $caption = jsonString
   }
 </script>
 

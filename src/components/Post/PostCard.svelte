@@ -3,6 +3,9 @@
   import * as Card from "$lib/components/ui/card/index"
   import * as Carousel from "$lib/components/ui/carousel/index"
   import { Button } from "$lib/components/ui/button"
+  import { theme } from "svelte-lexical/dist/themes/default"
+  import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
+
   import type { Post } from "$lib/types"
 
   interface Props {
@@ -117,7 +120,8 @@
         </div>
       </a>
       {#if post.caption}
-        <p>{post.caption}</p>
+        <!-- <p>{post.caption}</p> -->
+        <CaptionViewer {theme} captionJSONstring={post.caption} />
       {/if}
     </Card.Header>
     <Card.Footer
