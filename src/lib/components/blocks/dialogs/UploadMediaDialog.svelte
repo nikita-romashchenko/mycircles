@@ -1,12 +1,15 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog"
-  import { superForm, filesProxy } from "sveltekit-superforms"
+  import { superForm, filesProxy, fieldProxy } from "sveltekit-superforms"
   import { Input } from "$lib/components/ui/input"
   import { Button } from "$lib/components/ui/button"
   import Label from "$lib/components/ui/label/label.svelte"
+  import CaptionEditor from "../svelte-lexical/caption-editor/caption-editor.svelte"
+  import { theme } from "svelte-lexical/dist/themes/default"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
+  import type { EditorState } from "lexical"
 
   interface Props {
     open?: boolean
@@ -16,6 +19,7 @@
   let { open = $bindable(true), pageForm }: Props = $props()
   const { form, errors, enhance } = superForm(pageForm)
   const files = filesProxy(form, "media")
+  const caption = fieldProxy(form, "caption")
 
   let search = ""
   let results: any[] = []
@@ -28,7 +32,15 @@
   function removeFile(index: number) {
     const arr = Array.from($files)
     arr.splice(index, 1) // remove the clicked file
+    //TODO: possibly need $ syntax here
     files.set(arr) // update the filesProxy store
+  }
+
+  function handleEditorChange(editorState: EditorState) {
+    console.log("Editor state changed:", editorState)
+    const json = JSON.stringify(editorState)
+    console.log("JSON:", json)
+    $caption = json
   }
 </script>
 
@@ -93,6 +105,14 @@
       {/if}
 
       <Label for="caption">Caption</Label>
+      <CaptionEditor {theme} onChange={handleEditorChange} />
+
+      <Input type="hidden" name="caption" bind:value={$form.caption} />
+      {#if $errors.caption}
+        <p class="error">{$errors.caption[0]}</p>
+      {/if}
+
+      <!-- <Label for="caption">Caption</Label>
       <Input
         type="text"
         name="caption"
@@ -101,7 +121,7 @@
       />
       {#if $errors.caption}
         <p class="error">{$errors.caption[0]}</p>
-      {/if}
+      {/if} -->
 
       <!-- <Label for="visibility">Visibility</Label>
       <select name="visibility" bind:value={$form.visibility}>
