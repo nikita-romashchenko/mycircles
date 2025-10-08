@@ -4,8 +4,8 @@
   import { Input } from "$lib/components/ui/input"
   import { Button } from "$lib/components/ui/button"
   import Label from "$lib/components/ui/label/label.svelte"
-  import CaptionEditor from "../svelte-lexical/caption-editor/caption-editor.svelte"
   import { theme } from "svelte-lexical/dist/themes/default"
+  import CaptionEditor from "../svelte-lexical/caption-editor/caption-editor.svelte"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
@@ -17,10 +17,12 @@
   }
 
   let { open = $bindable(true), pageForm }: Props = $props()
-  const { form, errors, enhance } = superForm(pageForm)
+  const { form, errors, enhance, reset } = superForm(pageForm)
+  console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
   const caption = fieldProxy(form, "caption")
 
+  let captionEditorRef: any
   let search = ""
   let results: any[] = []
   let previews = $derived(
@@ -48,9 +50,38 @@
     console.log("jsonString:", jsonString)
     $caption = jsonString
   }
+
+  function toggleField(field: "media" | "caption" | "location", show: boolean) {
+    // hide/show the field
+    if (field === "media") showMedia = show
+    if (field === "caption") showCaption = show
+    if (field === "location") showLocation = show
+
+    // if hiding -> reset that field in the form
+    if (!show) {
+      if (field === "media") $form.media = []
+      if (field === "caption") {
+        captionEditorRef.clear()
+        $form.caption = ""
+      }
+      if (field === "location") $form.location = undefined
+    }
+    console.log(`form toggle ${field} ${show}:`, $form)
+  }
+
+  function handleOpenChange(value: boolean) {
+    if (!value) {
+      // Reset the form when the dialog is closed
+      reset()
+      showMedia = false
+      showCaption = false
+      showLocation = false
+      console.log("form reset in UploadMediaDialog:", $form)
+    }
+  }
 </script>
 
-<Dialog.Root bind:open>
+<Dialog.Root onOpenChange={handleOpenChange} bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
   <Dialog.Content class="max-h-[90vh] overflow-auto">
     <Dialog.Header>
@@ -74,7 +105,7 @@
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showMedia = false)}>− Remove media</Button
+          onclick={() => toggleField("media", false)}>− Remove media</Button
         >
         <Label for="media">Media</Label>
 
@@ -120,22 +151,26 @@
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showMedia = true)}>+ Add media</Button
+          onclick={() => toggleField("media", true)}>+ Add media</Button
         >{/if}
 
       {#if showCaption}
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showCaption = false)}>− Remove text</Button
+          onclick={() => toggleField("caption", false)}>− Remove text</Button
         >
         <Label for="caption">Caption</Label>
-        <CaptionEditor {theme} onChange={handleEditorChange} />
+        <CaptionEditor
+          bind:this={captionEditorRef}
+          {theme}
+          onChange={handleEditorChange}
+        />
       {:else}
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showCaption = true)}>+ Add text</Button
+          onclick={() => toggleField("caption", true)}>+ Add text</Button
         >{/if}
 
       <Input type="hidden" name="caption" bind:value={$form.caption} />
@@ -169,7 +204,8 @@
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showLocation = false)}>− Remove location</Button
+          onclick={() => toggleField("location", false)}
+          >− Remove location</Button
         >
         <Label for="location">Location</Label>
         <Input
@@ -185,13 +221,13 @@
         <Button
           class={"text-blue-500"}
           variant={"ghost"}
-          onclick={() => (showLocation = true)}>+ Add location</Button
+          onclick={() => toggleField("location", true)}>+ Add location</Button
         >{/if}
 
       {#if !(!showMedia && !showCaption && !showLocation)}
         <div class="flex flex-col items-center justify-center mt-4">
           <Button
-            disabled={!showMedia && !showCaption && !showLocation}
+            disabled={!$form.caption && $form.media.length === 0}
             type="submit">Upload</Button
           >
         </div>

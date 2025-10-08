@@ -32,6 +32,27 @@
   export function getEditor() {
     return composer.getEditor()
   }
+  export function clear() {
+    const editor = composer.getEditor()
+    // Create an empty state and set it
+    const emptyState = editor.parseEditorState({
+      root: {
+        type: "root",
+        children: [
+          {
+            type: "paragraph",
+            children: [], // completely empty paragraph
+            direction: "ltr",
+          },
+        ],
+        direction: "ltr",
+        format: "",
+        indent: 0,
+        version: 1,
+      },
+    })
+    editor.setEditorState(emptyState)
+  }
 </script>
 
 <Composer {initialConfig} bind:this={composer}>
