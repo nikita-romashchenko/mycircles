@@ -1,9 +1,11 @@
 <script lang="ts">
   import { invalidate } from "$app/navigation"
   import { page } from "$app/stores"
+  import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
   import { Button } from "$lib/components/ui/button"
   import type { Post as PostType } from "$lib/types"
   import type { Profile as ProfileType } from "$lib/types"
+  import { theme } from "svelte-lexical/dist/themes/default"
 
   let liked = $state($page.data.post.isLiked)
 
@@ -95,7 +97,9 @@
 
     <!-- Caption -->
     {#if post.caption}
-      <p class="p-3 text-sm">{post.caption}</p>
+      <div class="p-2">
+        <CaptionViewer {theme} captionJSONstring={post.caption} />
+      </div>
     {/if}
 
     <!-- Post meta -->

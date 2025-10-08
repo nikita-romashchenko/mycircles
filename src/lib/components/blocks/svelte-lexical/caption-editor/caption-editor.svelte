@@ -52,8 +52,8 @@
       <HorizontalRulePlugin />
       <OnChangePlugin
         {onChange}
-        ignoreHistoryMergeTagChange={false}
-        ignoreSelectionChange={false}
+        ignoreHistoryMergeTagChange={true}
+        ignoreSelectionChange={true}
       />
     </div>
   </div>

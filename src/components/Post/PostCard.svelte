@@ -120,7 +120,6 @@
         </div>
       </a>
       {#if post.caption}
-        <!-- <p>{post.caption}</p> -->
         <CaptionViewer {theme} captionJSONstring={post.caption} />
       {/if}
     </Card.Header>

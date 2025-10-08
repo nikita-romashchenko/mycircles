@@ -33,5 +33,5 @@
 </script>
 
 <Composer {initialConfig} bind:this={composer}>
-  <ContentEditable />
+  <ContentEditable className={"!min-h-auto"} />
 </Composer>
