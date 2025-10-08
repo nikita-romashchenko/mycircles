@@ -22,7 +22,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="h-[40vh]">
+  <Dialog.Content class="h-[40vh] max-h-[90vh]">
     <Dialog.Header>
       <Dialog.Title>Relations</Dialog.Title>
       <!-- <Dialog.Description>

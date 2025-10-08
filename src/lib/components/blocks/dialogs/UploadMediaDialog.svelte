@@ -29,6 +29,10 @@
       : [],
   )
 
+  let showMedia = $state(false)
+  let showCaption = $state(false)
+  let showLocation = $state(false)
+
   function removeFile(index: number) {
     const arr = Array.from($files)
     arr.splice(index, 1) // remove the clicked file
@@ -48,7 +52,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content>
+  <Dialog.Content class="max-h-[90vh] overflow-auto">
     <Dialog.Header>
       <Dialog.Title>Upload media</Dialog.Title>
       <!-- <Dialog.Description>
@@ -63,51 +67,76 @@
       method="POST"
       class="flex flex-col gap-4 p-4"
     >
-      <Label for="media">Media</Label>
       <!-- Drop zone container -->
       <!-- TODO: this is not good for accessibility -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div
-        class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
-      >
-        <Input
-          type="file"
-          multiple
-          name="media"
-          accept="image/*,video/*"
-          bind:files={$files}
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        {#if $files.length > 0}
-          <div
-            class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto"
-          >
-            {#each previews as src, i}
-              <!-- TODO: this is not good for accessibility -->
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-              <img
-                {src}
-                alt="Uploaded media"
-                class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
-                loading="lazy"
-                onclick={() => removeFile(i)}
-                title="Click to remove"
-              />
-            {/each}
-          </div>
-        {:else}
-          <span class="text-gray-400 z-10"
-            >Drag & drop files here or click to select</span
-          >
-        {/if}
-      </div>
-      {#if $errors.media}
-        <p class="error">{$errors.media[0]}</p>
-      {/if}
+      {#if showMedia}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showMedia = false)}>− Remove media</Button
+        >
+        <Label for="media">Media</Label>
 
-      <Label for="caption">Caption</Label>
-      <CaptionEditor {theme} onChange={handleEditorChange} />
+        <div
+          class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
+        >
+          <Input
+            type="file"
+            multiple
+            name="media"
+            accept="image/*,video/*"
+            bind:files={$files}
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          />
+          {#if $files.length > 0}
+            <div
+              class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto"
+            >
+              {#each previews as src, i}
+                <!-- TODO: this is not good for accessibility -->
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                <img
+                  {src}
+                  alt="Uploaded media"
+                  class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
+                  loading="lazy"
+                  onclick={() => removeFile(i)}
+                  title="Click to remove"
+                />
+              {/each}
+            </div>
+          {:else}
+            <span class="text-gray-400 z-10"
+              >Drag & drop files here or click to select</span
+            >
+          {/if}
+        </div>
+        {#if $errors.media}
+          <p class="error">{$errors.media[0]}</p>
+        {/if}
+      {:else}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showMedia = true)}>+ Add media</Button
+        >{/if}
+
+      {#if showCaption}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showCaption = false)}>− Remove text</Button
+        >
+        <Label for="caption">Caption</Label>
+        <CaptionEditor {theme} onChange={handleEditorChange} />
+      {:else}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showCaption = true)}>+ Add text</Button
+        >{/if}
 
       <Input type="hidden" name="caption" bind:value={$form.caption} />
       {#if $errors.caption}
@@ -136,19 +165,37 @@
       {/if} -->
 
       <!-- location dropdown here -->
-      <Label for="location">Location</Label>
-      <Input
-        type="text"
-        name="location"
-        bind:value={$form.location}
-        placeholder="location"
-      />
-      {#if $errors.location}
-        <p class="error">{$errors.location[0]}</p>
+      {#if showLocation}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showLocation = false)}>− Remove location</Button
+        >
+        <Label for="location">Location</Label>
+        <Input
+          type="text"
+          name="location"
+          bind:value={$form.location}
+          placeholder="location"
+        />
+        {#if $errors.location}
+          <p class="error">{$errors.location[0]}</p>
+        {/if}
+      {:else}
+        <Button
+          class={"text-blue-500"}
+          variant={"ghost"}
+          onclick={() => (showLocation = true)}>+ Add location</Button
+        >{/if}
+
+      {#if !(!showMedia && !showCaption && !showLocation)}
+        <div class="flex flex-col items-center justify-center mt-4">
+          <Button
+            disabled={!showMedia && !showCaption && !showLocation}
+            type="submit">Upload</Button
+          >
+        </div>
       {/if}
-      <div class="flex flex-col items-center justify-center mt-4">
-        <Button type="submit">Upload</Button>
-      </div>
     </form>
   </Dialog.Content>
 </Dialog.Root>
