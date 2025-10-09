@@ -1,6 +1,8 @@
 <script lang="ts">
   import { page } from "$app/state"
   import { SignIn, SignOut } from "@auth/sveltekit/components"
+  import * as NavigationMenu from "$lib/components/ui/navigation-menu/index"
+  import { navigationMenuTriggerStyle } from "$lib/components/ui/navigation-menu/navigation-menu-trigger.svelte"
 </script>
 
 <header>
@@ -12,26 +14,47 @@
           `https://api.dicebear.com/9.x/thumbs/svg?seed=${Math.floor(Math.random() * 100000) + 1}&randomizeIds=true`}
         class="avatar"
       />
+      <NavigationMenu.Root>
+        <NavigationMenu.List>
+          <NavigationMenu.Item>
+            <NavigationMenu.Link>
+              {#snippet child()}
+                <a href="/" class={navigationMenuTriggerStyle()}>Feed</a>
+              {/snippet}
+            </NavigationMenu.Link>
+          </NavigationMenu.Item>
+          <NavigationMenu.Item>
+            <NavigationMenu.Link>
+              {#snippet child()}
+                <a
+                  href={`/${page.data.session?.user.profileId}`}
+                  class={navigationMenuTriggerStyle()}>Profile</a
+                >
+              {/snippet}
+            </NavigationMenu.Link>
+          </NavigationMenu.Item>
+        </NavigationMenu.List>
+      </NavigationMenu.Root>
       {#if page.data.session}
         <span class="signedInText">
           {page.data.session.user?.email ?? page.data.session.user?.name}
         </span>
         <SignOut>
           {#snippet submitButton()}
-                    <div  class="buttonPrimary">Sign out</div>
-                  {/snippet}
+            <div class="buttonPrimary">Sign out</div>
+          {/snippet}
         </SignOut>
       {:else}
         <span class="notSignedInText">You are not signed in</span>
         <SignIn>
           {#snippet submitButton()}
-                    <div  class="buttonPrimary">Sign in</div>
-                  {/snippet}
+            <div class="buttonPrimary">Sign in</div>
+          {/snippet}
         </SignIn>
       {/if}
     </div>
   </div>
-  <nav>
+  <!-- <nav>
     <ul class="navItems">
       <li class="navItem"><a href="/">Home</a></li>
       <li class="navItem"><a href="/protected">Protected</a></li>
@@ -40,7 +63,7 @@
         <a href={`/${page.data.session?.user.profileId}`}>Profile</a>
       </li>
     </ul>
-  </nav>
+  </nav> -->
 </header>
 
 <style>
