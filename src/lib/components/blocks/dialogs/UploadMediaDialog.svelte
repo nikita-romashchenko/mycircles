@@ -139,7 +139,7 @@
               {/each}
             </div>
           {:else}
-            <span class="text-gray-400 z-10"
+            <span class="text-gray-400 z-10 pointer-events-none"
               >Drag & drop files here or click to select</span
             >
           {/if}
