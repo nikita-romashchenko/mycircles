@@ -1,5 +1,5 @@
 <script lang="ts">
-  import * as Dialog from "$lib/components/ui/dialog"
+  import * as Dialog from "$lib/components/ui/dialog/index"
   import { superForm, filesProxy, fieldProxy } from "sveltekit-superforms"
   import { Input } from "$lib/components/ui/input"
   import { Button } from "$lib/components/ui/button"
