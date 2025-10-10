@@ -6,7 +6,11 @@ const PostSchema = new mongoose.Schema({
     ref: "Profile",
     required: true,
   },
-  type: { type: String, enum: ["image", "video", "album"], required: true },
+  type: {
+    type: String,
+    enum: ["image", "video", "album", "text"],
+    required: true,
+  },
   caption: { type: String, default: "" },
   createdAt: { type: Date, default: Date.now },
   mediaItems: [{ type: mongoose.Schema.Types.ObjectId, ref: "MediaItem" }], // references

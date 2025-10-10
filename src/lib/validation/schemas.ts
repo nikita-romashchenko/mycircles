@@ -47,7 +47,7 @@ signUpSchema
 
 // UploadMediaModal form schema
 export const uploadMediaSchema = z.object({
-  media: z.array(z.instanceof(File)).min(1, "Post must have at least 1 image"),
+  media: z.array(z.instanceof(File)),
   caption: z.string().default(""),
   visibility: z.enum(["public", "private", "friends"]).default("public"),
   // location: z

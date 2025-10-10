@@ -17,6 +17,7 @@ import {
   ProcessMediaError,
 } from "$lib/utils/mediaUploadUtils"
 import { Interaction } from "$lib/models/Interaction"
+import { ca } from "zod/v4/locales"
 
 // Connect to MongoDB
 await mongoose
@@ -107,6 +108,9 @@ export const actions = {
   default: async ({ request, locals }) => {
     const formData = await request.formData()
     const form = await superValidate(formData, zod(uploadMediaSchema))
+    let type: "image" | "video" | "album" | "text"
+    let processedMedia: any[] = []
+
     console.log("Form: ", form)
 
     if (!form.valid) {
@@ -119,26 +123,33 @@ export const actions = {
     try {
       const session = await locals.auth()
       const media = formData.getAll("media") as File[]
+      const caption = formData.get("caption") as string
 
-      if (media.length === 0) {
-        return new Response(JSON.stringify({ error: "No file uploaded" }), {
-          status: 400,
-        })
-      }
-
-      const result = await processAndUploadMedia(formData)
-      console.log("Media processing result:", result)
-
-      if (!result.success) {
+      if (media.length === 0 && !caption) {
         return new Response(
-          JSON.stringify({ error: "Media processing failed" }),
+          JSON.stringify({ error: "No main content uploaded" }),
           {
-            status: 500,
+            status: 400,
           },
         )
       }
 
-      const { type, processedMedia } = result
+      if (media.length !== 0) {
+        const result = await processAndUploadMedia(formData)
+        console.log("Media processing result:", result)
+        if (!result.success) {
+          return new Response(
+            JSON.stringify({ error: "Media processing failed" }),
+            {
+              status: 500,
+            },
+          )
+        }
+        type = result.type
+        processedMedia = result.processedMedia
+      } else {
+        type = "text"
+      }
 
       // Save Post
       const userId = session?.user.profileId
@@ -151,7 +162,7 @@ export const actions = {
       const postDoc = await Post.create({
         userId,
         type: type,
-        caption: formData.get("caption") || "",
+        caption: caption || "",
         mediaItems: [], // will populate after creating MediaItem
       })
 
