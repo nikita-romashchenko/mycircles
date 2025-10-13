@@ -10,6 +10,7 @@
   import LogOutIcon from "@lucide/svelte/icons/log-out"
   import SparklesIcon from "@lucide/svelte/icons/sparkles"
   import { page } from "$app/state"
+  import { signOut } from "@auth/sveltekit/client"
 
   let { user }: any = $props()
   let initials = $derived(
@@ -62,7 +63,7 @@
             <a href={`/${page.data.session?.user.profileId}`}>
               <Avatar.Root class="size-8 rounded-lg">
                 <Avatar.Image src={user.image} alt={user.name} />
-                <Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+                <Avatar.Fallback class="rounded-lg">{initials}</Avatar.Fallback>
               </Avatar.Root>
             </a>
             <div class="grid flex-1 text-left text-sm leading-tight">
@@ -94,7 +95,7 @@
           </DropdownMenu.Item>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => signOut()}>
           <LogOutIcon />
           Log out
         </DropdownMenu.Item>
