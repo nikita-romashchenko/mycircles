@@ -15,11 +15,7 @@
   // This is sample data.
   const data = {
     versions: ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"],
-    user: {
-      name: "shadcn",
-      email: "m@example.com",
-      avatar: "/avatars/shadcn.jpg",
-    },
+
     teams: [
       {
         name: "Acme Inc",
@@ -61,6 +57,7 @@
   import TeamSwitcher from "./team-switcher.svelte"
   import * as Sidebar from "$lib/components/ui/sidebar/index"
   import type { ComponentProps } from "svelte"
+  import NavUserCustom from "./nav-user-custom.svelte"
 
   let {
     ref = $bindable(null),
@@ -74,9 +71,6 @@
     <TeamSwitcher teams={data.teams} />
   </Sidebar.Header>
   <Sidebar.Content>
-    <!-- <NavMain items={data.navMain} />
-    <NavProjects projects={data.projects} /> -->
-    <!-- We create a Sidebar.Group for each parent. -->
     {#each data.navMain as group (group.title)}
       <Sidebar.Group>
         <Sidebar.GroupLabel>{group.title}</Sidebar.GroupLabel>
@@ -102,7 +96,8 @@
     {/each}
   </Sidebar.Content>
   <Sidebar.Footer>
-    <NavUser user={data.user} />
+    <!-- <NavUser user={data.user} /> -->
+    <NavUserCustom user={page.data.session?.user} />
   </Sidebar.Footer>
   <Sidebar.Rail />
 </Sidebar.Root>
