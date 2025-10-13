@@ -12,6 +12,16 @@
   import { page } from "$app/state"
 
   let { user }: any = $props()
+  let initials = $derived(
+    user?.name
+      ? user.name
+          .split(" ")
+          .map((word: string) => word[0])
+          .slice(0, 2) // take first 2 words (first + surname)
+          .join("")
+          .toUpperCase()
+      : "",
+  )
 
   $effect(() => {
     console.log("user prop in NavUserCustom:", user)
@@ -31,7 +41,7 @@
           >
             <Avatar.Root class="size-8 rounded-lg">
               <Avatar.Image src={user.image} alt={user.name} />
-              <Avatar.Fallback class="rounded-lg">CN</Avatar.Fallback>
+              <Avatar.Fallback class="rounded-lg">{initials}</Avatar.Fallback>
             </Avatar.Root>
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-medium">{user.name}</span>

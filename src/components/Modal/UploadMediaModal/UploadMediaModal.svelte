@@ -19,9 +19,14 @@
   let search = ""
   let results: any[] = []
   let previews = $derived(
-    $files.length > 0
-      ? Array.from($files).map((file: File) => URL.createObjectURL(file))
-      : [],
+    user?.name
+      ? user.name
+          .split(" ")
+          .map((word) => word[0])
+          .slice(0, 2) // take first 2 words (first + surname)
+          .join("")
+          .toUpperCase()
+      : "",
   )
 
   // Reactive update when files change
