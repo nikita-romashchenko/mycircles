@@ -10,6 +10,7 @@
   import Settings2Icon from "@lucide/svelte/icons/settings-2"
   import SquareTerminalIcon from "@lucide/svelte/icons/square-terminal"
   import { page } from "$app/state"
+  import HomeIcon from "@lucide/svelte/icons/home"
 
   // This is sample data.
   const data = {
@@ -45,6 +46,7 @@
             title: "Home",
             url: "/",
             isActive: true,
+            icon: HomeIcon,
           },
         ],
       },
@@ -84,7 +86,12 @@
               <Sidebar.MenuItem>
                 <Sidebar.MenuButton isActive={item.isActive}>
                   {#snippet child({ props })}
-                    <a href={item.url} {...props}>{item.title}</a>
+                    <a href={item.url} {...props}>
+                      {#if item.icon}
+                        <item.icon />
+                      {/if}
+                      <span>{item.title}</span>
+                    </a>
                   {/snippet}
                 </Sidebar.MenuButton>
               </Sidebar.MenuItem>
