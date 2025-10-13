@@ -4,7 +4,7 @@
   import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end"
   import { page } from "$app/state"
   import HomeIcon from "@lucide/svelte/icons/home"
-  import { SignIn, SignOut } from "@auth/sveltekit/components"
+  import { signIn } from "@auth/sveltekit/client"
 
   // This is sample data.
   const data = {
@@ -51,6 +51,7 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index"
   import type { ComponentProps } from "svelte"
   import NavUserCustom from "./nav-user-custom.svelte"
+  import LogIn from "@lucide/svelte/icons/log-in"
 
   let {
     ref = $bindable(null),
@@ -92,7 +93,20 @@
     <!-- <NavUser user={data.user} /> -->
     {#if page.data.session?.user}
       <NavUserCustom user={page.data.session?.user} />
-    {:else}{/if}
+    {:else}
+      <Sidebar.Menu>
+        <Sidebar.MenuItem onclick={() => signIn()}>
+          <Sidebar.MenuButton class="cursor-pointer">
+            {#snippet child({ props })}
+              <div {...props}>
+                <LogIn />
+                <span>Sign in</span>
+              </div>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
+    {/if}
   </Sidebar.Footer>
   <Sidebar.Rail />
 </Sidebar.Root>
