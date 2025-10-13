@@ -55,7 +55,7 @@
 </script>
 
 {#if post}
-  <Card.Root class="p-0 overflow-hidden">
+  <Card.Root class="p-0 overflow-hidden w-full">
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}

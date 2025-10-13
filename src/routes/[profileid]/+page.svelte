@@ -137,7 +137,7 @@
 
 <!-- TODO: add something like a spinner if no profile or error screen -->
 {#if profile}
-  <div>
+  <div class="w-full max-w-3xl">
     <!-- User info section -->
     {#if isOwnProfile}
       <div class="flex flex-col items-center justify-center md:flex-row gap-6">
@@ -231,7 +231,7 @@
     {/if}
 
     <!-- User posts section -->
-    <div class="flex-1 max-w-4xl mx-auto p-4">
+    <div class="flex-1 mx-auto p-4 w-full">
       {#if posts.length === 0}
         <p class="text-gray-500">No posts available.</p>
       {/if}
