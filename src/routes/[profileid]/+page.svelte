@@ -140,13 +140,13 @@
   <div>
     <!-- User info section -->
     {#if isOwnProfile}
-      <div class="flex flex-row gap-6">
+      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
         <img
           alt="User avatar"
           src={$page.data?.session?.user?.image}
           class="w-24 h-24 rounded-full object-cover"
         />
-        <div class="flex flex-col">
+        <div class="flex flex-col text-center md:text-left">
           <p>{$page.data.session?.user.name}</p>
           <p class="text-gray-500">@{$page.data.session?.user.username}</p>
           <hr />
@@ -171,13 +171,13 @@
         </button>
       </div>
     {:else}
-      <div class="flex flex-row gap-6">
+      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
         <img
           alt="User avatar"
           src={profile.avatarImageUrl || "https://picsum.photos/200"}
           class="w-24 h-24 rounded-full object-cover"
         />
-        <div class="flex flex-col">
+        <div class="flex flex-col text-center md:text-left">
           <p>{profile.name}</p>
           <p class="text-gray-500">@{profile.username}</p>
           <hr />
