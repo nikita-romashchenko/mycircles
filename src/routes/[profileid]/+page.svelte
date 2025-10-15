@@ -51,8 +51,6 @@
       const data = await res.json()
 
       console.log("SERVER Fetched posts:", data)
-      console.log("SERVER data.success:", data.success)
-      console.log("SERVER data.posts.length:", data.posts.length)
 
       if (!res.ok || !data.posts.length) {
         allLoaded = true
@@ -177,7 +175,7 @@
           src={profile.avatarImageUrl || "https://picsum.photos/200"}
           class="w-24 h-24 rounded-full object-cover"
         />
-        <div class="flex flex-col text-center md:text-left">
+        <div class="flex flex-col text-center md:text-left gap-1">
           <p>{profile.name}</p>
           <p class="text-gray-500">@{profile.username}</p>
           <hr />
@@ -204,41 +202,39 @@
     {/if}
 
     <!-- Upload bttn section -->
-    {#if isOwnProfile}
-      <div class="mt-4 flex flex-row justify-center items-center gap-10">
-        <div class="flex flex-col items-center justify-center mt-4">
-          <!-- svelte-ignore a11y_consider_explicit_label -->
-          <Button
-            class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-            onclick={openUploadMediaModal}
+    <div class="mt-4 flex flex-row justify-center items-center gap-10">
+      <div class="flex flex-col items-center justify-center mt-4">
+        <!-- svelte-ignore a11y_consider_explicit_label -->
+        <Button
+          class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+          onclick={openUploadMediaModal}
+        >
+          <svg
+            class="w-5 h-5"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
           >
-            <svg
-              class="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-          </Button>
-        </div>
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 4v16m8-8H4"
+            />
+          </svg>
+        </Button>
       </div>
-    {/if}
+    </div>
 
     <!-- User posts section -->
     <div class="flex-1 mx-auto p-4 w-full">
       {#if posts.length === 0}
-        <p class="text-gray-500">No posts available.</p>
+        <p class="text-center mt-4 text-gray-500">No posts available</p>
       {/if}
 
       <div class="space-y-8">
         {#each posts as post (post._id)}
-          <PostCard {post} session={$page.data.session} />
+          <PostCard {post} />
         {/each}
       </div>
       <div bind:this={sentinel} class="h-8"></div>
@@ -247,23 +243,16 @@
         <p class="text-center mt-4 text-gray-500">Loading...</p>
       {/if}
 
-      {#if allLoaded}
+      {#if allLoaded && posts.length > 0}
         <p class="text-center mt-4 text-gray-500">No more posts</p>
       {/if}
     </div>
   </div>
-
-  <!-- <RelationsModal
-    bind:open={relationsModalOpen}
-    onLinkClick={handleLinkClick}
-    {contents}
-  /> -->
 
   <RelationsDialog
     bind:open={relationsModalOpen}
     onLinkClick={handleLinkClick}
     {contents}
   />
-  <!-- <UploadMediaModal pageForm={form} bind:open={uploadModalOpen} /> -->
   <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
 {/if}

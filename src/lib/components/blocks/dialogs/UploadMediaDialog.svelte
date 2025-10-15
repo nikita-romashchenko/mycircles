@@ -152,7 +152,8 @@
           class={"text-blue-500"}
           variant={"ghost"}
           onclick={() => toggleField("media", true)}>+ Add media</Button
-        >{/if}
+        >
+      {/if}
 
       {#if showCaption}
         <Button
@@ -171,7 +172,8 @@
           class={"text-blue-500"}
           variant={"ghost"}
           onclick={() => toggleField("caption", true)}>+ Add text</Button
-        >{/if}
+        >
+      {/if}
 
       <Input type="hidden" name="caption" bind:value={$form.caption} />
       {#if $errors.caption}
@@ -222,7 +224,8 @@
           class={"text-blue-500"}
           variant={"ghost"}
           onclick={() => toggleField("location", true)}>+ Add location</Button
-        >{/if}
+        >
+      {/if}
 
       {#if !(!showMedia && !showCaption && !showLocation)}
         <div class="flex flex-col items-center justify-center mt-4">

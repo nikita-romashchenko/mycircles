@@ -11,10 +11,9 @@
   interface Props {
     post: Post
     showActions?: boolean
-    session?: any
   }
 
-  let { post, showActions = true, session }: Props = $props()
+  let { post, showActions = true }: Props = $props()
 
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
@@ -59,11 +58,7 @@
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
-          <a
-            href="/{session
-              ? session.user.profileId
-              : post.userId?._id}/p/{post._id}"
-          >
+          <a href="/{post.userId._id}/p/{post._id}">
             <img
               class="w-full cursor-pointer object-cover"
               src={mainMedia.url}
@@ -77,11 +72,7 @@
           <Carousel.Content class="">
             {#each post.mediaItems as m}
               <Carousel.Item class="">
-                <a
-                  href="/{session
-                    ? session.user.profileId
-                    : post.userId?._id}/p/{post._id}"
-                >
+                <a href="/{post.userId._id}/p/{post._id}">
                   <img
                     class="w-full object-cover cursor-pointer"
                     src={m.url}
@@ -102,21 +93,15 @@
       {/if}
     </Card.Content>
     <Card.Header class="flex flex-col gap-2">
-      <a href="/{post.userId?._id}" class="flex flex-row items-center gap-2">
+      <a href="/{post.userId._id}" class="flex flex-row items-center gap-2">
         <img
           src={"https://picsum.photos/200"}
-          alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
+          alt={`${post.userId.username ?? post.userId.name}'s avatar`}
           class="w-12 h-12 rounded-full object-cover"
         />
         <div class="flex flex-col">
-          <Card.Title
-            >{session ? session?.user.name : post.userId?.name}</Card.Title
-          >
-          <Card.Description
-            >@{session
-              ? session?.user.username
-              : post.userId?.username}</Card.Description
-          >
+          <Card.Title>{post.userId.name}</Card.Title>
+          <Card.Description>@{post.userId.username}</Card.Description>
         </div>
       </a>
       {#if post.caption}

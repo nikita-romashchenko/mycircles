@@ -6,6 +6,11 @@ const PostSchema = new mongoose.Schema({
     ref: "Profile",
     required: true,
   },
+  postedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Profile",
+    required: false,
+  },
   type: {
     type: String,
     enum: ["image", "video", "album", "text"],

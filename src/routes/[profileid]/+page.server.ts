@@ -66,6 +66,10 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       .skip(skip)
       .limit(limit)
       .populate({
+        path: "userId",
+        select: "name username",
+      })
+      .populate({
         path: "mediaItems",
         select: "url",
       })
