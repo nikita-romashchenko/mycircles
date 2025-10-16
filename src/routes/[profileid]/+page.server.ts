@@ -109,7 +109,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 
 //Posting form data action
 export const actions = {
-  default: async ({ request, locals }) => {
+  default: async ({ request, locals, params }) => {
     const formData = await request.formData()
     const form = await superValidate(formData, zod(uploadMediaSchema))
     let type: "image" | "video" | "album" | "text"
@@ -163,8 +163,15 @@ export const actions = {
         })
       }
 
+      console.log("params.profileid:", params.profileid)
+      console.log(
+        "postedTo:",
+        params.profileid !== userId ? params.profileid : undefined,
+      )
+
       const postDoc = await Post.create({
         userId,
+        postedTo: params.profileid !== userId ? params.profileid : undefined,
         type: type,
         caption: caption || "",
         mediaItems: [], // will populate after creating MediaItem
