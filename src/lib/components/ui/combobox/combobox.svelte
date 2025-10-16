@@ -2,10 +2,10 @@
   import CheckIcon from "@lucide/svelte/icons/check"
   import ChevronsUpDownIcon from "@lucide/svelte/icons/chevrons-up-down"
   import { tick } from "svelte"
-  import * as Command from "$lib/components/ui/command/index.js"
-  import * as Popover from "$lib/components/ui/popover/index.js"
-  import { Button } from "$lib/components/ui/button/index.js"
-  import { cn } from "$lib/utils.js"
+  import * as Command from "$lib/components/ui/command/index"
+  import * as Popover from "$lib/components/ui/popover/index"
+  import { Button } from "$lib/components/ui/button/index"
+  import { cn } from "$lib/utils"
 
   const frameworks = [
     {
@@ -13,12 +13,12 @@
       label: "SvelteKit",
     },
     {
-      value: "next.js",
-      label: "Next.js",
+      value: "next",
+      label: "Next",
     },
     {
-      value: "nuxt.js",
-      label: "Nuxt.js",
+      value: "nuxt",
+      label: "Nuxt",
     },
     {
       value: "remix",

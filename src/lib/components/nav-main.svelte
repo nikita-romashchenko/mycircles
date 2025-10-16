@@ -1,6 +1,6 @@
 <script lang="ts">
-  import * as Collapsible from "$lib/components/ui/collapsible/index.js"
-  import * as Sidebar from "$lib/components/ui/sidebar/index.js"
+  import * as Collapsible from "$lib/components/ui/collapsible/index"
+  import * as Sidebar from "$lib/components/ui/sidebar/index"
   import ChevronRightIcon from "@lucide/svelte/icons/chevron-right"
 
   let {
