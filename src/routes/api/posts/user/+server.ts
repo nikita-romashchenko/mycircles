@@ -22,17 +22,26 @@ export async function GET({ request, params, locals }: RequestEvent) {
   const session = await locals.auth()
 
   try {
-    const posts = await Post.find({ userId: userId })
+    const posts = await Post.find({
+      $or: [
+        { userId: userId, postedTo: { $exists: false } },
+        { userId: { $ne: userId }, postedTo: userId },
+      ],
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate({
-        path: "mediaItems",
-        select: "url",
-      })
-      .populate({
         path: "userId",
         select: "name username",
+      })
+      .populate({
+        path: "postedTo",
+        select: "name username",
+      })
+      .populate({
+        path: "mediaItems",
+        select: "url",
       })
 
     console.log("Fetched posts:", posts.length)

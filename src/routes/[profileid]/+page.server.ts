@@ -17,7 +17,6 @@ import {
   ProcessMediaError,
 } from "$lib/utils/mediaUploadUtils"
 import { Interaction } from "$lib/models/Interaction"
-import { ca } from "zod/v4/locales"
 
 // Connect to MongoDB
 await mongoose
