@@ -37,9 +37,15 @@
 
 <Sidebar.Root {collapsible} {...restProps}>
   <Sidebar.Header>
-    <a href="/" class="flex items-center gap-2 px-4 py-3">
-      <span class="text-lg font-medium">MyCircles</span>
-    </a>
+    <Sidebar.MenuItem>
+      <Sidebar.MenuButton>
+        {#snippet child({ props })}
+          <a href="/" {...props}>
+            <span class="text-lg font-medium">MyCircles</span>
+          </a>
+        {/snippet}
+      </Sidebar.MenuButton>
+    </Sidebar.MenuItem>
   </Sidebar.Header>
   <Sidebar.Content>
     {#each data.navMain as group (group.title)}
