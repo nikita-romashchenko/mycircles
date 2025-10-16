@@ -93,6 +93,9 @@
       {/if}
     </Card.Content>
     <Card.Header class="flex flex-col gap-2">
+      {#if post.postedTo}
+        <span class="text-sm text-gray-500">posted by</span>
+      {/if}
       <a href="/{post.userId._id}" class="flex flex-row items-center gap-2">
         <img
           src={"https://picsum.photos/200"}

@@ -61,12 +61,21 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
     }
 
     // Fetch posts
-    const posts = await Post.find({ userId: profile._id })
+    const posts = await Post.find({
+      $or: [
+        { userId: profile._id, postedTo: { $exists: false } },
+        { userId: { $ne: profile._id }, postedTo: profile._id },
+      ],
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate({
         path: "userId",
+        select: "name username",
+      })
+      .populate({
+        path: "postedTo",
         select: "name username",
       })
       .populate({

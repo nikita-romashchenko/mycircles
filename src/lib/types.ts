@@ -31,6 +31,11 @@ export interface Post {
     name: string
     username: string
   }
+  postedTo: {
+    _id: string
+    name: string
+    username: string
+  }
   type: "image" | "video" | "album"
   caption: string
   createdAt: string
