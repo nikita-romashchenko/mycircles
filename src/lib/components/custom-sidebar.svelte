@@ -1,31 +1,10 @@
 <script lang="ts" module>
-  import AudioWaveformIcon from "@lucide/svelte/icons/audio-waveform"
-  import CommandIcon from "@lucide/svelte/icons/command"
-  import GalleryVerticalEndIcon from "@lucide/svelte/icons/gallery-vertical-end"
   import { page } from "$app/state"
   import HomeIcon from "@lucide/svelte/icons/home"
   import { signIn } from "@auth/sveltekit/client"
 
   // This is sample data.
   const data = {
-    versions: ["1.0.1", "1.1.0-alpha", "2.0.0-beta1"],
-    teams: [
-      {
-        name: "Acme Inc",
-        logo: GalleryVerticalEndIcon,
-        plan: "Enterprise",
-      },
-      {
-        name: "Acme Corp.",
-        logo: AudioWaveformIcon,
-        plan: "Startup",
-      },
-      {
-        name: "Evil Corp.",
-        logo: CommandIcon,
-        plan: "Free",
-      },
-    ],
     navMain: [
       {
         title: "Navigation",
@@ -44,10 +23,6 @@
 </script>
 
 <script lang="ts">
-  import NavMain from "./nav-main.svelte"
-  import NavProjects from "./nav-projects.svelte"
-  import NavUser from "./nav-user.svelte"
-  import TeamSwitcher from "./team-switcher.svelte"
   import * as Sidebar from "$lib/components/ui/sidebar/index"
   import type { ComponentProps } from "svelte"
   import NavUserCustom from "./nav-user-custom.svelte"
@@ -62,7 +37,9 @@
 
 <Sidebar.Root {collapsible} {...restProps}>
   <Sidebar.Header>
-    <TeamSwitcher teams={data.teams} />
+    <a href="/" class="flex items-center gap-2 px-4 py-3">
+      <span class="text-lg font-medium">MyCircles</span>
+    </a>
   </Sidebar.Header>
   <Sidebar.Content>
     {#each data.navMain as group (group.title)}
