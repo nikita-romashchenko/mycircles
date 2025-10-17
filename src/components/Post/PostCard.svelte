@@ -5,6 +5,8 @@
   import { Button } from "$lib/components/ui/button"
   import { theme } from "svelte-lexical/dist/themes/default"
   import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
+  import ArrowUp from "@lucide/svelte/icons/arrow-up"
+  import ArrowDown from "@lucide/svelte/icons/arrow-down"
 
   import type { Post } from "$lib/types"
 
@@ -17,6 +19,9 @@
 
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
+  const handleInteraction = async () => {
+    // Placeholder for future interaction handling
+  }
 
   async function handleLike() {
     if (!liked) {
@@ -114,6 +119,12 @@
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
     >
+      <Button variant={"outline"} onclick={handleInteraction}
+        ><ArrowDown /></Button
+      >
+      <Button variant={"outline"} onclick={handleInteraction}
+        ><ArrowUp /></Button
+      >
       {#if liked}
         <Button onclick={handleLike}>Liked</Button>
       {:else}
