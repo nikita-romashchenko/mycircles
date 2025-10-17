@@ -13,14 +13,15 @@
   interface Props {
     post: Post
     showActions?: boolean
+    onVote: (postId: string, type: "upVote" | "downVote") => Promise<void>
   }
 
-  let { post, showActions = true }: Props = $props()
+  let { post, showActions = true, onVote }: Props = $props()
 
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
-  const handleInteraction = async () => {
-    // Placeholder for future interaction handling
+  const handleInteraction = async (type: "upVote" | "downVote") => {
+    onVote(post._id, type)
   }
 
   async function handleLike() {
@@ -101,7 +102,10 @@
       {#if post.postedTo}
         <span class="text-sm text-gray-500">posted by</span>
       {/if}
-      <a href="/{post.userId.safeAddress}" class="flex flex-row items-center gap-2">
+      <a
+        href="/{post.userId.safeAddress}"
+        class="flex flex-row items-center gap-2"
+      >
         <img
           src={"https://picsum.photos/200"}
           alt={`${post.userId.username ?? post.userId.name}'s avatar`}
@@ -119,18 +123,22 @@
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
     >
-      <Button variant={"outline"} onclick={handleInteraction}
-        ><ArrowDown /></Button
-      >
-      <Button variant={"outline"} onclick={handleInteraction}
-        ><ArrowUp /></Button
-      >
-      {#if liked}
+      <div class="flex flex-row gap-1">
+        <Button
+          variant={"outline"}
+          onclick={() => handleInteraction("downVote")}><ArrowDown /></Button
+        >
+        <Button variant={"outline"} onclick={() => handleInteraction("upVote")}
+          ><ArrowUp /></Button
+        >
+      </div>
+      <!-- {#if liked}
         <Button onclick={handleLike}>Liked</Button>
       {:else}
-        <Button variant={"outline"} onclick={handleLike}>Like</Button>{/if}
+        <Button variant={"outline"} onclick={handleLike}>Like</Button>
+      {/if} -->
 
-      <span>{likesCount} {likesCount > 1 ? "likes" : "like"}</span>
+      <!-- <span>{likesCount} {likesCount > 1 ? "likes" : "like"}</span> -->
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
     </Card.Footer>
   </Card.Root>

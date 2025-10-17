@@ -60,11 +60,12 @@ export const uploadMediaSchema = z.object({
   location: z.string().optional(),
 })
 
-// export const uploadMediaSchema = z.object({
-//   media: z.instanceof(File, { message: "Please upload a file." }).array(),
-//   caption: z.string(),
-//   visibility: z.enum(["public", "private", "friends"]).default("public"),
-//   location: z.string(),
-// })
-
 export type UploadMediaSchema = typeof uploadMediaSchema
+
+export const voteSchema = z.object({
+  postId: z.string(),
+  type: z.enum(["upvote", "downvote"]),
+  balanceChange: z.number(),
+})
+
+export type voteSchema = typeof voteSchema

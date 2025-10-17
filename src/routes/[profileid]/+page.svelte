@@ -15,8 +15,9 @@
   import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
-  import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
+  import UploadMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
+  import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
 
   const limit = 1
 
@@ -27,8 +28,11 @@
   let error: string | null = null
 
   let form = $page.data.form
+  let voteForm = $page.data.voteForm
+
   let relationsModalOpen = false
   let uploadModalOpen = false
+  let voteModalOpen = false
   let contents: Relation[][] = [[], [], []]
   let loading = false
   let allLoaded = false
@@ -86,6 +90,8 @@
 
     return () => observer.disconnect()
   })
+
+  const handleVote = async (postId: string, type: "upVote" | "downVote") => {}
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -195,18 +201,26 @@
         <img
           alt="User avatar"
           src={isRpcProfile
-            ? ((profile as CirclesRpcProfile).previewImageUrl || "https://picsum.photos/200")
-            : ((profile as ProfileType).avatarImageUrl || "https://picsum.photos/200")}
+            ? (profile as CirclesRpcProfile).previewImageUrl ||
+              "https://picsum.photos/200"
+            : (profile as ProfileType).avatarImageUrl ||
+              "https://picsum.photos/200"}
           class="w-24 h-24 rounded-full object-cover"
         />
         <div class="flex flex-col text-center md:text-left gap-1">
-          <p>{isRpcProfile ? ((profile as CirclesRpcProfile).name || "Anonymous") : (profile as ProfileType).name}</p>
+          <p>
+            {isRpcProfile
+              ? (profile as CirclesRpcProfile).name || "Anonymous"
+              : (profile as ProfileType).name}
+          </p>
           {#if !isRpcProfile}
             <p class="text-gray-500">@{(profile as ProfileType).username}</p>
           {/if}
           <hr />
           <p class="text-gray-500 text-xs break-all">
-            {isRpcProfile ? (profile as CirclesRpcProfile).address : (profile as ProfileType)._id}
+            {isRpcProfile
+              ? (profile as CirclesRpcProfile).address
+              : (profile as ProfileType)._id}
           </p>
         </div>
         <button
@@ -262,7 +276,7 @@
 
       <div class="space-y-8">
         {#each posts as post (post._id)}
-          <PostCard {post} />
+          <PostCard onVote={handleVote} {post} />
         {/each}
       </div>
       <div bind:this={sentinel} class="h-8"></div>
@@ -284,5 +298,6 @@
       {contents}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
+    <VoteMediaDialog pageForm={voteForm} bind:open={voteModalOpen} />
   {/if}
 {/if}

@@ -5,13 +5,17 @@ import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { Profile } from "$lib/models/Profile"
 import { MediaItem } from "$lib/models/MediaItem"
-import type { Post as PostType, Profile as ProfileType, CirclesRpcProfile } from "$lib/types"
+import type {
+  Post as PostType,
+  Profile as ProfileType,
+  CirclesRpcProfile,
+} from "$lib/types"
 import { superValidate } from "sveltekit-superforms"
 import { zod } from "sveltekit-superforms/adapters"
 import { z } from "zod"
 import { message } from "sveltekit-superforms"
 import { fail } from "@sveltejs/kit"
-import { uploadMediaSchema } from "$lib/validation/schemas"
+import { uploadMediaSchema, voteSchema } from "$lib/validation/schemas"
 import {
   processAndUploadMedia,
   ProcessMediaError,
@@ -45,16 +49,21 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
+  const voteForm = await superValidate(zod(voteSchema))
   const limit = Number(2)
   const skip = Number(0)
 
   try {
     // Check if profile exists in local database by safeAddress
-    const profile = await Profile.findOne({ safeAddress: profileid }).select("-privateKey")
+    const profile = await Profile.findOne({ safeAddress: profileid }).select(
+      "-privateKey",
+    )
 
     if (!profile) {
       // Profile not found in local database, try fetching from Circles RPC
-      console.log(`Profile not found in database for address: ${profileid}, fetching from Circles RPC...`)
+      console.log(
+        `Profile not found in database for address: ${profileid}, fetching from Circles RPC...`,
+      )
       const rpcProfile = await fetchCirclesProfile(profileid)
 
       if (!rpcProfile) {
@@ -64,14 +73,15 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
           error: "Sorry, no such profile found",
           profile: null,
           isOwnProfile: false,
-          form
+          form,
+          voteForm,
         }
       }
 
       // Profile found in RPC, return it with no posts
       const circlesProfile: CirclesRpcProfile = {
         ...rpcProfile,
-        isRpcProfile: true
+        isRpcProfile: true,
       }
 
       return {
@@ -79,7 +89,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         profile: circlesProfile as any,
         isOwnProfile: false,
         isRpcProfile: true,
-        form
+        form,
+        voteForm,
       }
     }
 
@@ -133,6 +144,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       isOwnProfile: session?.user?.profileId === profile._id.toString(),
       isRpcProfile: false,
       form,
+      voteForm,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)
@@ -197,7 +209,9 @@ export const actions = {
       }
 
       // Look up the profile by safeAddress to get its MongoDB ID
-      const targetProfile = await Profile.findOne({ safeAddress: params.profileid })
+      const targetProfile = await Profile.findOne({
+        safeAddress: params.profileid,
+      })
       if (!targetProfile) {
         return new Response(JSON.stringify({ error: "Profile not found" }), {
           status: 404,
@@ -212,7 +226,10 @@ export const actions = {
 
       const postDoc = await Post.create({
         userId,
-        postedTo: targetProfile._id.toString() !== userId ? targetProfile._id : undefined,
+        postedTo:
+          targetProfile._id.toString() !== userId
+            ? targetProfile._id
+            : undefined,
         balance: 0,
         type: type,
         caption: caption || "",
@@ -250,7 +267,57 @@ export const actions = {
       }
       console.log("Post created with ID:", postDoc._id)
 
-      return message(form, "Form posted successfully!")
+      return message(form, "Upload media form posted successfully!")
+    } catch (err: any) {
+      if (err instanceof ProcessMediaError) {
+        return fail(400, { form, error: err.message })
+      }
+
+      return fail(500, {
+        form,
+        error: "Upload failed. Please try again later.",
+      })
+    }
+  },
+  vote: async ({ request, locals, params }) => {
+    const formData = await request.formData()
+    const form = await superValidate(formData, zod(uploadMediaSchema))
+    let type: "image" | "video" | "album" | "text"
+    let processedMedia: any[] = []
+
+    console.log("Form: ", form)
+
+    if (!form.valid) {
+      console.log("Form Errors: ", form.errors)
+      return fail(400, { form })
+    }
+    console.log("Form data is valid:", form.data)
+
+    // TODO: Do something with the validated form.data
+    try {
+      const session = await locals.auth()
+      const media = formData.getAll("media") as File[]
+      const caption = formData.get("caption") as string
+
+      // Save Post
+      const userId = session?.user.profileId
+      if (!userId) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+        })
+      }
+
+      // Look up the profile by safeAddress to get its MongoDB ID
+      const targetProfile = await Profile.findOne({
+        safeAddress: params.profileid,
+      })
+      if (!targetProfile) {
+        return new Response(JSON.stringify({ error: "Profile not found" }), {
+          status: 404,
+        })
+      }
+
+      return message(form, "Vote form posted successfully!")
     } catch (err: any) {
       if (err instanceof ProcessMediaError) {
         return fail(400, { form, error: err.message })
