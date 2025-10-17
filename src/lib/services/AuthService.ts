@@ -4,6 +4,7 @@ import { Profile } from '$lib/models/Profile';
 import { env } from '$env/dynamic/private';
 import { safeApiService } from '$lib/services/SafeApiService';
 import Safe, { hashSafeMessage } from '@safe-global/protocol-kit';
+import { fetchCirclesProfile } from '$lib/utils/circlesRpc';
 
 // Connect to MongoDB if not already connected
 if (mongoose.connection.readyState === 0) {
@@ -163,7 +164,7 @@ export class Auth {
         success: true,
         user: {
           safeAddress: profile.safeAddress,
-          username: profile.username,
+          username: profile.username || undefined,
           profileId: profile._id.toString(),
           name: profile.name,
           controllingEOA: ownerAddress,
@@ -220,23 +221,31 @@ export class Auth {
         };
       }
 
-      // Check if profile exists for this Safe address
-      const profile = await Profile.findOne({ safeAddress: safeAddress });
+      // Check if profile exists for this Safe address, create if not
+      let profile = await Profile.findOne({ safeAddress: safeAddress });
 
       if (!profile) {
-        return {
-          success: false,
-          error: 'No profile found for this Safe address'
-        };
+        // Auto-create profile with just the safeAddress
+        profile = await Profile.create({
+          safeAddress: safeAddress
+        });
+        console.log(`Auto-created profile for Safe address: ${safeAddress}`);
       }
+
+      // Fetch profile data from Circles RPC
+      const rpcProfile = await fetchCirclesProfile(safeAddress);
+      console.log(`Fetched RPC profile for ${safeAddress}:`, rpcProfile);
+
+      // Use RPC name if available
+      const displayName = rpcProfile?.name || undefined;
 
       return {
         success: true,
         user: {
           safeAddress: safeAddress,
-          username: profile.username,
+          username: profile.username || undefined,
           profileId: profile._id.toString(),
-          name: profile.name,
+          name: displayName,
           controllingEOA: walletOwner,
           email: profile.email || undefined
         }
@@ -302,7 +311,7 @@ export class Auth {
         success: true,
         user: {
           safeAddress: profile.safeAddress,
-          username: profile.username,
+          username: profile.username || undefined,
           profileId: profile._id.toString(),
           name: profile.name
         }

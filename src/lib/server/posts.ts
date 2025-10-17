@@ -58,17 +58,27 @@ export async function getPersonalizedFeed(
 
     const filteredRelations = relationsWithProfiles.filter(
       (item) =>
-        item.profile &&
-        (item.relationItem.relation === "mutuallyTrusts" ||
-          item.relationItem.relation === "trusts"),
+        item.relationItem.relation === "mutuallyTrusts" ||
+        item.relationItem.relation === "trusts",
     )
 
     // Get allowed addresses from filtered relations (normalize to lowercase)
-    const allowedAddresses = filteredRelations.map((fp) => fp.profile.safeAddress.toLowerCase())
+    // Use objectAvatar (the address we trust) regardless of whether they have a profile
+    const allowedAddresses = filteredRelations.map((fp) => fp.relationItem.objectAvatar.toLowerCase())
 
     console.log("Allowed User Addresses:", allowedAddresses)
 
-    const posts = await Post.find({ creatorAddress: { $in: allowedAddresses } })
+    const posts = await Post.find({
+      $and: [
+        {
+          $or: [
+            { creatorAddress: { $in: allowedAddresses } },
+            { postedToAddress: { $in: allowedAddresses } }
+          ]
+        },
+        { creatorAddress: { $ne: session.user.safeAddress.toLowerCase() } }
+      ]
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

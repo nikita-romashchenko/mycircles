@@ -4,7 +4,7 @@ import mongoose from "mongoose"
 const ProfileSchema = new mongoose.Schema({
   name: { type: String, default: "" },
   username: { type: String, unique: false, sparse: true }, // @todo check if profile exists
-  email: { type: String, required: true, unique: true },
+  email: { type: String, required: false, unique: true, sparse: true },
   safeAddress: { type: String, required: true, default: "0x" },
   privateKey: { type: String, default: "" },
   description: { type: String, default: "" },
@@ -24,5 +24,9 @@ const ProfileSchema = new mongoose.Schema({
   },
 })
 
-export const Profile =
-  mongoose.models.Profile || mongoose.model("Profile", ProfileSchema)
+// Clear cached model to ensure schema changes are applied
+if (mongoose.models.Profile) {
+  delete mongoose.models.Profile;
+}
+
+export const Profile = mongoose.model("Profile", ProfileSchema)

@@ -2,7 +2,6 @@ import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
-import { MediaItem } from "$lib/models/MediaItem"
 import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
 import { Interaction } from "$lib/models/Interaction"
 import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
@@ -14,14 +13,12 @@ await mongoose
   .catch((err) => console.error("MongoDB connection error:", err))
 
 /**
- * Loads all posts for a profile by profileId slug.
+ * Loads a single post by ID and the profile it belongs to.
  */
 export const load: PageServerLoad = async ({ params, parent, depends }) => {
   depends("like")
 
-  const { profileid, postid } = params
-  // Normalize address to lowercase for consistent lookups
-  const normalizedAddress = profileid.toLowerCase()
+  const { postid } = params
 
   const parentData = await parent()
   const session = parentData.session
@@ -29,26 +26,41 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   try {
     // Validate ObjectId
     if (!mongoose.Types.ObjectId.isValid(postid)) {
-      return { posts: [], error: "Invalid post ID" }
+      return { error: "Invalid post ID" }
     }
 
     // Fetch post
-    const post = await Post.findById(postid).populate({
-      path: "mediaItems",
-      select: "url", // only get URLs, exclude metadata
-    })
+    const post = await Post.findById(postid)
+      .populate({
+        path: "mediaItems",
+        select: "url",
+      })
+      .populate({
+        path: "userId",
+        select: "name username safeAddress",
+      })
+
     if (!post) {
-      return { posts: [], error: "Post not found" }
+      return { error: "Post not found" }
     }
 
-    // Fetch profile data ONLY from Circles RPC (don't use local DB for profile data)
+    // Determine which address to fetch profile for
+    // If posted to someone else's profile, use postedToAddress
+    // Otherwise use creatorAddress
+    const profileAddress = post.postedToAddress || post.creatorAddress
+    const normalizedAddress = profileAddress?.toLowerCase()
+
+    if (!normalizedAddress) {
+      return { error: "Post has no associated address" }
+    }
+
+    // Fetch profile data ONLY from Circles RPC
     console.log(`Fetching profile data from Circles RPC for address: ${normalizedAddress}`)
     const rpcProfile = await fetchCirclesProfile(normalizedAddress)
 
     if (!rpcProfile) {
       // Profile not found on Circles network
       return {
-        posts: [],
         error: "Sorry, no such profile found",
         profile: null,
         isOwnProfile: false,
@@ -71,8 +83,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       type: "like",
     })
 
-    console.log(`ExpectedPost: ${post}`)
-
     return {
       post: {
         ...JSON.parse(JSON.stringify(post)),
@@ -83,7 +93,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       isRpcProfile: true
     }
   } catch (err: any) {
-    console.error("Error loading posts:", err)
-    return { posts: [], error: err.message }
+    console.error("Error loading post:", err)
+    return { error: err.message }
   }
 }

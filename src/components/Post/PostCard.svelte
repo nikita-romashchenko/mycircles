@@ -65,7 +65,7 @@
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
-          <a href="/{post.userId.safeAddress}/p/{post._id}">
+          <a href="/post/{post._id}">
             <img
               class="w-full cursor-pointer object-cover"
               src={mainMedia.url}
@@ -79,7 +79,7 @@
           <Carousel.Content class="">
             {#each post.mediaItems as m}
               <Carousel.Item class="">
-                <a href="/{post.userId.safeAddress}/p/{post._id}">
+                <a href="/post/{post._id}">
                   <img
                     class="w-full object-cover cursor-pointer"
                     src={m.url}

@@ -3,14 +3,13 @@
   import { page } from "$app/stores"
   import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
   import { Button } from "$lib/components/ui/button"
-  import type { Post as PostType } from "$lib/types"
-  import type { Profile as ProfileType } from "$lib/types"
+  import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
   import { theme } from "svelte-lexical/dist/themes/default"
 
-  let liked = $state($page.data.post.isLiked)
+  let liked = $state($page.data.post?.isLiked)
 
   let post = $derived($page.data.post as PostType)
-  let profile = $derived($page.data.profile as ProfileType)
+  let profile = $derived($page.data.profile as CirclesRpcProfile)
   let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
 
   async function handleLike() {
@@ -47,23 +46,17 @@
 <div class="max-w-xl mx-auto p-4">
   <!-- User info -->
   <div class="flex items-center gap-3 mb-4">
-    <a href="/{post.userId}" class="flex items-center gap-3">
-      {#if isOwnProfile}
-        <img
-          src={$page.data.session?.user.image}
-          alt={`${profile.username}'s avatar`}
-          class="w-12 h-12 rounded-full object-cover"
-        />
-      {:else}
-        <img
-          src={profile.avatarImageUrl || "https://picsum.photos/200"}
-          alt={`${profile.username ?? profile.name}'s avatar`}
-          class="w-12 h-12 rounded-full object-cover"
-        />
-      {/if}
+    <a href="/{profile.address}" class="flex items-center gap-3">
+      <img
+        src={profile.previewImageUrl || "https://picsum.photos/200"}
+        alt={`${profile.name || 'Anonymous'}'s avatar`}
+        class="w-12 h-12 rounded-full object-cover"
+      />
       <div>
-        <h2 class="font-semibold text-lg">{profile.name}</h2>
-        <p class="text-gray-500 text-sm">@{profile.username}</p>
+        <h2 class="font-semibold text-lg">{profile.name || "Anonymous"}</h2>
+        {#if isOwnProfile}
+          <p class="text-blue-500 text-sm">(Your Profile)</p>
+        {/if}
       </div>
     </a>
   </div>

@@ -271,9 +271,8 @@
 <div class="signin-container">
   <div class="signin-card">
     <div class="logo-section">
-      <img src="/img/logo.png" alt="MyCircles Logo" class="logo" />
-      <h1 class="app-title">MyCircles</h1>
-      <p class="subtitle">Welcome back</p>
+      <h1 class="app-title">Sign in</h1>
+      <p class="subtitle">Welcome back to MyCircles</p>
     </div>
 
     {#if !showSafeForm}
@@ -300,9 +299,6 @@
         </button>
 
         <button class="metamask-button" onclick={handleMetaMaskLogin}>
-          <svg width="18" height="18" viewBox="0 0 318 318" fill="currentColor">
-            <path d="M272.99 44.91L234.48 16.14c-6.37-4.77-15.45-3.43-20.22 2.94L185.47 56.2c-2.99 4-2.24 9.68 1.64 12.75l24.83 19.68c3.88 3.07 9.42 2.4 12.49-1.49l28.79-36.47c4.77-6.37 13.85-7.71 20.22-2.94l29.75 22.27c6.37 4.77 7.71 13.85 2.94 20.22l-36.47 48.62c-2.99 3.99-2.24 9.68 1.64 12.75l30.15 23.88c3.88 3.07 9.42 2.4 12.49-1.49l39.51-49.89c4.77-6.37 13.85-7.71 20.22-2.94l38.51 28.79c6.37 4.77 7.71 13.85 2.94 20.22L272.99 44.91z"/>
-          </svg>
           Sign in with MetaMask
         </button>
       </div>
@@ -395,57 +391,29 @@
   }
 
   .signin-card {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(20px);
-    border-radius: 24px;
-    box-shadow:
-      0 8px 32px rgba(0, 0, 0, 0.1),
-      0 1px 0 rgba(255, 255, 255, 0.5) inset;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
     padding: 2.5rem;
-    width: 100%;
-    max-width: 420px;
-    animation: slideUp 0.6s ease-out;
-  }
-
-  @keyframes slideUp {
-    from {
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    width: 420px;
+    min-width: 420px;
   }
 
   .logo-section {
-    text-align: center;
     margin-bottom: 2rem;
   }
 
-  .logo {
-    width: 64px;
-    height: 64px;
-    border-radius: 16px;
-    margin-bottom: 1rem;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
   .app-title {
-    font-size: 2rem;
-    font-weight: 700;
-    color: #1a1a1a;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
     margin: 0 0 0.5rem 0;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
   }
 
   .subtitle {
-    color: #64748b;
-    font-size: 1rem;
+    color: #6b7280;
+    font-size: 0.875rem;
     margin: 0;
     font-weight: 400;
   }
@@ -453,38 +421,33 @@
   .auth-methods {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
   }
 
   :global(.google-signin) {
     width: 100% !important;
   }
 
-  .google-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.875rem 1rem;
-    background: #fff;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  :global(.buttonPrimary) {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 0.75rem !important;
+    width: 100% !important;
+    padding: 0.875rem 1rem !important;
+    background: white !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 8px !important;
+    color: #374151 !important;
+    font-size: 0.95rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.15s ease !important;
   }
 
-  .google-button:hover {
-    border-color: #cbd5e1;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
-  }
-
-  .google-icon {
-    flex-shrink: 0;
+  :global(.buttonPrimary:hover) {
+    background: #f9fafb !important;
+    border-color: #9ca3af !important;
   }
 
   .divider {
@@ -500,14 +463,14 @@
     left: 0;
     right: 0;
     height: 1px;
-    background: #e2e8f0;
+    background: #e5e7eb;
     z-index: 1;
   }
 
   .divider span {
-    background: rgba(255, 255, 255, 0.95);
+    background: white;
     padding: 0 1rem;
-    color: #64748b;
+    color: #9ca3af;
     font-size: 0.875rem;
     position: relative;
     z-index: 2;
@@ -520,25 +483,25 @@
     gap: 0.75rem;
     width: 100%;
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #374151;
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
   }
 
   .safe-key-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    background: #f9fafb;
+    border-color: #9ca3af;
   }
 
   .safe-form {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: 1.25rem;
   }
 
   .back-button {
@@ -547,15 +510,15 @@
     gap: 0.5rem;
     background: none;
     border: none;
-    color: #64748b;
+    color: #6b7280;
     font-size: 0.875rem;
     cursor: pointer;
     padding: 0.5rem 0;
-    transition: color 0.2s ease;
+    transition: color 0.15s ease;
   }
 
   .back-button:hover {
-    color: #475569;
+    color: #374151;
   }
 
   .form-section {
@@ -572,19 +535,19 @@
 
   .form-input,
   .form-select {
-    padding: 0.875rem 1rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
     font-size: 0.95rem;
-    background: #fff;
-    transition: all 0.2s ease;
+    background: white;
+    transition: all 0.15s ease;
   }
 
   .form-input:focus,
   .form-select:focus {
     outline: none;
-    border-color: #667eea;
-    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    border-color: #6b7280;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
   }
 
   .form-input::placeholder {
@@ -592,48 +555,46 @@
   }
 
   .load-safes-button {
-    padding: 0.875rem 1rem;
-    background: #3b82f6;
+    padding: 0.75rem 1rem;
+    background: #1f2937;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     color: white;
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     margin-top: 0.5rem;
   }
 
   .load-safes-button:hover:not(:disabled) {
-    background: #2563eb;
-    transform: translateY(-1px);
+    background: #111827;
   }
 
   .load-safes-button:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
   .signin-button {
-    padding: 0.875rem 1rem;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    padding: 0.75rem 1rem;
+    background: #1f2937;
     border: none;
-    border-radius: 12px;
+    border-radius: 8px;
     color: white;
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     margin-top: 0.5rem;
   }
 
   .signin-button:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+    background: #111827;
   }
 
   .signin-button:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 
@@ -641,7 +602,7 @@
     padding: 0.75rem 1rem;
     background: #fef2f2;
     border: 1px solid #fecaca;
-    border-radius: 12px;
+    border-radius: 8px;
     color: #dc2626;
     font-size: 0.875rem;
   }
@@ -653,37 +614,39 @@
     gap: 0.75rem;
     width: 100%;
     padding: 0.875rem 1rem;
-    background: linear-gradient(135deg, #f6851b 0%, #e2761b 100%);
-    border: none;
-    border-radius: 12px;
-    color: white;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #374151;
     font-size: 0.95rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
   }
 
   .metamask-button:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(246, 133, 27, 0.4);
+    background: #f9fafb;
+    border-color: #9ca3af;
   }
 
   .connected-wallet {
     padding: 1rem;
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
+    background: #f9fafb;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
   }
 
   .wallet-address {
     font-family: monospace;
     font-size: 0.875rem;
-    padding: 0.5rem;
+    padding: 0.5rem 0.75rem;
     background: white;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
     color: #374151;
     margin-top: 0.5rem;
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 
   .method-switcher {
@@ -694,26 +657,27 @@
   .switch-method-button {
     background: none;
     border: none;
-    color: #3b82f6;
+    color: #6b7280;
     font-size: 0.875rem;
     cursor: pointer;
     text-decoration: underline;
-    transition: color 0.2s ease;
+    transition: color 0.15s ease;
   }
 
   .switch-method-button:hover {
-    color: #2563eb;
+    color: #374151;
   }
 
   @media (max-width: 480px) {
     .signin-card {
       padding: 2rem 1.5rem;
-      margin: 1rem;
-      border-radius: 20px;
+      margin: 0.5rem;
+      width: calc(100vw - 2rem);
+      min-width: unset;
     }
 
     .app-title {
-      font-size: 1.75rem;
+      font-size: 1.5rem;
     }
   }
 </style>
