@@ -24,7 +24,7 @@ export async function getPublicFeed(limit: number, skip: number) {
       })
       .populate({
         path: "userId",
-        select: "name username",
+        select: "name username safeAddress",
       })
 
     //TODO: Check if throws "Cannot stringify arbitrary non-POJOs" without .stringify()
@@ -98,7 +98,7 @@ export async function getPersonalizedFeed(
       })
       .populate({
         path: "userId",
-        select: "name username",
+        select: "name username safeAddress",
       })
 
     console.log("Fetched posts:", posts.length)

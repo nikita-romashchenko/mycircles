@@ -4,6 +4,7 @@
   import type {
     Post as PostType,
     Profile as ProfileType,
+    CirclesRpcProfile,
     Relation,
   } from "$lib/types"
   import { page } from "$app/stores"
@@ -20,8 +21,10 @@
   const limit = 1
 
   let posts: PostType[] = []
-  let profile: ProfileType
+  let profile: ProfileType | CirclesRpcProfile | null
   let isOwnProfile: boolean
+  let isRpcProfile: boolean = false
+  let error: string | null = null
 
   let form = $page.data.form
   let relationsModalOpen = false
@@ -31,22 +34,27 @@
   let allLoaded = false
   let sentinel: HTMLDivElement
 
-  $: profile = $page.data.profile as ProfileType
+  $: profile = $page.data.profile as ProfileType | CirclesRpcProfile | null
   $: posts = $page.data.posts as PostType[]
   $: skip = posts.length
   $: isOwnProfile = $page.data.isOwnProfile as boolean
+  $: isRpcProfile = $page.data.isRpcProfile as boolean
+  $: error = $page.data.error as string | null
   $: console.log("posts:", posts)
   $: console.log("page.data.posts:", $page.data.posts)
+  $: console.log("isRpcProfile:", isRpcProfile)
+  $: console.log("error:", error)
 
   async function loadMore() {
-    if (loading) return
+    if (loading || isRpcProfile) return // Don't load more for RPC profiles
     loading = true
 
     try {
-      const str = `/api/posts/user?userid=${profile._id}&skip=${skip}&limit=${limit}`
+      const profileId = (profile as ProfileType)._id
+      const str = `/api/posts/user?userid=${profileId}&skip=${skip}&limit=${limit}`
       console.log("Fetching more posts from:", str)
       const res = await fetch(
-        `/api/posts/user?userid=${profile._id}&skip=${skip}&limit=${limit}`,
+        `/api/posts/user?userid=${profileId}&skip=${skip}&limit=${limit}`,
       )
       const data = await res.json()
 
@@ -127,14 +135,28 @@
   })
 
   run(() => {
-    if (browser && profile?.safeAddress) {
-      fetchRelations(profile.safeAddress)
+    if (browser && profile && !isRpcProfile) {
+      const safeAddr = (profile as ProfileType).safeAddress
+      if (safeAddr) {
+        fetchRelations(safeAddr)
+      }
+    } else if (browser && profile && isRpcProfile) {
+      const rpcAddr = (profile as CirclesRpcProfile).address
+      if (rpcAddr) {
+        fetchRelations(rpcAddr)
+      }
     }
   })
 </script>
 
-<!-- TODO: add something like a spinner if no profile or error screen -->
-{#if profile}
+<!-- Error screen -->
+{#if error}
+  <div class="w-full max-w-3xl">
+    <div class="flex flex-col items-center justify-center p-8 text-center">
+      <p class="text-2xl text-gray-600 mb-4">{error}</p>
+    </div>
+  </div>
+{:else if profile}
   <div class="w-full max-w-3xl">
     <!-- User info section -->
     {#if isOwnProfile}
@@ -172,14 +194,20 @@
       <div class="flex flex-col items-center justify-center md:flex-row gap-6">
         <img
           alt="User avatar"
-          src={profile.avatarImageUrl || "https://picsum.photos/200"}
+          src={isRpcProfile
+            ? ((profile as CirclesRpcProfile).previewImageUrl || "https://picsum.photos/200")
+            : ((profile as ProfileType).avatarImageUrl || "https://picsum.photos/200")}
           class="w-24 h-24 rounded-full object-cover"
         />
         <div class="flex flex-col text-center md:text-left gap-1">
-          <p>{profile.name}</p>
-          <p class="text-gray-500">@{profile.username}</p>
+          <p>{isRpcProfile ? ((profile as CirclesRpcProfile).name || "Anonymous") : (profile as ProfileType).name}</p>
+          {#if !isRpcProfile}
+            <p class="text-gray-500">@{(profile as ProfileType).username}</p>
+          {/if}
           <hr />
-          <p class="text-gray-500">{profile._id}</p>
+          <p class="text-gray-500 text-xs break-all">
+            {isRpcProfile ? (profile as CirclesRpcProfile).address : (profile as ProfileType)._id}
+          </p>
         </div>
         <button
           onclick={openRelationsModal}

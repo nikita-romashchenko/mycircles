@@ -51,7 +51,7 @@
             </div>
           {:else}
             <a
-              href={`/${relation.profile.profileId}`}
+              href={`/${relation.profile.safeAddress}`}
               class="my-2 flex flex-row gap-4 items-center border border-gray-300 rounded-md p-2"
               onclick={() => onLinkClick?.()}
             >

@@ -33,11 +33,11 @@ export async function GET({ request, params, locals }: RequestEvent) {
       .limit(limit)
       .populate({
         path: "userId",
-        select: "name username",
+        select: "name username safeAddress",
       })
       .populate({
         path: "postedTo",
-        select: "name username",
+        select: "name username safeAddress",
       })
       .populate({
         path: "mediaItems",

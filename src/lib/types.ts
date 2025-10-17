@@ -19,6 +19,15 @@ export interface Profile {
   type: "Open" | "Private"
 }
 
+// Profile data from Circles RPC network
+export interface CirclesRpcProfile {
+  address: string
+  name?: string
+  previewImageUrl?: string
+  avatarType?: string
+  isRpcProfile: true // Flag to identify RPC profiles
+}
+
 interface MediaItem {
   _id: string
   url: string
@@ -30,11 +39,13 @@ export interface Post {
     _id: string
     name: string
     username: string
+    safeAddress: string
   }
   postedTo: {
     _id: string
     name: string
     username: string
+    safeAddress: string
   }
   type: "image" | "video" | "album"
   caption: string

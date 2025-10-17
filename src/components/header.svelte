@@ -27,7 +27,7 @@
             <NavigationMenu.Link>
               {#snippet child()}
                 <a
-                  href={`/${page.data.session?.user.profileId}`}
+                  href={`/${page.data.session?.user.safeAddress}`}
                   class={navigationMenuTriggerStyle()}>Profile</a
                 >
               {/snippet}
@@ -60,7 +60,7 @@
       <li class="navItem"><a href="/protected">Protected</a></li>
       <li class="navItem"><a href="/media">Media</a></li>
       <li class="navItem">
-        <a href={`/${page.data.session?.user.profileId}`}>Profile</a>
+        <a href={`/${page.data.session?.user.safeAddress}`}>Profile</a>
       </li>
     </ul>
   </nav> -->
