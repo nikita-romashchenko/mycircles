@@ -1,4 +1,4 @@
-import * as DialogPrimitive from "$lib/components/dialog-custom"
+import { Dialog as DialogPrimitive } from "bits-ui"
 
 import Title from "./dialog-title.svelte"
 import Footer from "./dialog-footer.svelte"
