@@ -1,8 +1,8 @@
 <script lang="ts">
   import { Dialog as DialogPrimitive } from "bits-ui"
+  import Overlay from "./dialog-overlay.svelte"
   import XIcon from "@lucide/svelte/icons/x"
   import type { Snippet } from "svelte"
-  import * as Dialog from "./index"
   import { cn, type WithoutChildrenOrChild } from "$lib/utils"
 
   let {
@@ -19,8 +19,8 @@
   } = $props()
 </script>
 
-<Dialog.Portal {...portalProps}>
-  <Dialog.Overlay />
+<DialogPrimitive.Portal {...portalProps}>
+  <Overlay />
   <DialogPrimitive.Content
     bind:ref
     data-slot="dialog-content"
@@ -40,4 +40,4 @@
       </DialogPrimitive.Close>
     {/if}
   </DialogPrimitive.Content>
-</Dialog.Portal>
+</DialogPrimitive.Portal>
