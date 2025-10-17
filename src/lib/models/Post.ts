@@ -1,4 +1,5 @@
 import mongoose from "mongoose"
+import { required } from "zod/v4-mini"
 
 const PostSchema = new mongoose.Schema({
   userId: {
@@ -11,6 +12,7 @@ const PostSchema = new mongoose.Schema({
     ref: "Profile",
     required: false,
   },
+  balance: { type: Number, default: 0, required: true },
   type: {
     type: String,
     enum: ["image", "video", "album", "text"],

@@ -249,10 +249,12 @@
     </div>
   </div>
 
-  <RelationsDialog
-    bind:open={relationsModalOpen}
-    onLinkClick={handleLinkClick}
-    {contents}
-  />
-  <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
+  {#if browser}
+    <RelationsDialog
+      bind:open={relationsModalOpen}
+      onLinkClick={handleLinkClick}
+      {contents}
+    />
+    <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
+  {/if}
 {/if}

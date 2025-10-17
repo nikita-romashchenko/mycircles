@@ -180,6 +180,7 @@ export const actions = {
       const postDoc = await Post.create({
         userId,
         postedTo: params.profileid !== userId ? params.profileid : undefined,
+        balance: 0,
         type: type,
         caption: caption || "",
         mediaItems: [], // will populate after creating MediaItem
