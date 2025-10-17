@@ -3,8 +3,7 @@ import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
-import type { Post as PostType, Profile as ProfileType, CirclesRpcProfile } from "$lib/types"
-import { Profile } from "$lib/models/Profile"
+import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
 import { Interaction } from "$lib/models/Interaction"
 import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
 
@@ -21,6 +20,9 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   depends("like")
 
   const { profileid, postid } = params
+  // Normalize address to lowercase for consistent lookups
+  const normalizedAddress = profileid.toLowerCase()
+
   const parentData = await parent()
   const session = parentData.session
 
@@ -39,48 +41,30 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       return { posts: [], error: "Post not found" }
     }
 
-    // Fetch profile by safeAddress from local database
-    const profile = await Profile.findOne({ safeAddress: profileid }).select("-privateKey")
+    // Fetch profile data ONLY from Circles RPC (don't use local DB for profile data)
+    console.log(`Fetching profile data from Circles RPC for address: ${normalizedAddress}`)
+    const rpcProfile = await fetchCirclesProfile(normalizedAddress)
 
-    if (!profile) {
-      // Profile not found in local database, try fetching from Circles RPC
-      console.log(`Profile not found in database for address: ${profileid}, fetching from Circles RPC...`)
-      const rpcProfile = await fetchCirclesProfile(profileid)
-
-      if (!rpcProfile) {
-        // Profile not found anywhere
-        return {
-          posts: [],
-          error: "Sorry, no such profile found",
-          profile: null,
-          isOwnProfile: false
-        }
-      }
-
-      // Profile found in RPC
-      const circlesProfile: CirclesRpcProfile = {
-        ...rpcProfile,
-        isRpcProfile: true
-      }
-
-      const interaction = await Interaction.findOne({
-        userId: session?.user?.profileId,
-        postId: post._id,
-        type: "like",
-      })
-
+    if (!rpcProfile) {
+      // Profile not found on Circles network
       return {
-        post: {
-          ...JSON.parse(JSON.stringify(post)),
-          isLiked: !!interaction,
-        } as PostType,
-        profile: circlesProfile as any,
+        posts: [],
+        error: "Sorry, no such profile found",
+        profile: null,
         isOwnProfile: false,
-        isRpcProfile: true
+        isRpcProfile: false
       }
     }
 
-    // Profile found in local database
+    // Create profile object from RPC data only
+    const circlesProfile: CirclesRpcProfile = {
+      ...rpcProfile,
+      isRpcProfile: true
+    }
+
+    // Check if this is the current user's profile by comparing addresses
+    const isOwnProfile = session?.user?.safeAddress?.toLowerCase() === normalizedAddress
+
     const interaction = await Interaction.findOne({
       userId: session?.user?.profileId,
       postId: post._id,
@@ -94,9 +78,9 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         ...JSON.parse(JSON.stringify(post)),
         isLiked: !!interaction,
       } as PostType,
-      profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
-      isOwnProfile: session?.user?.profileId === profile._id.toString(),
-      isRpcProfile: false
+      profile: circlesProfile as any,
+      isOwnProfile,
+      isRpcProfile: true
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)

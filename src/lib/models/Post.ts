@@ -2,16 +2,30 @@ import mongoose from "mongoose"
 import { required } from "zod/v4-mini"
 
 const PostSchema = new mongoose.Schema({
+  // New fields using safeAddress (lowercase)
+  creatorAddress: {
+    type: String,
+    required: true,
+    lowercase: true, // Auto-normalize to lowercase
+  },
+  postedToAddress: {
+    type: String,
+    required: false,
+    lowercase: true, // Auto-normalize to lowercase
+  },
+
+  // Old fields - kept for migration/backward compatibility (will be deprecated)
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Profile",
-    required: true,
+    required: false, // Made optional for migration
   },
   postedTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Profile",
     required: false,
   },
+
   balance: { type: Number, default: 0, required: true },
   type: {
     type: String,
@@ -30,5 +44,10 @@ const PostSchema = new mongoose.Schema({
   repostsCount: { type: Number, default: 0 },
   location: { type: Object },
 })
+
+// Indexes for efficient queries using new address fields
+PostSchema.index({ creatorAddress: 1, createdAt: -1 })
+PostSchema.index({ postedToAddress: 1, createdAt: -1 })
+PostSchema.index({ creatorAddress: 1, postedToAddress: 1 })
 
 export const Post = mongoose.models.Post || mongoose.model("Post", PostSchema)

@@ -1,18 +1,11 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3"
 import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
-import { Profile } from "$lib/models/Profile"
 import { MediaItem } from "$lib/models/MediaItem"
-import type {
-  Post as PostType,
-  Profile as ProfileType,
-  CirclesRpcProfile,
-} from "$lib/types"
+import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
 import { superValidate } from "sveltekit-superforms"
 import { zod } from "sveltekit-superforms/adapters"
-import { z } from "zod"
 import { message } from "sveltekit-superforms"
 import { fail } from "@sveltejs/kit"
 import { uploadMediaSchema, voteSchema } from "$lib/validation/schemas"
@@ -29,16 +22,6 @@ await mongoose
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err))
 
-const s3 = new S3Client({
-  endpoint: env.MINIO_ENDPOINT,
-  region: "auto",
-  forcePathStyle: true, // required for MinIO
-  credentials: {
-    accessKeyId: env.MINIO_ACCESS_KEY_ID,
-    secretAccessKey: env.MINIO_SECRET_ACCESS_KEY,
-  },
-})
-
 /**
  * Loads all posts for a profile by profileId slug.
  */
@@ -46,6 +29,9 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   depends("posts")
 
   const { profileid } = params
+  // Normalize address to lowercase for consistent lookups
+  const normalizedAddress = profileid.toLowerCase()
+
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
@@ -54,51 +40,42 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const skip = Number(0)
 
   try {
-    // Check if profile exists in local database by safeAddress
-    const profile = await Profile.findOne({ safeAddress: profileid }).select(
-      "-privateKey",
+    // Fetch profile data ONLY from Circles RPC (don't use local DB for profile data)
+    console.log(
+      `Fetching profile data from Circles RPC for address: ${normalizedAddress}`,
     )
+    const rpcProfile = await fetchCirclesProfile(normalizedAddress)
 
-    if (!profile) {
-      // Profile not found in local database, try fetching from Circles RPC
-      console.log(
-        `Profile not found in database for address: ${profileid}, fetching from Circles RPC...`,
-      )
-      const rpcProfile = await fetchCirclesProfile(profileid)
-
-      if (!rpcProfile) {
-        // Profile not found anywhere
-        return {
-          posts: [],
-          error: "Sorry, no such profile found",
-          profile: null,
-          isOwnProfile: false,
-          form,
-          voteForm,
-        }
-      }
-
-      // Profile found in RPC, return it with no posts
-      const circlesProfile: CirclesRpcProfile = {
-        ...rpcProfile,
-        isRpcProfile: true,
-      }
-
+    if (!rpcProfile) {
+      // Profile not found on Circles network
       return {
         posts: [],
-        profile: circlesProfile as any,
+        error: "Sorry, no such profile found",
+        profile: null,
         isOwnProfile: false,
-        isRpcProfile: true,
+        isRpcProfile: false,
         form,
-        voteForm,
       }
     }
 
-    // Profile found in local database, fetch posts
+    // Always fetch posts by address from local database
+    // Show posts where:
+    // 1. User created the post and didn't post to another profile (own posts)
+    // 2. Post was explicitly posted to this user's profile by anyone
     const posts = await Post.find({
       $or: [
-        { userId: profile._id, postedTo: { $exists: false } },
-        { userId: { $ne: profile._id }, postedTo: profile._id },
+        // Posts created by this user on their own profile (postedToAddress is null/undefined)
+        {
+          creatorAddress: normalizedAddress,
+          postedToAddress: { $exists: false },
+        },
+        { creatorAddress: normalizedAddress, postedToAddress: null },
+        {
+          creatorAddress: normalizedAddress,
+          postedToAddress: normalizedAddress,
+        },
+        // Posts created by anyone (including self) explicitly posted to this profile
+        { postedToAddress: normalizedAddress },
       ],
     })
       .sort({ createdAt: -1 })
@@ -116,6 +93,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         path: "mediaItems",
         select: "url",
       })
+
+    console.log(`Found ${posts.length} posts for address: ${normalizedAddress}`)
 
     // collect all post IDs
     const postIds = posts.map((p) => p._id)
@@ -138,11 +117,21 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       isLiked: likedPostIds.has(p._id.toString()),
     }))
 
+    // Create profile object from RPC data only
+    const circlesProfile: CirclesRpcProfile = {
+      ...rpcProfile,
+      isRpcProfile: true,
+    }
+
+    // Check if this is the current user's profile by comparing addresses
+    const isOwnProfile =
+      session?.user?.safeAddress?.toLowerCase() === normalizedAddress
+
     return {
       posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
-      profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
-      isOwnProfile: session?.user?.profileId === profile._id.toString(),
-      isRpcProfile: false,
+      profile: circlesProfile as any,
+      isOwnProfile,
+      isRpcProfile: true,
       form,
       voteForm,
     }
@@ -200,41 +189,56 @@ export const actions = {
         type = "text"
       }
 
-      // Save Post
-      const userId = session?.user.profileId
-      if (!userId) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-        })
+      // Get creator's safe address from session
+      const creatorAddress = session?.user?.safeAddress?.toLowerCase()
+      if (!creatorAddress) {
+        return new Response(
+          JSON.stringify({
+            error: "Unauthorized - No safe address in session",
+          }),
+          {
+            status: 401,
+          },
+        )
       }
 
-      // Look up the profile by safeAddress to get its MongoDB ID
-      const targetProfile = await Profile.findOne({
-        safeAddress: params.profileid,
-      })
-      if (!targetProfile) {
-        return new Response(JSON.stringify({ error: "Profile not found" }), {
-          status: 404,
-        })
-      }
+      // Normalize the target profile address
+      // NOTE: We allow posting to any address, even if it doesn't exist in our local database.
+      // This enables posting to RPC-only profiles (users on Circles network but not registered locally).
+      const normalizedTargetAddress = params.profileid.toLowerCase()
 
-      console.log("params.profileid (safeAddress):", params.profileid)
+      const postToAddress =
+        creatorAddress !== normalizedTargetAddress
+          ? normalizedTargetAddress
+          : undefined
+
+      console.log("=== POST CREATION DEBUG ===")
+      console.log("Creator address:", creatorAddress)
+      console.log("Target profile address:", normalizedTargetAddress)
       console.log(
-        "postedTo:",
-        targetProfile._id.toString() !== userId ? targetProfile._id : undefined,
+        "Posted to address:",
+        postToAddress || "own profile (undefined)",
       )
+      console.log("Are they equal?", creatorAddress === normalizedTargetAddress)
 
       const postDoc = await Post.create({
-        userId,
-        postedTo:
-          targetProfile._id.toString() !== userId
-            ? targetProfile._id
-            : undefined,
+        // New address-based fields
+        creatorAddress: creatorAddress,
+        postedToAddress: postToAddress,
+        // Old fields - kept for backward compatibility
+        userId: session?.user?.profileId,
+        postedTo: undefined, // Will be deprecated
         balance: 0,
         type: type,
         caption: caption || "",
         mediaItems: [], // will populate after creating MediaItem
       })
+
+      console.log("=== POST CREATED ===")
+      console.log("Post ID:", postDoc._id)
+      console.log("creatorAddress in DB:", postDoc.creatorAddress)
+      console.log("postedToAddress in DB:", postDoc.postedToAddress)
+      console.log("========================")
 
       const bucket = env.MINIO_BUCKET || "uploads"
       // Save MediaItem

@@ -6,6 +6,7 @@
   import Label from "$lib/components/ui/label/label.svelte"
   import { theme } from "svelte-lexical/dist/themes/default"
   import CaptionEditor from "../svelte-lexical/caption-editor/caption-editor.svelte"
+  import { invalidate } from "$app/navigation"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
@@ -17,7 +18,16 @@
   }
 
   let { open = $bindable(true), pageForm }: Props = $props()
-  const { form, errors, enhance, reset } = superForm(pageForm)
+  const { form, errors, enhance, reset } = superForm(pageForm, {
+    onResult: ({ result }) => {
+      if (result.type === 'success') {
+        // Invalidate posts to refresh the list
+        invalidate('posts')
+        // Close the modal
+        open = false
+      }
+    }
+  })
   console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
   const caption = fieldProxy(form, "caption")
