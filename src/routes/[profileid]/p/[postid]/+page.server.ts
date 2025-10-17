@@ -3,9 +3,10 @@ import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
-import type { Post as PostType, Profile as ProfileType } from "$lib/types"
+import type { Post as PostType, Profile as ProfileType, CirclesRpcProfile } from "$lib/types"
 import { Profile } from "$lib/models/Profile"
 import { Interaction } from "$lib/models/Interaction"
+import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
 
 // Connect to MongoDB
 await mongoose
@@ -38,12 +39,48 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       return { posts: [], error: "Post not found" }
     }
 
-    // Fetch profile
-    const profile = await Profile.findById(profileid).select("-privateKey")
+    // Fetch profile by safeAddress from local database
+    const profile = await Profile.findOne({ safeAddress: profileid }).select("-privateKey")
+
     if (!profile) {
-      return { posts: [], error: "Profile not found" }
+      // Profile not found in local database, try fetching from Circles RPC
+      console.log(`Profile not found in database for address: ${profileid}, fetching from Circles RPC...`)
+      const rpcProfile = await fetchCirclesProfile(profileid)
+
+      if (!rpcProfile) {
+        // Profile not found anywhere
+        return {
+          posts: [],
+          error: "Sorry, no such profile found",
+          profile: null,
+          isOwnProfile: false
+        }
+      }
+
+      // Profile found in RPC
+      const circlesProfile: CirclesRpcProfile = {
+        ...rpcProfile,
+        isRpcProfile: true
+      }
+
+      const interaction = await Interaction.findOne({
+        userId: session?.user?.profileId,
+        postId: post._id,
+        type: "like",
+      })
+
+      return {
+        post: {
+          ...JSON.parse(JSON.stringify(post)),
+          isLiked: !!interaction,
+        } as PostType,
+        profile: circlesProfile as any,
+        isOwnProfile: false,
+        isRpcProfile: true
+      }
     }
 
+    // Profile found in local database
     const interaction = await Interaction.findOne({
       userId: session?.user?.profileId,
       postId: post._id,
@@ -58,7 +95,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         isLiked: !!interaction,
       } as PostType,
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
-      isOwnProfile: session?.user?.profileId === profileid,
+      isOwnProfile: session?.user?.profileId === profile._id.toString(),
+      isRpcProfile: false
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)

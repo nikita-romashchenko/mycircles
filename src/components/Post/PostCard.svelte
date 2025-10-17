@@ -63,7 +63,7 @@
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
-          <a href="/{post.userId._id}/p/{post._id}">
+          <a href="/{post.userId.safeAddress}/p/{post._id}">
             <img
               class="w-full cursor-pointer object-cover"
               src={mainMedia.url}
@@ -77,7 +77,7 @@
           <Carousel.Content class="">
             {#each post.mediaItems as m}
               <Carousel.Item class="">
-                <a href="/{post.userId._id}/p/{post._id}">
+                <a href="/{post.userId.safeAddress}/p/{post._id}">
                   <img
                     class="w-full object-cover cursor-pointer"
                     src={m.url}
@@ -101,7 +101,7 @@
       {#if post.postedTo}
         <span class="text-sm text-gray-500">posted by</span>
       {/if}
-      <a href="/{post.userId._id}" class="flex flex-row items-center gap-2">
+      <a href="/{post.userId.safeAddress}" class="flex flex-row items-center gap-2">
         <img
           src={"https://picsum.photos/200"}
           alt={`${post.userId.username ?? post.userId.name}'s avatar`}

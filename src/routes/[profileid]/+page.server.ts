@@ -5,7 +5,7 @@ import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
 import { Profile } from "$lib/models/Profile"
 import { MediaItem } from "$lib/models/MediaItem"
-import type { Post as PostType, Profile as ProfileType } from "$lib/types"
+import type { Post as PostType, Profile as ProfileType, CirclesRpcProfile } from "$lib/types"
 import { superValidate } from "sveltekit-superforms"
 import { zod } from "sveltekit-superforms/adapters"
 import { z } from "zod"
@@ -17,6 +17,7 @@ import {
   ProcessMediaError,
 } from "$lib/utils/mediaUploadUtils"
 import { Interaction } from "$lib/models/Interaction"
+import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
 
 // Connect to MongoDB
 await mongoose
@@ -48,18 +49,41 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const skip = Number(0)
 
   try {
-    // Validate ObjectId
-    if (!mongoose.Types.ObjectId.isValid(profileid)) {
-      return { posts: [], error: "Invalid profile ID" }
-    }
+    // Check if profile exists in local database by safeAddress
+    const profile = await Profile.findOne({ safeAddress: profileid }).select("-privateKey")
 
-    // Check if profile exists
-    const profile = await Profile.findById(profileid).select("-privateKey")
     if (!profile) {
-      return { posts: [], error: "Profile not found" }
+      // Profile not found in local database, try fetching from Circles RPC
+      console.log(`Profile not found in database for address: ${profileid}, fetching from Circles RPC...`)
+      const rpcProfile = await fetchCirclesProfile(profileid)
+
+      if (!rpcProfile) {
+        // Profile not found anywhere
+        return {
+          posts: [],
+          error: "Sorry, no such profile found",
+          profile: null,
+          isOwnProfile: false,
+          form
+        }
+      }
+
+      // Profile found in RPC, return it with no posts
+      const circlesProfile: CirclesRpcProfile = {
+        ...rpcProfile,
+        isRpcProfile: true
+      }
+
+      return {
+        posts: [],
+        profile: circlesProfile as any,
+        isOwnProfile: false,
+        isRpcProfile: true,
+        form
+      }
     }
 
-    // Fetch posts
+    // Profile found in local database, fetch posts
     const posts = await Post.find({
       $or: [
         { userId: profile._id, postedTo: { $exists: false } },
@@ -71,11 +95,11 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       .limit(limit)
       .populate({
         path: "userId",
-        select: "name username",
+        select: "name username safeAddress",
       })
       .populate({
         path: "postedTo",
-        select: "name username",
+        select: "name username safeAddress",
       })
       .populate({
         path: "mediaItems",
@@ -106,12 +130,13 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
     return {
       posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
       profile: JSON.parse(JSON.stringify(profile)) as ProfileType,
-      isOwnProfile: session?.user?.profileId === profileid,
+      isOwnProfile: session?.user?.profileId === profile._id.toString(),
+      isRpcProfile: false,
       form,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)
-    return { posts: [], error: err.message }
+    return { posts: [], error: err.message, isRpcProfile: false }
   }
 }
 
@@ -171,15 +196,23 @@ export const actions = {
         })
       }
 
-      console.log("params.profileid:", params.profileid)
+      // Look up the profile by safeAddress to get its MongoDB ID
+      const targetProfile = await Profile.findOne({ safeAddress: params.profileid })
+      if (!targetProfile) {
+        return new Response(JSON.stringify({ error: "Profile not found" }), {
+          status: 404,
+        })
+      }
+
+      console.log("params.profileid (safeAddress):", params.profileid)
       console.log(
         "postedTo:",
-        params.profileid !== userId ? params.profileid : undefined,
+        targetProfile._id.toString() !== userId ? targetProfile._id : undefined,
       )
 
       const postDoc = await Post.create({
         userId,
-        postedTo: params.profileid !== userId ? params.profileid : undefined,
+        postedTo: targetProfile._id.toString() !== userId ? targetProfile._id : undefined,
         balance: 0,
         type: type,
         caption: caption || "",
