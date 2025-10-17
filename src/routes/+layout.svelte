@@ -14,7 +14,7 @@
 
 <AuthDataManager />
 
-<!-- <Sidebar.Provider>
+<Sidebar.Provider>
   <CustomSidebar />
   <Sidebar.Inset>
     <header
@@ -28,10 +28,10 @@
       <slot />
     </div>
   </Sidebar.Inset>
-</Sidebar.Provider> -->
+</Sidebar.Provider>
 
-<div>
+<!-- <div>
   <Header />
   <slot />
   <Footer />
-</div>
+</div> -->
