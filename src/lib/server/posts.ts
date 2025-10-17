@@ -63,32 +63,12 @@ export async function getPersonalizedFeed(
           item.relationItem.relation === "trusts"),
     )
 
-    //TODO: decide which filtering is better
-    // THIS ONE:
-    // const posts = await Post.find()
-    //   .sort({ createdAt: -1 })
-    //   .skip(skip)
-    //   .limit(limit)
-    //   .populate({
-    //     path: "mediaItems",
-    //     select: "url",
-    //   })
-    //   .populate({
-    //     path: "userId",
-    //     select: "name username",
-    //   })
+    // Get allowed addresses from filtered relations (normalize to lowercase)
+    const allowedAddresses = filteredRelations.map((fp) => fp.profile.safeAddress.toLowerCase())
 
-    // const filteredPosts = posts.filter((post) =>
-    //   filteredRelations.some(
-    //     (fp) => fp.profile.profileId === post.userId._id.toString(),
-    //   ),
-    // )
-    // OR THIS ONE:
-    const allowedUserIds = filteredRelations.map((fp) => fp.profile.profileId)
+    console.log("Allowed User Addresses:", allowedAddresses)
 
-    console.log("Allowed User IDs:", allowedUserIds)
-
-    const posts = await Post.find({ userId: { $in: allowedUserIds } })
+    const posts = await Post.find({ creatorAddress: { $in: allowedAddresses } })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

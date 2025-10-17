@@ -3,7 +3,6 @@
 
   import type {
     Post as PostType,
-    Profile as ProfileType,
     CirclesRpcProfile,
     Relation,
   } from "$lib/types"
@@ -21,7 +20,7 @@
   const limit = 1
 
   let posts: PostType[] = []
-  let profile: ProfileType | CirclesRpcProfile | null
+  let profile: CirclesRpcProfile | null
   let isOwnProfile: boolean
   let isRpcProfile: boolean = false
   let error: string | null = null
@@ -34,7 +33,7 @@
   let allLoaded = false
   let sentinel: HTMLDivElement
 
-  $: profile = $page.data.profile as ProfileType | CirclesRpcProfile | null
+  $: profile = $page.data.profile as CirclesRpcProfile | null
   $: posts = $page.data.posts as PostType[]
   $: skip = posts.length
   $: isOwnProfile = $page.data.isOwnProfile as boolean
@@ -46,15 +45,17 @@
   $: console.log("error:", error)
 
   async function loadMore() {
-    if (loading || isRpcProfile) return // Don't load more for RPC profiles
+    if (loading) return
     loading = true
 
     try {
-      const profileId = (profile as ProfileType)._id
-      const str = `/api/posts/user?userid=${profileId}&skip=${skip}&limit=${limit}`
+      // All profiles are now RPC profiles, use address field
+      const address = (profile as CirclesRpcProfile).address
+
+      const str = `/api/posts/user?address=${address}&skip=${skip}&limit=${limit}`
       console.log("Fetching more posts from:", str)
       const res = await fetch(
-        `/api/posts/user?userid=${profileId}&skip=${skip}&limit=${limit}`,
+        `/api/posts/user?address=${address}&skip=${skip}&limit=${limit}`,
       )
       const data = await res.json()
 
@@ -135,15 +136,11 @@
   })
 
   run(() => {
-    if (browser && profile && !isRpcProfile) {
-      const safeAddr = (profile as ProfileType).safeAddress
-      if (safeAddr) {
-        fetchRelations(safeAddr)
-      }
-    } else if (browser && profile && isRpcProfile) {
-      const rpcAddr = (profile as CirclesRpcProfile).address
-      if (rpcAddr) {
-        fetchRelations(rpcAddr)
+    // All profiles are now RPC profiles
+    if (browser && profile) {
+      const address = (profile as CirclesRpcProfile).address
+      if (address) {
+        fetchRelations(address)
       }
     }
   })
@@ -159,75 +156,40 @@
 {:else if profile}
   <div class="w-full max-w-3xl">
     <!-- User info section -->
-    {#if isOwnProfile}
-      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
-        <img
-          alt="User avatar"
-          src={$page.data?.session?.user?.image}
-          class="w-24 h-24 rounded-full object-cover"
-        />
-        <div class="flex flex-col text-center md:text-left">
-          <p>{$page.data.session?.user.name}</p>
-          <p class="text-gray-500">@{$page.data.session?.user.username}</p>
-          <hr />
-          <p class="text-gray-500">{$page.data.session?.user.profileId}</p>
-        </div>
-        <button
-          onclick={openRelationsModal}
-          class="flex flex-row gap-6 cursor-pointer"
-        >
-          <div class="flex flex-col">
-            <p>mutuals</p>
-            <p>{contents[0].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusted by</p>
-            <p>{contents[1].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusts</p>
-            <p>{contents[2].length}</p>
-          </div>
-        </button>
+    <div class="flex flex-col items-center justify-center md:flex-row gap-6">
+      <img
+        alt="User avatar"
+        src={(profile as CirclesRpcProfile).previewImageUrl || "https://picsum.photos/200"}
+        class="w-24 h-24 rounded-full object-cover"
+      />
+      <div class="flex flex-col text-center md:text-left gap-1">
+        <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
+        {#if isOwnProfile}
+          <span class="text-xs text-blue-500">(Your Profile)</span>
+        {/if}
+        <hr />
+        <p class="text-gray-500 text-xs break-all">
+          {(profile as CirclesRpcProfile).address}
+        </p>
       </div>
-    {:else}
-      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
-        <img
-          alt="User avatar"
-          src={isRpcProfile
-            ? ((profile as CirclesRpcProfile).previewImageUrl || "https://picsum.photos/200")
-            : ((profile as ProfileType).avatarImageUrl || "https://picsum.photos/200")}
-          class="w-24 h-24 rounded-full object-cover"
-        />
-        <div class="flex flex-col text-center md:text-left gap-1">
-          <p>{isRpcProfile ? ((profile as CirclesRpcProfile).name || "Anonymous") : (profile as ProfileType).name}</p>
-          {#if !isRpcProfile}
-            <p class="text-gray-500">@{(profile as ProfileType).username}</p>
-          {/if}
-          <hr />
-          <p class="text-gray-500 text-xs break-all">
-            {isRpcProfile ? (profile as CirclesRpcProfile).address : (profile as ProfileType)._id}
-          </p>
+      <button
+        onclick={openRelationsModal}
+        class="flex flex-row gap-6 cursor-pointer"
+      >
+        <div class="flex flex-col">
+          <p>mutuals</p>
+          <p>{contents[0].length}</p>
         </div>
-        <button
-          onclick={openRelationsModal}
-          class="flex flex-row gap-6 cursor-pointer"
-        >
-          <div class="flex flex-col">
-            <p>mutuals</p>
-            <p>{contents[0].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusted by</p>
-            <p>{contents[1].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusts</p>
-            <p>{contents[2].length}</p>
-          </div>
-        </button>
-      </div>
-    {/if}
+        <div class="flex flex-col">
+          <p>trusted by</p>
+          <p>{contents[1].length}</p>
+        </div>
+        <div class="flex flex-col">
+          <p>trusts</p>
+          <p>{contents[2].length}</p>
+        </div>
+      </button>
+    </div>
 
     <!-- Upload bttn section -->
     <div class="mt-4 flex flex-row justify-center items-center gap-10">

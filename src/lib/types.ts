@@ -35,19 +35,23 @@ interface MediaItem {
 
 export interface Post {
   _id: string
-  userId: {
+  // New address-based fields
+  creatorAddress: string
+  postedToAddress?: string
+  // Old fields - kept for backward compatibility with populated data
+  userId?: {
     _id: string
     name: string
     username: string
     safeAddress: string
   }
-  postedTo: {
+  postedTo?: {
     _id: string
     name: string
     username: string
     safeAddress: string
   }
-  type: "image" | "video" | "album"
+  type: "image" | "video" | "album" | "text"
   caption: string
   createdAt: string
   mediaItems: MediaItem[]

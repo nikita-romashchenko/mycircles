@@ -74,16 +74,20 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const fileUrl = `${env.MINIO_ENDPOINT}/${bucket}/${fileName}`
 
-    // Save Post
-    const userId = session?.user.profileId
-    if (!userId) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    // Save Post with creator's safe address
+    const creatorAddress = session?.user?.safeAddress?.toLowerCase()
+    if (!creatorAddress) {
+      return new Response(JSON.stringify({ error: "Unauthorized - No safe address" }), {
         status: 401,
       })
     }
 
     const postDoc = await Post.create({
-      userId,
+      // New address-based fields
+      creatorAddress: creatorAddress,
+      postedToAddress: undefined, // Posting to own profile
+      // Old fields - kept for backward compatibility
+      userId: session?.user?.profileId,
       type: "image",
       caption: formData.get("caption") || "",
       mediaItems: [], // will populate after creating MediaItem

@@ -16,16 +16,31 @@ await mongoose
 export async function GET({ request, params, locals }: RequestEvent) {
   const url = new URL(request.url)
   //TODO: use constants instead of hardcoded values
-  const userId = url.searchParams.get("userid")
+  const userAddress = url.searchParams.get("address") || url.searchParams.get("userid") // Support both for backward compatibility
   const skip = Number(url.searchParams.get("skip")) || 0
   const limit = Number(url.searchParams.get("limit")) || 5
   const session = await locals.auth()
 
+  if (!userAddress) {
+    return json({ error: "Missing address or userid parameter" }, { status: 400 })
+  }
+
+  // Normalize address to lowercase
+  const normalizedAddress = userAddress.toLowerCase()
+
   try {
+    // Fetch posts using new address-based fields
+    // Show posts where:
+    // 1. User created the post and didn't post to another profile (own posts)
+    // 2. Post was explicitly posted to this user's profile by anyone
     const posts = await Post.find({
       $or: [
-        { userId: userId, postedTo: { $exists: false } },
-        { userId: { $ne: userId }, postedTo: userId },
+        // Posts created by this user on their own profile (postedToAddress is null/undefined)
+        { creatorAddress: normalizedAddress, postedToAddress: { $exists: false } },
+        { creatorAddress: normalizedAddress, postedToAddress: null },
+        { creatorAddress: normalizedAddress, postedToAddress: normalizedAddress },
+        // Posts created by anyone (including self) explicitly posted to this profile
+        { postedToAddress: normalizedAddress },
       ],
     })
       .sort({ createdAt: -1 })
