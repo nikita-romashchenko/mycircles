@@ -21,6 +21,7 @@
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
   const handleInteraction = async (type: "upVote" | "downVote") => {
+    console.log("Handling vote interaction:", type, "for post:", post._id)
     onVote(post._id, type)
   }
 
@@ -103,17 +104,17 @@
         <span class="text-sm text-gray-500">posted by</span>
       {/if}
       <a
-        href="/{post.userId.safeAddress}"
+        href="/{post.userId?.safeAddress}"
         class="flex flex-row items-center gap-2"
       >
         <img
           src={"https://picsum.photos/200"}
-          alt={`${post.userId.username ?? post.userId.name}'s avatar`}
+          alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
           class="w-12 h-12 rounded-full object-cover"
         />
         <div class="flex flex-col">
-          <Card.Title>{post.userId.name}</Card.Title>
-          <Card.Description>@{post.userId.username}</Card.Description>
+          <Card.Title>{post.userId?.name}</Card.Title>
+          <Card.Description>@{post.userId?.username}</Card.Description>
         </div>
       </a>
       {#if post.caption}

@@ -15,6 +15,7 @@ import {
 } from "$lib/utils/mediaUploadUtils"
 import { Interaction } from "$lib/models/Interaction"
 import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
+import { Profile } from "$lib/models/Profile"
 
 // Connect to MongoDB
 await mongoose
@@ -143,7 +144,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
 
 //Posting form data action
 export const actions = {
-  default: async ({ request, locals, params }) => {
+  upload: async ({ request, locals, params }) => {
     const formData = await request.formData()
     const form = await superValidate(formData, zod(uploadMediaSchema))
     let type: "image" | "video" | "album" | "text"
@@ -285,9 +286,7 @@ export const actions = {
   },
   vote: async ({ request, locals, params }) => {
     const formData = await request.formData()
-    const form = await superValidate(formData, zod(uploadMediaSchema))
-    let type: "image" | "video" | "album" | "text"
-    let processedMedia: any[] = []
+    const form = await superValidate(formData, zod(voteSchema))
 
     console.log("Form: ", form)
 
@@ -300,24 +299,32 @@ export const actions = {
     // TODO: Do something with the validated form.data
     try {
       const session = await locals.auth()
-      const media = formData.getAll("media") as File[]
-      const caption = formData.get("caption") as string
+      const balanceChange = Number(formData.get("balanceChange"))
+      const type = formData.get("type")
+      const postId = formData.get("postId") as string
 
-      // Save Post
+      // Find Target Post
+      const targetPost = await Post.findById(postId)
+      if (!targetPost) {
+        return new Response(JSON.stringify({ error: "Post not found" }), {
+          status: 404,
+        })
+      }
+
+      if (type === "upVote") {
+        targetPost.balance += balanceChange
+      } else {
+        targetPost.balance -= balanceChange
+      }
+
+      console.log(`Updating post ${postId} balance to ${targetPost.balance}`)
+
+      await targetPost.save()
+
       const userId = session?.user.profileId
       if (!userId) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
-        })
-      }
-
-      // Look up the profile by safeAddress to get its MongoDB ID
-      const targetProfile = await Profile.findOne({
-        safeAddress: params.profileid,
-      })
-      if (!targetProfile) {
-        return new Response(JSON.stringify({ error: "Profile not found" }), {
-          status: 404,
         })
       }
 

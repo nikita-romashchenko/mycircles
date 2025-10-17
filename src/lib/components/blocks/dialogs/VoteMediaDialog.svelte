@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog/index"
-  import { superForm } from "sveltekit-superforms"
+  import { superForm, fieldProxy } from "sveltekit-superforms"
   import { Input } from "$lib/components/ui/input"
   import { Button } from "$lib/components/ui/button"
   import Label from "$lib/components/ui/label/label.svelte"
@@ -11,15 +11,28 @@
   interface Props {
     open?: boolean
     pageForm: SuperValidated<Infer<voteSchema>>
+    type: "upVote" | "downVote" | null
+    postId: string | null
   }
 
-  let { open = $bindable(true), pageForm }: Props = $props()
+  let { open = $bindable(true), pageForm, type, postId }: Props = $props()
   const { form, errors, enhance, reset } = superForm(pageForm)
+
+  const typeProxy = fieldProxy(form, "type")
+  const postIdProxy = fieldProxy(form, "postId")
+
+  $effect(() => {
+    console.log("Setting form values in VoteMediaDialog:", type, postId)
+    if (open && type !== null && postId !== null) {
+      $typeProxy = type
+      $postIdProxy = postId
+    }
+  })
 
   function handleOpenChange(value: boolean) {
     if (!value) {
       // Reset the form when the dialog is closed
-      reset()
+      // reset()
       console.log("form reset in VoteDialog:", $form)
     }
   }

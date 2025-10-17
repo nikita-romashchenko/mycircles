@@ -14,7 +14,7 @@
   import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
-  import UploadMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
+  import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
 
@@ -36,6 +36,8 @@
   let loading = false
   let allLoaded = false
   let sentinel: HTMLDivElement
+  let votePostId: any
+  let voteType: any
 
   $: profile = $page.data.profile as CirclesRpcProfile | null
   $: posts = $page.data.posts as PostType[]
@@ -92,7 +94,14 @@
     return () => observer.disconnect()
   })
 
-  const handleVote = async (postId: string, type: "upVote" | "downVote") => {}
+  const handleVote = async (postId: string, type: "upVote" | "downVote") => {
+    console.log("Voting on post:", postId, "Type:", type)
+    // Open the vote dialog
+    voteModalOpen = true
+    // Set the form values
+    votePostId = postId
+    voteType = type
+  }
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -253,6 +262,11 @@
       {contents}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
-    <VoteMediaDialog pageForm={voteForm} bind:open={voteModalOpen} />
+    <VoteMediaDialog
+      postId={votePostId}
+      type={voteType}
+      pageForm={voteForm}
+      bind:open={voteModalOpen}
+    />
   {/if}
 {/if}

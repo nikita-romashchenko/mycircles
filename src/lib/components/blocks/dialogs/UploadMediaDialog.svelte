@@ -20,13 +20,13 @@
   let { open = $bindable(true), pageForm }: Props = $props()
   const { form, errors, enhance, reset } = superForm(pageForm, {
     onResult: ({ result }) => {
-      if (result.type === 'success') {
+      if (result.type === "success") {
         // Invalidate posts to refresh the list
-        invalidate('posts')
+        invalidate("posts")
         // Close the modal
         open = false
       }
-    }
+    },
   })
   console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
@@ -104,6 +104,7 @@
     </Dialog.Header>
     <form
       use:enhance
+      action="?/upload"
       enctype="multipart/form-data"
       method="POST"
       class="flex flex-col gap-4 p-4"
