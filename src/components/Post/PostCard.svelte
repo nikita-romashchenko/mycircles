@@ -7,6 +7,9 @@
   import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
   import ArrowUp from "@lucide/svelte/icons/arrow-up"
   import ArrowDown from "@lucide/svelte/icons/arrow-down"
+  import ArrowRight from "@lucide/svelte/icons/arrow-right"
+  import * as Avatar from "$lib/components/ui/avatar/index"
+  import ImageIcon from "@lucide/svelte/icons/image"
 
   import type { Post } from "$lib/types"
 
@@ -101,23 +104,54 @@
     </Card.Content>
     <Card.Header class="flex flex-col gap-2">
       <div class="flex flex-col gap-1">
-        <a
-          href="/{post.userId?.safeAddress}"
-          class="flex flex-row items-center gap-2"
-        >
-          <img
-            src={"https://picsum.photos/200"}
-            alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
-            class="w-12 h-12 rounded-full object-cover"
-          />
-          <div class="flex flex-col">
-            <Card.Title>{post.userId?.name}</Card.Title>
-            <Card.Description>@{post.userId?.username}</Card.Description>
-          </div>
-        </a>
+        <div class="flex flex-row gap-1 items-center">
+          <a
+            href="/{post.creatorProfile?.safeAddress}"
+            class="flex flex-row items-center gap-2"
+          >
+            <Avatar.Root class="rounded-full object-cover">
+              <Avatar.Fallback class="rounded-full object-cover"
+                ><ImageIcon /></Avatar.Fallback
+              >
+              <Avatar.Image
+                src={"https://picsum.photos/200"}
+                alt={`${post.creatorProfile?.username}'s avatar`}
+                class="w-24 h-24 rounded-full object-cover"
+              />
+            </Avatar.Root>
+            <div class="flex flex-col">
+              <Card.Title>@{post.creatorProfile?.username}</Card.Title>
+            </div>
+          </a>
+          {#if post.postedToAddress}
+            <ArrowRight class="w-4 h-4 text-gray-400" />
+            <a
+              href="/{post.postedToProfile?.address}"
+              class="flex flex-row items-center gap-2"
+            >
+              <Avatar.Root>
+                <Avatar.Fallback class="rounded-full object-cover text-gray-500"
+                  ><ImageIcon /></Avatar.Fallback
+                >
+                <Avatar.Image
+                  src={post.postedToProfile?.previewImageUrl}
+                  alt={`${post.creatorProfile?.username}'s avatar`}
+                />
+              </Avatar.Root>
+              <div class="flex flex-col">
+                <Card.Title>@{post.postedToProfile?.name}</Card.Title>
+              </div>
+            </a>
+          {/if}
+        </div>
+
         {#if post.postedTo}
           <span class="text-sm text-gray-500 ml-14">
-            posted on <a href="/{post.postedTo.safeAddress}" class="font-semibold text-gray-700 hover:underline">@{post.postedTo.username}</a> profile
+            posted on <a
+              href="/{post.postedTo.safeAddress}"
+              class="font-semibold text-gray-700 hover:underline"
+              >@{post.postedTo.username}</a
+            > profile
           </span>
         {/if}
       </div>

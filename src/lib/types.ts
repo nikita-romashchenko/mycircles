@@ -38,6 +38,14 @@ export interface Post {
   // New address-based fields
   creatorAddress: string
   postedToAddress?: string
+  postedToProfile?: CirclesRpcProfile
+  creatorProfile?: {
+    _id: string
+    name: string
+    username: string
+    safeAddress: string
+  }
+
   // Old fields - kept for backward compatibility with populated data
   userId?: {
     _id: string

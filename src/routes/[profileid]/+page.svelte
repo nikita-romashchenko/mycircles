@@ -8,15 +8,15 @@
   } from "$lib/types"
   import { page } from "$app/stores"
   import { onMount } from "svelte"
-  import RelationsModal from "$components/Modal/RelationsModal/RelationsModal.svelte"
-  import UploadMediaModal from "$components/Modal/UploadMediaModal/UploadMediaModal.svelte"
   import { browser } from "$app/environment"
   import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
+  import * as Avatar from "$lib/components/ui/avatar/index"
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
+  import ImageIcon from "@lucide/svelte/icons/image"
 
   const limit = 1
 
@@ -45,6 +45,7 @@
   $: isOwnProfile = $page.data.isOwnProfile as boolean
   $: isRpcProfile = $page.data.isRpcProfile as boolean
   $: error = $page.data.error as string | null
+  $: console.log("profile:", $page.data.profile)
   $: console.log("posts:", posts)
   $: console.log("page.data.posts:", $page.data.posts)
   $: console.log("isRpcProfile:", isRpcProfile)
@@ -98,7 +99,7 @@
     console.log("Voting on post:", postId, "Type:", type)
 
     // Find the post to get target address
-    const post = posts.find(p => p._id === postId)
+    const post = posts.find((p) => p._id === postId)
     voteTargetAddress = post?.postedToAddress || post?.creatorAddress
 
     // Open the vote dialog
@@ -108,14 +109,19 @@
     voteType = type
   }
 
-  const handleVoteSubmit = async (postId: string, type: "upVote" | "downVote", balanceChange: number) => {
+  const handleVoteSubmit = async (
+    postId: string,
+    type: "upVote" | "downVote",
+    balanceChange: number,
+  ) => {
     // Optimistically update the post balance
-    const postIndex = posts.findIndex(p => p._id === postId)
+    const postIndex = posts.findIndex((p) => p._id === postId)
     if (postIndex !== -1) {
       const oldBalance = posts[postIndex].balance
-      posts[postIndex].balance = type === "upVote"
-        ? oldBalance + balanceChange
-        : oldBalance - balanceChange
+      posts[postIndex].balance =
+        type === "upVote"
+          ? oldBalance + balanceChange
+          : oldBalance - balanceChange
     }
 
     try {
@@ -134,18 +140,20 @@
       if (!response.ok) {
         // Revert on error
         if (postIndex !== -1) {
-          posts[postIndex].balance = type === "upVote"
-            ? posts[postIndex].balance - balanceChange
-            : posts[postIndex].balance + balanceChange
+          posts[postIndex].balance =
+            type === "upVote"
+              ? posts[postIndex].balance - balanceChange
+              : posts[postIndex].balance + balanceChange
         }
         console.error("Vote failed")
       }
     } catch (err) {
       // Revert on error
       if (postIndex !== -1) {
-        posts[postIndex].balance = type === "upVote"
-          ? posts[postIndex].balance - balanceChange
-          : posts[postIndex].balance + balanceChange
+        posts[postIndex].balance =
+          type === "upVote"
+            ? posts[postIndex].balance - balanceChange
+            : posts[postIndex].balance + balanceChange
       }
       console.error("Error submitting vote:", err)
     }
@@ -220,12 +228,16 @@
   <div class="w-full max-w-3xl">
     <!-- User info section -->
     <div class="flex flex-col items-center justify-center md:flex-row gap-6">
-      <img
-        alt="User avatar"
-        src={(profile as CirclesRpcProfile).previewImageUrl ||
-          "https://picsum.photos/200"}
-        class="w-24 h-24 rounded-full object-cover"
-      />
+      <Avatar.Root class="w-24 h-24 rounded-full object-cover">
+        <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
+          ><ImageIcon /></Avatar.Fallback
+        >
+        <Avatar.Image
+          src={(profile as CirclesRpcProfile).previewImageUrl}
+          alt="@shadcn"
+          class="w-24 h-24 rounded-full object-cover"
+        />
+      </Avatar.Root>
       <div class="flex flex-col text-center md:text-left gap-1">
         <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
         {#if isOwnProfile}

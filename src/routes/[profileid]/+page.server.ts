@@ -45,6 +45,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       `Fetching profile data from Circles RPC for address: ${normalizedAddress}`,
     )
     const rpcProfile = await fetchCirclesProfile(normalizedAddress)
+    console.log(`rpcProfile: `)
+    console.log(rpcProfile)
 
     if (!rpcProfile) {
       // Profile not found on Circles network
@@ -81,6 +83,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      //TODO: Remove deprecated populates
       .populate({
         path: "userId",
         select: "name username safeAddress",
@@ -90,11 +93,16 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
         select: "name username safeAddress",
       })
       .populate({
+        path: "creatorProfile",
+        select: "name username safeAddress",
+      })
+      .populate({
         path: "mediaItems",
         select: "url",
       })
 
     console.log(`Found ${posts.length} posts for address: ${normalizedAddress}`)
+    console.log(posts[0])
 
     // collect all post IDs
     const postIds = posts.map((p) => p._id)
@@ -211,6 +219,17 @@ export const actions = {
           ? normalizedTargetAddress
           : undefined
 
+      let circlesProfile: CirclesRpcProfile | null = null
+      if (postToAddress) {
+        const rpcProfile = await fetchCirclesProfile(postToAddress)
+        if (rpcProfile) {
+          circlesProfile = {
+            ...rpcProfile,
+            isRpcProfile: true,
+          }
+        }
+      }
+
       console.log("=== POST CREATION DEBUG ===")
       console.log("Creator address:", creatorAddress)
       console.log("Target profile address:", normalizedTargetAddress)
@@ -224,6 +243,7 @@ export const actions = {
         // New address-based fields
         creatorAddress: creatorAddress,
         postedToAddress: postToAddress,
+        ...(circlesProfile ? { postedToProfile: circlesProfile } : {}),
         // Old fields - kept for backward compatibility
         userId: session?.user?.profileId,
         postedTo: undefined, // Will be deprecated

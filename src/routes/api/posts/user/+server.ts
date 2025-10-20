@@ -16,13 +16,17 @@ await mongoose
 export async function GET({ request, params, locals }: RequestEvent) {
   const url = new URL(request.url)
   //TODO: use constants instead of hardcoded values
-  const userAddress = url.searchParams.get("address") || url.searchParams.get("userid") // Support both for backward compatibility
+  const userAddress =
+    url.searchParams.get("address") || url.searchParams.get("userid") // Support both for backward compatibility
   const skip = Number(url.searchParams.get("skip")) || 0
   const limit = Number(url.searchParams.get("limit")) || 5
   const session = await locals.auth()
 
   if (!userAddress) {
-    return json({ error: "Missing address or userid parameter" }, { status: 400 })
+    return json(
+      { error: "Missing address or userid parameter" },
+      { status: 400 },
+    )
   }
 
   // Normalize address to lowercase
@@ -36,9 +40,15 @@ export async function GET({ request, params, locals }: RequestEvent) {
     const posts = await Post.find({
       $or: [
         // Posts created by this user on their own profile (postedToAddress is null/undefined)
-        { creatorAddress: normalizedAddress, postedToAddress: { $exists: false } },
+        {
+          creatorAddress: normalizedAddress,
+          postedToAddress: { $exists: false },
+        },
         { creatorAddress: normalizedAddress, postedToAddress: null },
-        { creatorAddress: normalizedAddress, postedToAddress: normalizedAddress },
+        {
+          creatorAddress: normalizedAddress,
+          postedToAddress: normalizedAddress,
+        },
         // Posts created by anyone (including self) explicitly posted to this profile
         { postedToAddress: normalizedAddress },
       ],
@@ -46,12 +56,17 @@ export async function GET({ request, params, locals }: RequestEvent) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
+      //TODO: Remove deprecated populates
       .populate({
         path: "userId",
         select: "name username safeAddress",
       })
       .populate({
         path: "postedTo",
+        select: "name username safeAddress",
+      })
+      .populate({
+        path: "creatorProfile",
         select: "name username safeAddress",
       })
       .populate({

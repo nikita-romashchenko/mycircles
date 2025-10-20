@@ -13,6 +13,10 @@ const PostSchema = new mongoose.Schema({
     required: false,
     lowercase: true, // Auto-normalize to lowercase
   },
+  postedToProfile: {
+    type: mongoose.Schema.Types.Mixed,
+    required: false,
+  },
 
   // Old fields - kept for migration/backward compatibility (will be deprecated)
   userId: {
@@ -44,6 +48,16 @@ const PostSchema = new mongoose.Schema({
   repostsCount: { type: Number, default: 0 },
   location: { type: Object },
 })
+
+PostSchema.virtual("creatorProfile", {
+  ref: "Profile",
+  localField: "creatorAddress", // field in Post
+  foreignField: "safeAddress", // field in Profile
+  justOne: true, // because one profile per address
+})
+
+PostSchema.set("toObject", { virtuals: true })
+PostSchema.set("toJSON", { virtuals: true })
 
 // Indexes for efficient queries using new address fields
 PostSchema.index({ creatorAddress: 1, createdAt: -1 })
