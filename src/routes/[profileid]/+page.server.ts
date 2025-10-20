@@ -8,7 +8,7 @@ import { superValidate } from "sveltekit-superforms"
 import { zod } from "sveltekit-superforms/adapters"
 import { message } from "sveltekit-superforms"
 import { fail } from "@sveltejs/kit"
-import { uploadMediaSchema, voteSchema } from "$lib/validation/schemas"
+import { uploadMediaSchema } from "$lib/validation/schemas"
 import {
   processAndUploadMedia,
   ProcessMediaError,
@@ -36,7 +36,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
-  const voteForm = await superValidate(zod(voteSchema))
   const limit = Number(2)
   const skip = Number(0)
 
@@ -134,7 +133,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       isOwnProfile,
       isRpcProfile: true,
       form,
-      voteForm,
     }
   } catch (err: any) {
     console.error("Error loading posts:", err)
@@ -273,62 +271,6 @@ export const actions = {
       console.log("Post created with ID:", postDoc._id)
 
       return message(form, "Upload media form posted successfully!")
-    } catch (err: any) {
-      if (err instanceof ProcessMediaError) {
-        return fail(400, { form, error: err.message })
-      }
-
-      return fail(500, {
-        form,
-        error: "Upload failed. Please try again later.",
-      })
-    }
-  },
-  vote: async ({ request, locals, params }) => {
-    const formData = await request.formData()
-    const form = await superValidate(formData, zod(voteSchema))
-
-    console.log("Form: ", form)
-
-    if (!form.valid) {
-      console.log("Form Errors: ", form.errors)
-      return fail(400, { form })
-    }
-    console.log("Form data is valid:", form.data)
-
-    // TODO: Do something with the validated form.data
-    try {
-      const session = await locals.auth()
-      const balanceChange = Number(formData.get("balanceChange"))
-      const type = formData.get("type")
-      const postId = formData.get("postId") as string
-
-      // Find Target Post
-      const targetPost = await Post.findById(postId)
-      if (!targetPost) {
-        return new Response(JSON.stringify({ error: "Post not found" }), {
-          status: 404,
-        })
-      }
-
-      if (type === "upVote") {
-        targetPost.balance += balanceChange
-      } else {
-        targetPost.balance -= balanceChange
-      }
-
-      console.log(`Updating post ${postId} balance to ${targetPost.balance}`)
-
-      await targetPost.save()
-
-      const userId = session?.user.profileId
-      if (!userId) {
-        return new Response(JSON.stringify({ error: "Unauthorized" }), {
-          status: 401,
-        })
-      }
-
-      return message(form, "Vote form posted successfully!")
     } catch (err: any) {
       if (err instanceof ProcessMediaError) {
         return fail(400, { form, error: err.message })

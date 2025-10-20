@@ -100,23 +100,27 @@
       {/if}
     </Card.Content>
     <Card.Header class="flex flex-col gap-2">
-      {#if post.postedTo}
-        <span class="text-sm text-gray-500">posted by</span>
-      {/if}
-      <a
-        href="/{post.userId?.safeAddress}"
-        class="flex flex-row items-center gap-2"
-      >
-        <img
-          src={"https://picsum.photos/200"}
-          alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
-          class="w-12 h-12 rounded-full object-cover"
-        />
-        <div class="flex flex-col">
-          <Card.Title>{post.userId?.name}</Card.Title>
-          <Card.Description>@{post.userId?.username}</Card.Description>
-        </div>
-      </a>
+      <div class="flex flex-col gap-1">
+        <a
+          href="/{post.userId?.safeAddress}"
+          class="flex flex-row items-center gap-2"
+        >
+          <img
+            src={"https://picsum.photos/200"}
+            alt={`${post.userId?.username ?? post.userId?.name}'s avatar`}
+            class="w-12 h-12 rounded-full object-cover"
+          />
+          <div class="flex flex-col">
+            <Card.Title>{post.userId?.name}</Card.Title>
+            <Card.Description>@{post.userId?.username}</Card.Description>
+          </div>
+        </a>
+        {#if post.postedTo}
+          <span class="text-sm text-gray-500 ml-14">
+            posted on <a href="/{post.postedTo.safeAddress}" class="font-semibold text-gray-700 hover:underline">@{post.postedTo.username}</a> profile
+          </span>
+        {/if}
+      </div>
       {#if post.caption}
         <CaptionViewer {theme} captionJSONstring={post.caption} />
       {/if}
@@ -124,11 +128,12 @@
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
     >
-      <div class="flex flex-row gap-1">
+      <div class="flex flex-row gap-2 items-center">
         <Button
           variant={"outline"}
           onclick={() => handleInteraction("downVote")}><ArrowDown /></Button
         >
+        <span class="font-semibold text-base">{post.balance || 0}</span>
         <Button variant={"outline"} onclick={() => handleInteraction("upVote")}
           ><ArrowUp /></Button
         >

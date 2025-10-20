@@ -27,7 +27,6 @@
   let error: string | null = null
 
   let form = $page.data.form
-  let voteForm = $page.data.voteForm
 
   let relationsModalOpen = false
   let uploadModalOpen = false
@@ -38,6 +37,7 @@
   let sentinel: HTMLDivElement
   let votePostId: any
   let voteType: any
+  let voteTargetAddress: any
 
   $: profile = $page.data.profile as CirclesRpcProfile | null
   $: posts = $page.data.posts as PostType[]
@@ -96,11 +96,59 @@
 
   const handleVote = async (postId: string, type: "upVote" | "downVote") => {
     console.log("Voting on post:", postId, "Type:", type)
+
+    // Find the post to get target address
+    const post = posts.find(p => p._id === postId)
+    voteTargetAddress = post?.postedToAddress || post?.creatorAddress
+
     // Open the vote dialog
     voteModalOpen = true
     // Set the form values
     votePostId = postId
     voteType = type
+  }
+
+  const handleVoteSubmit = async (postId: string, type: "upVote" | "downVote", balanceChange: number) => {
+    // Optimistically update the post balance
+    const postIndex = posts.findIndex(p => p._id === postId)
+    if (postIndex !== -1) {
+      const oldBalance = posts[postIndex].balance
+      posts[postIndex].balance = type === "upVote"
+        ? oldBalance + balanceChange
+        : oldBalance - balanceChange
+    }
+
+    try {
+      const response = await fetch("/api/posts/vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId,
+          type,
+          balanceChange,
+        }),
+      })
+
+      if (!response.ok) {
+        // Revert on error
+        if (postIndex !== -1) {
+          posts[postIndex].balance = type === "upVote"
+            ? posts[postIndex].balance - balanceChange
+            : posts[postIndex].balance + balanceChange
+        }
+        console.error("Vote failed")
+      }
+    } catch (err) {
+      // Revert on error
+      if (postIndex !== -1) {
+        posts[postIndex].balance = type === "upVote"
+          ? posts[postIndex].balance - balanceChange
+          : posts[postIndex].balance + balanceChange
+      }
+      console.error("Error submitting vote:", err)
+    }
   }
 
   // RelationsModal state
@@ -265,7 +313,8 @@
     <VoteMediaDialog
       postId={votePostId}
       type={voteType}
-      pageForm={voteForm}
+      targetAddress={voteTargetAddress}
+      onSubmit={handleVoteSubmit}
       bind:open={voteModalOpen}
     />
   {/if}

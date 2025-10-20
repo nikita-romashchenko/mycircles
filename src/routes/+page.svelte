@@ -2,13 +2,19 @@
   import type { Post as PostType } from "$lib/types"
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
+  import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import { onMount } from "svelte"
   import { globalState } from "$lib/stores/state.svelte"
+  import { browser } from "$app/environment"
 
   let posts: PostType[] = []
   const limit = 1
   let loading = false
   let allLoaded = false
+  let voteModalOpen = false
+  let votePostId: any
+  let voteType: any
+  let voteTargetAddress: any
 
   $: posts = $page.data.posts
   $: relations = $page.data.relationsWithProfiles
@@ -21,6 +27,61 @@
     globalState.relations = relations
     console.log("Current relation data in global state:", globalState.relations)
   })
+
+  const handleVote = async (postId: string, type: "upVote" | "downVote") => {
+    console.log("Voting on post:", postId, "Type:", type)
+
+    // Find the post to get target address
+    const post = posts.find(p => p._id === postId)
+    voteTargetAddress = post?.postedToAddress || post?.creatorAddress
+
+    voteModalOpen = true
+    votePostId = postId
+    voteType = type
+  }
+
+  const handleVoteSubmit = async (postId: string, type: "upVote" | "downVote", balanceChange: number) => {
+    // Optimistically update the post balance
+    const postIndex = posts.findIndex(p => p._id === postId)
+    if (postIndex !== -1) {
+      const oldBalance = posts[postIndex].balance
+      posts[postIndex].balance = type === "upVote"
+        ? oldBalance + balanceChange
+        : oldBalance - balanceChange
+    }
+
+    try {
+      const response = await fetch("/api/posts/vote", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          postId,
+          type,
+          balanceChange,
+        }),
+      })
+
+      if (!response.ok) {
+        // Revert on error
+        if (postIndex !== -1) {
+          posts[postIndex].balance = type === "upVote"
+            ? posts[postIndex].balance - balanceChange
+            : posts[postIndex].balance + balanceChange
+        }
+        console.error("Vote failed")
+      }
+    } catch (err) {
+      // Revert on error
+      if (postIndex !== -1) {
+        posts[postIndex].balance = type === "upVote"
+          ? posts[postIndex].balance - balanceChange
+          : posts[postIndex].balance + balanceChange
+      }
+      console.error("Error submitting vote:", err)
+    }
+  }
 
   async function loadMore() {
     if (loading) return
@@ -73,7 +134,7 @@
 
   <div class="space-y-8">
     {#each posts as post}
-      <PostCard {post} />
+      <PostCard onVote={handleVote} {post} />
     {/each}
   </div>
   <div bind:this={sentinel} class="h-8"></div>
@@ -86,3 +147,13 @@
     <p class="text-center mt-4 text-gray-500">No more posts</p>
   {/if}
 </main>
+
+{#if browser}
+  <VoteMediaDialog
+    postId={votePostId}
+    type={voteType}
+    targetAddress={voteTargetAddress}
+    onSubmit={handleVoteSubmit}
+    bind:open={voteModalOpen}
+  />
+{/if}

@@ -59,6 +59,7 @@ export interface Post {
   likesCount: number
   repostsCount: number
   isLiked: boolean
+  balance: number
 }
 
 export interface RelationProfile {

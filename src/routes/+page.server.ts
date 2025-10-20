@@ -1,11 +1,7 @@
 import type { PageServerLoad } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
-import { Post } from "$lib/models/Post"
-import { MediaItem } from "$lib/models/MediaItem"
 import type { Post as PostType } from "$lib/types"
-import { Interaction } from "$lib/models/Interaction"
-import { getFilteredRelationsWithProfiles } from "$lib/server/relations"
 import { getPersonalizedFeed, getPublicFeed } from "$lib/server/posts"
 
 // Connect to MongoDB
