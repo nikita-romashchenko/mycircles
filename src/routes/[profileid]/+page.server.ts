@@ -16,6 +16,8 @@ import {
 import { Interaction } from "$lib/models/Interaction"
 import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
 import { Profile } from "$lib/models/Profile"
+import { getProfileFeed } from "$lib/server/posts"
+import { DEFAULT_LIMIT, DEFAULT_SKIP } from "$lib/constants"
 
 // Connect to MongoDB
 await mongoose
@@ -36,8 +38,8 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
-  const limit = Number(2)
-  const skip = Number(0)
+  const limit = DEFAULT_LIMIT
+  const skip = DEFAULT_SKIP
 
   try {
     // Fetch profile data ONLY from Circles RPC (don't use local DB for profile data)
@@ -60,70 +62,10 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       }
     }
 
-    // Always fetch posts by address from local database
-    // Show posts where:
-    // 1. User created the post and didn't post to another profile (own posts)
-    // 2. Post was explicitly posted to this user's profile by anyone
-    const posts = await Post.find({
-      $or: [
-        // Posts created by this user on their own profile (postedToAddress is null/undefined)
-        {
-          creatorAddress: normalizedAddress,
-          postedToAddress: { $exists: false },
-        },
-        { creatorAddress: normalizedAddress, postedToAddress: null },
-        {
-          creatorAddress: normalizedAddress,
-          postedToAddress: normalizedAddress,
-        },
-        // Posts created by anyone (including self) explicitly posted to this profile
-        { postedToAddress: normalizedAddress },
-      ],
-    })
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      //TODO: Remove deprecated populates
-      .populate({
-        path: "userId",
-        select: "name username safeAddress",
-      })
-      .populate({
-        path: "postedTo",
-        select: "name username safeAddress",
-      })
-      .populate({
-        path: "creatorProfile",
-        select: "name username safeAddress",
-      })
-      .populate({
-        path: "mediaItems",
-        select: "url",
-      })
-
-    console.log(`Found ${posts.length} posts for address: ${normalizedAddress}`)
-    console.log(posts[0])
-
-    // collect all post IDs
-    const postIds = posts.map((p) => p._id)
-
-    // fetch all likes by this user for these posts
-    const interactions = session?.user
-      ? await Interaction.find({
-          userId: session.user.profileId,
-          postId: { $in: postIds },
-          type: "like",
-        }).lean()
-      : []
-
-    // make a Set for quick lookup
-    const likedPostIds = new Set(interactions.map((i) => i.postId.toString()))
-
-    // add `liked` property to each post
-    const postsWithLikes = posts.map((p) => ({
-      ...p.toObject(),
-      isLiked: likedPostIds.has(p._id.toString()),
-    }))
+    const result = await getProfileFeed(profileid, session, limit, skip)
+    if (result.error) {
+      throw new Error(result.error)
+    }
 
     // Create profile object from RPC data only
     const circlesProfile: CirclesRpcProfile = {
@@ -136,7 +78,7 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       session?.user?.safeAddress?.toLowerCase() === normalizedAddress
 
     return {
-      posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
+      posts: result.posts as PostType[],
       profile: circlesProfile as any,
       isOwnProfile,
       isRpcProfile: true,

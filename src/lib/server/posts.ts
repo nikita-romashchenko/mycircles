@@ -1,10 +1,11 @@
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
+import { Profile } from "$lib/models/Profile"
 import { Post } from "$lib/models/Post"
 import { MediaItem } from "$lib/models/MediaItem"
-import type { Post as PostType } from "$lib/types"
 import { Interaction } from "$lib/models/Interaction"
 import { getFilteredRelationsWithProfiles } from "$lib/server/relations"
+import type { Post as PostType } from "$lib/types"
 
 // Connect to MongoDB
 await mongoose
@@ -64,7 +65,9 @@ export async function getPersonalizedFeed(
 
     // Get allowed addresses from filtered relations (normalize to lowercase)
     // Use objectAvatar (the address we trust) regardless of whether they have a profile
-    const allowedAddresses = filteredRelations.map((fp) => fp.relationItem.objectAvatar.toLowerCase())
+    const allowedAddresses = filteredRelations.map((fp) =>
+      fp.relationItem.objectAvatar.toLowerCase(),
+    )
 
     console.log("Allowed User Addresses:", allowedAddresses)
 
@@ -73,11 +76,11 @@ export async function getPersonalizedFeed(
         {
           $or: [
             { creatorAddress: { $in: allowedAddresses } },
-            { postedToAddress: { $in: allowedAddresses } }
-          ]
+            { postedToAddress: { $in: allowedAddresses } },
+          ],
         },
-        { creatorAddress: { $ne: session.user.safeAddress.toLowerCase() } }
-      ]
+        { creatorAddress: { $ne: session.user.safeAddress.toLowerCase() } },
+      ],
     })
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -121,5 +124,85 @@ export async function getPersonalizedFeed(
   } catch (err: any) {
     console.error("Error loading posts:", err)
     return { posts: [], relationsWithProfiles: [], error: err.message }
+  }
+}
+
+export async function getProfileFeed(
+  safeAddress: string,
+  userSession: any,
+  limit: number,
+  skip: number,
+) {
+  try {
+    // Always fetch posts by address from local database
+    // Show posts where:
+    // 1. User created the post and didn't post to another profile (own posts)
+    // 2. Post was explicitly posted to this user's profile by anyone
+    const posts = await Post.find({
+      $or: [
+        // Posts created by this user on their own profile (postedToAddress is null/undefined)
+        {
+          creatorAddress: safeAddress,
+          postedToAddress: { $exists: false },
+        },
+        { creatorAddress: safeAddress, postedToAddress: null },
+        {
+          creatorAddress: safeAddress,
+          postedToAddress: safeAddress,
+        },
+        // Posts created by anyone (including self) explicitly posted to this profile
+        { postedToAddress: safeAddress },
+      ],
+    })
+      .sort({ balance: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      //TODO: Remove deprecated populates
+      .populate({
+        path: "userId",
+        select: "name username safeAddress",
+      })
+      .populate({
+        path: "postedTo",
+        select: "name username safeAddress",
+      })
+      .populate({
+        path: "creatorProfile",
+        select: "name username safeAddress",
+      })
+      .populate({
+        path: "mediaItems",
+        select: "url",
+      })
+
+    console.log(`Found ${posts.length} posts for address: ${safeAddress}`)
+
+    // collect all post IDs
+    const postIds = posts.map((p) => p._id)
+
+    // fetch all likes by this user for these posts
+    const interactions = userSession?.user
+      ? await Interaction.find({
+          userId: userSession.user.profileId,
+          postId: { $in: postIds },
+          type: "like",
+        }).lean()
+      : []
+
+    // make a Set for quick lookup
+    const likedPostIds = new Set(interactions.map((i) => i.postId.toString()))
+
+    // add `liked` property to each post
+    const postsWithLikes = posts.map((p) => ({
+      ...p.toObject(),
+      isLiked: likedPostIds.has(p._id.toString()),
+    }))
+
+    return {
+      posts: JSON.parse(JSON.stringify(postsWithLikes)) as PostType[],
+    }
+  } catch (err: any) {
+    console.error("Error loading posts:", err)
+    return { posts: [], error: err.message }
   }
 }
