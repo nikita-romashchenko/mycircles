@@ -25,7 +25,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="h-[40vh] max-h-[90vh]">
+  <Dialog.Content class="h-[40vh] max-h-[90vh] w-full max-w-full">
     <Dialog.Header>
       <Dialog.Title>Relations</Dialog.Title>
       <!-- <Dialog.Description>
@@ -34,6 +34,8 @@
         nesciunt nemo earum repellat atque maiores quas obcaecati tenetur.
       </Dialog.Description> -->
     </Dialog.Header>
-    <Tabs tabs={["mutuals", "trusted by", "trusts"]} {contents} {onLinkClick} />
+    <div class="min-w-0 w-full">
+      <Tabs tabs={["mutuals", "trusted by", "trusts"]} {contents} {onLinkClick} />
+    </div>
   </Dialog.Content>
 </Dialog.Root>
