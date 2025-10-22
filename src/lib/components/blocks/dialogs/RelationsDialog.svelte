@@ -4,13 +4,16 @@
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
-  import type { Relation } from "$lib/types"
+  import type { CirclesRpcProfile, Relation } from "$lib/types"
   import Tabs from "$components/Tabs/Tabs.svelte"
 
   interface Props {
     open?: boolean
     onLinkClick: () => void
-    contents?: Relation[][]
+    contents?: {
+      relation: Relation
+      profile: CirclesRpcProfile | null
+    }[][]
   }
 
   let {

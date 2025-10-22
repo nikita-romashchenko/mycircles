@@ -1,17 +1,22 @@
 <script lang="ts">
-  import type { Relation } from "$lib/types"
+  import * as Avatar from "$lib/components/ui/avatar/index"
+  import ImageIcon from "@lucide/svelte/icons/image"
+  import type { CirclesRpcProfile, Relation } from "$lib/types"
 
   let activeTab = $state(0)
   interface Props {
     tabs?: string[]
-    contents?: Relation[][]
+    contents?: {
+      relation: Relation
+      profile: CirclesRpcProfile | null
+    }[][]
     onLinkClick: () => void
   }
 
   let { tabs = [], contents = [[], [], []], onLinkClick }: Props = $props()
 </script>
 
-<div class="w-full">
+<div>
   <!-- Tab headers -->
   <div class="flex border-b">
     {#each tabs as tab, i}
@@ -34,39 +39,27 @@
         <p class="text-gray-500">No data found.</p>
       {:else}
         {#each contents[activeTab] as relation}
-          {#if !relation.profile}
-            <div
-              class="my-2 flex flex-row gap-4 items-center opacity-60 border border-gray-300 rounded-md p-2"
-            >
-              <!-- TODO: Add actual user avatars -->
-              <img
-                alt="User avatar"
-                src="https://picsum.photos/200"
-                class="w-8 h-8 rounded-full grayscale"
-                loading="lazy"
-              />
-              <div class="flex flex-col gap-2 text-gray-400">
-                <span>{relation.relationItem.objectAvatar}</span>
-              </div>
-            </div>
-          {:else}
+          {#if !relation.profile}{:else}
             <a
-              href={`/${relation.profile.safeAddress}`}
+              href={`/${relation.profile.address}`}
               class="my-2 flex flex-row gap-4 items-center border border-gray-300 rounded-md p-2"
               onclick={() => onLinkClick?.()}
             >
-              <!-- TODO: Add actual user avatars -->
-              <img
-                alt="User avatar"
-                src="https://picsum.photos/200"
-                class="w-8 h-8 rounded-full"
-                loading="lazy"
-              />
+              <Avatar.Root class="rounded-full object-cover">
+                <Avatar.Fallback class="rounded-full object-cover"
+                  ><ImageIcon /></Avatar.Fallback
+                >
+                <Avatar.Image
+                  src={relation.profile.previewImageUrl}
+                  alt={`${relation.profile.name}'s avatar`}
+                  class="rounded-full object-cover"
+                />
+              </Avatar.Root>
               <div class="flex flex-col gap-2">
-                <span>{relation.profile.username}</span>
+                <span>{relation.profile.name}</span>
                 <hr />
-                <span class="text-gray-500 text-sm"
-                  >{relation.profile.safeAddress}</span
+                <span class="text-gray-500 text-sm truncate"
+                  >{relation.profile.address}</span
                 >
               </div>
             </a>

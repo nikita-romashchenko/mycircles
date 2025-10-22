@@ -17,6 +17,7 @@
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
+  import { Item } from "$lib/components/ui/breadcrumb"
 
   const limit = 1
 
@@ -31,7 +32,10 @@
   let relationsModalOpen = false
   let uploadModalOpen = false
   let voteModalOpen = false
-  let contents: Relation[][] = [[], [], []]
+  let contents: {
+    relation: Relation
+    profile: CirclesRpcProfile | null
+  }[][] = [[], [], []]
   let loading = false
   let allLoaded = false
   let sentinel: HTMLDivElement
@@ -174,10 +178,20 @@
     uploadModalOpen = true
   }
 
-  function sortRelations(relations: Relation[]): Relation[] {
-    return [...relations].sort((a, b) => {
+  function sortRelations(
+    items: { relation: Relation; profile: CirclesRpcProfile | null }[],
+  ) {
+    return [...items].sort((a, b) => {
+      // Example 1: prioritize items that actually have profiles
       if (a.profile && !b.profile) return -1
       if (!a.profile && b.profile) return 1
+
+      // Example 2: sort alphabetically by displayName if both have profiles
+      if (a.profile && b.profile) {
+        return a.profile.address.localeCompare(b.profile.address)
+      }
+
+      // Example 3: fallback (keep original order)
       return 0
     })
   }
@@ -188,16 +202,63 @@
       if (!res.ok) throw new Error("Failed to fetch relations")
 
       const data: Relation[] = await res.json()
+
+      // Extract addresses of related users
+      const relationAddresses = data.map(
+        (item) => item.relationItem.objectAvatar,
+      )
+
+      // Fetch all their profiles
+      const profilesResponse = await fetch("/api/circles/batchProfiles", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ addresses: relationAddresses }),
+      })
+      const { profiles } = (await profilesResponse.json()) as {
+        profiles: (CirclesRpcProfile | null)[]
+      }
+
+      // Build a quick lookup map from address → profile
+      const profileMap = new Map(
+        profiles.map((p) => [p?.address.toLowerCase(), p]),
+      )
+
+      // Helper to get profile by address (fallback null if missing)
+      const getProfile = (address: string) =>
+        profileMap.get(address.toLowerCase()) || null
+
+      // Sort relations + attach profiles
       const mutuals = sortRelations(
-        data.filter((item) => item.relationItem.relation === "mutuallyTrusts"),
+        data
+          .filter((item) => item.relationItem.relation === "mutuallyTrusts")
+          .map((item) => ({
+            relation: item,
+            profile: getProfile(item.relationItem.objectAvatar),
+          })),
       )
+
       const trustedBy = sortRelations(
-        data.filter((item) => item.relationItem.relation === "trustedBy"),
+        data
+          .filter((item) => item.relationItem.relation === "trustedBy")
+          .map((item) => ({
+            relation: item,
+            profile: getProfile(item.relationItem.objectAvatar),
+          })),
       )
+
       const trusts = sortRelations(
-        data.filter((item) => item.relationItem.relation === "trusts"),
+        data
+          .filter((item) => item.relationItem.relation === "trusts")
+          .map((item) => ({
+            relation: item,
+            profile: getProfile(item.relationItem.objectAvatar),
+          })),
       )
-      contents = [mutuals || [], trustedBy || [], trusts || []]
+
+      // Now you have structured data for rendering
+      contents = [mutuals, trustedBy, trusts]
     } catch (err) {
       console.error("Error fetching relations:", err)
     }

@@ -1,10 +1,26 @@
 <script lang="ts" module>
-  import { page } from "$app/state"
   import HomeIcon from "@lucide/svelte/icons/home"
-  import { signIn } from "@auth/sveltekit/client"
+  import UserIcon from "@lucide/svelte/icons/user"
+</script>
 
-  // This is sample data.
-  const data = {
+<script lang="ts">
+  import { page } from "$app/state"
+  import * as Sidebar from "$lib/components/ui/sidebar/index"
+  import type { ComponentProps } from "svelte"
+  import NavUserCustom from "./nav-user-custom.svelte"
+  import { signIn } from "@auth/sveltekit/client"
+  import LogIn from "@lucide/svelte/icons/log-in"
+
+  let {
+    ref = $bindable(null),
+    collapsible = "icon",
+    ...restProps
+  }: ComponentProps<typeof Sidebar.Root> = $props()
+
+  // Derive safeAddress and data from page state
+  const safeAddress = $derived(page.data.session?.user?.safeAddress)
+
+  const data = $derived({
     navMain: [
       {
         title: "Navigation",
@@ -16,23 +32,16 @@
             isActive: true,
             icon: HomeIcon,
           },
+          {
+            title: "Profile",
+            url: `/${safeAddress}`,
+            isActive: true,
+            icon: UserIcon,
+          },
         ],
       },
     ],
-  }
-</script>
-
-<script lang="ts">
-  import * as Sidebar from "$lib/components/ui/sidebar/index"
-  import type { ComponentProps } from "svelte"
-  import NavUserCustom from "./nav-user-custom.svelte"
-  import LogIn from "@lucide/svelte/icons/log-in"
-
-  let {
-    ref = $bindable(null),
-    collapsible = "icon",
-    ...restProps
-  }: ComponentProps<typeof Sidebar.Root> = $props()
+  })
 </script>
 
 <Sidebar.Root {collapsible} {...restProps}>
@@ -75,7 +84,7 @@
   <Sidebar.Footer>
     <!-- <NavUser user={data.user} /> -->
     {#if page.data.session?.user}
-      <NavUserCustom user={page.data.session?.user} />
+      <!-- <NavUserCustom user={page.data.session?.user} /> -->
     {:else}
       <Sidebar.Menu>
         <Sidebar.MenuItem onclick={() => signIn()}>
