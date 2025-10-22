@@ -227,44 +227,65 @@
 {:else if profile}
   <div class="w-full max-w-3xl">
     <!-- User info section -->
-    <div class="flex flex-col items-center justify-center md:flex-row gap-6">
-      <Avatar.Root class="w-24 h-24 rounded-full object-cover">
-        <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
-          ><ImageIcon /></Avatar.Fallback
+    <div class="flex flex-col">
+      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
+        <div class="relative flex flex-col items-center">
+          <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
+            <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
+              ><ImageIcon /></Avatar.Fallback
+            >
+            <Avatar.Image
+              src={(profile as CirclesRpcProfile).previewImageUrl}
+              alt="@shadcn"
+              class="w-24 h-24 rounded-full object-cover"
+            />
+          </Avatar.Root>
+          {#if (profile as CirclesRpcProfile).description}
+            <div
+              class="block md:hidden bg-white p-4 shadow-lg text-black text-center max-w-md text-sm"
+            >
+              {(profile as CirclesRpcProfile).description}
+            </div>
+          {/if}
+        </div>
+
+        <div class="flex flex-col text-center md:text-left gap-1">
+          <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
+          {#if isOwnProfile}
+            <span class="text-xs text-blue-500">(Your Profile)</span>
+          {/if}
+          <hr />
+          <p class="text-gray-500 text-xs break-all">
+            {(profile as CirclesRpcProfile).address}
+          </p>
+        </div>
+
+        <button
+          onclick={openRelationsModal}
+          class="flex flex-row gap-6 cursor-pointer"
         >
-        <Avatar.Image
-          src={(profile as CirclesRpcProfile).previewImageUrl}
-          alt="@shadcn"
-          class="w-24 h-24 rounded-full object-cover"
-        />
-      </Avatar.Root>
-      <div class="flex flex-col text-center md:text-left gap-1">
-        <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
-        {#if isOwnProfile}
-          <span class="text-xs text-blue-500">(Your Profile)</span>
-        {/if}
-        <hr />
-        <p class="text-gray-500 text-xs break-all">
-          {(profile as CirclesRpcProfile).address}
-        </p>
+          <div class="flex flex-col">
+            <p>mutuals</p>
+            <p>{contents[0].length}</p>
+          </div>
+          <div class="flex flex-col">
+            <p>trusted by</p>
+            <p>{contents[1].length}</p>
+          </div>
+          <div class="flex flex-col">
+            <p>trusts</p>
+            <p>{contents[2].length}</p>
+          </div>
+        </button>
       </div>
-      <button
-        onclick={openRelationsModal}
-        class="flex flex-row gap-6 cursor-pointer"
-      >
-        <div class="flex flex-col">
-          <p>mutuals</p>
-          <p>{contents[0].length}</p>
+      {#if (profile as CirclesRpcProfile).description}
+        <div
+          class="hidden md:flex md:flex-col p-4 text-gray-800 text-left max-w-md text-sm ml-4"
+        >
+          <p>{(profile as CirclesRpcProfile).description}</p>
         </div>
-        <div class="flex flex-col">
-          <p>trusted by</p>
-          <p>{contents[1].length}</p>
-        </div>
-        <div class="flex flex-col">
-          <p>trusts</p>
-          <p>{contents[2].length}</p>
-        </div>
-      </button>
+      {/if}
+      <hr class="mt-4 hidden md:block" />
     </div>
 
     <!-- Upload bttn section -->

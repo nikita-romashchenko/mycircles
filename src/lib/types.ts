@@ -26,6 +26,7 @@ export interface CirclesRpcProfile {
   previewImageUrl?: string
   avatarType?: string
   isRpcProfile: true // Flag to identify RPC profiles
+  description?: string
 }
 
 interface MediaItem {

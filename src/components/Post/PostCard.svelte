@@ -11,7 +11,9 @@
   import * as Avatar from "$lib/components/ui/avatar/index"
   import ImageIcon from "@lucide/svelte/icons/image"
 
-  import type { Post } from "$lib/types"
+  import type { CirclesRpcProfile, Post } from "$lib/types"
+  import { fetchCirclesProfilesBatch } from "$lib/utils/circlesRpc"
+  import { onMount } from "svelte"
 
   interface Props {
     post: Post
@@ -27,6 +29,9 @@
     console.log("Handling vote interaction:", type, "for post:", post._id)
     onVote(post._id, type)
   }
+
+  let loading = $state(true)
+  let circlesProfiles: (CirclesRpcProfile | null)[] = $state([])
 
   async function handleLike() {
     if (!liked) {
@@ -59,6 +64,23 @@
 
     liked = !liked
   }
+
+  async function fetchData() {
+    try {
+      circlesProfiles = await fetchCirclesProfilesBatch([
+        post.creatorAddress,
+        post.postedToAddress ?? null,
+      ])
+    } catch (e: any) {
+      console.error(e.message)
+    } finally {
+      loading = false
+    }
+  }
+
+  onMount(() => {
+    fetchData()
+  })
 
   let mainMedia = $derived(post?.mediaItems?.[0])
 </script>
@@ -114,13 +136,13 @@
                 ><ImageIcon /></Avatar.Fallback
               >
               <Avatar.Image
-                src={"https://picsum.photos/200"}
-                alt={`${post.creatorProfile?.username}'s avatar`}
+                src={circlesProfiles[0]?.previewImageUrl}
+                alt={`${circlesProfiles[0]?.name}'s avatar`}
                 class="w-24 h-24 rounded-full object-cover"
               />
             </Avatar.Root>
             <div class="flex flex-col">
-              <Card.Title>@{post.creatorProfile?.username}</Card.Title>
+              <Card.Title>@{circlesProfiles[0]?.name}</Card.Title>
             </div>
           </a>
           {#if post.postedToAddress}
@@ -134,12 +156,12 @@
                   ><ImageIcon /></Avatar.Fallback
                 >
                 <Avatar.Image
-                  src={post.postedToProfile?.previewImageUrl}
-                  alt={`${post.creatorProfile?.username}'s avatar`}
+                  src={circlesProfiles[1]?.previewImageUrl}
+                  alt={`${circlesProfiles[1]?.name}'s avatar`}
                 />
               </Avatar.Root>
               <div class="flex flex-col">
-                <Card.Title>@{post.postedToProfile?.name}</Card.Title>
+                <Card.Title>@{circlesProfiles[1]?.name}</Card.Title>
               </div>
             </a>
           {/if}
