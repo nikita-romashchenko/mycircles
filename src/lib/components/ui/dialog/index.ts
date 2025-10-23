@@ -1,4 +1,9 @@
-import { Dialog } from "bits-ui"
+import * as BitsUI from "bits-ui"
+
+console.log("BitsUI imported:", typeof BitsUI, Object.keys(BitsUI || {}).slice(0, 10))
+console.log("Dialog:", typeof BitsUI.Dialog, BitsUI.Dialog)
+
+const Dialog = BitsUI.Dialog
 
 import Title from "./dialog-title.svelte"
 import Footer from "./dialog-footer.svelte"
@@ -9,8 +14,8 @@ import Description from "./dialog-description.svelte"
 import Trigger from "./dialog-trigger.svelte"
 import Close from "./dialog-close.svelte"
 
-const Root = Dialog.Root
-const Portal = Dialog.Portal
+const Root = Dialog?.Root || null
+const Portal = Dialog?.Portal || null
 
 export {
   Root,

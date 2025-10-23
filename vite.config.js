@@ -15,5 +15,8 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ['buffer']
+  },
+  ssr: {
+    noExternal: ['bits-ui']
   }
 });
