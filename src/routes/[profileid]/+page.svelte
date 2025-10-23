@@ -292,7 +292,9 @@
   <div class="w-full max-w-3xl">
     <!-- User info section -->
     <div class="flex flex-col">
-      <div class="flex flex-col items-center justify-center md:flex-row gap-6">
+      <div
+        class="flex flex-col items-center justify-center md:flex-row md:items-start gap-6"
+      >
         <div class="relative flex flex-col items-center">
           <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
             <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
@@ -324,12 +326,14 @@
             {@const description =
               "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Vel repellat quis, voluptate nam commodi iste nihil nesciunt ad eum inventore eveniet excepturi corrupti obcaecati itaque ipsa libero cumque porro molestiae?"}
             {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
-            {@const displayText =
-              isTooLong && !isDescriptionExpanded
-                ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
-                : description}
-            <div class="text-gray-500 text-xs break-words">
-              <p>{displayText}</p>
+            <div class="text-gray-500 text-xs break-words max-w-xs">
+              <p
+                class="transition-all duration-300 {isDescriptionExpanded
+                  ? ''
+                  : 'line-clamp-3'}"
+              >
+                {description}
+              </p>
               {#if isTooLong}
                 <button
                   onclick={() =>
