@@ -8,8 +8,9 @@
   import * as Sidebar from "$lib/components/ui/sidebar/index"
   import type { ComponentProps } from "svelte"
   import NavUserCustom from "./nav-user-custom.svelte"
-  import { signIn } from "@auth/sveltekit/client"
+  import { signIn, signOut } from "@auth/sveltekit/client"
   import LogIn from "@lucide/svelte/icons/log-in"
+  import LogOut from "@lucide/svelte/icons/log-out"
 
   let {
     ref = $bindable(null),
@@ -32,12 +33,16 @@
             isActive: true,
             icon: HomeIcon,
           },
-          {
-            title: "Profile",
-            url: `/${safeAddress}`,
-            isActive: true,
-            icon: UserIcon,
-          },
+          ...(page.data.session
+            ? [
+                {
+                  title: "Profile",
+                  url: `/${safeAddress}`,
+                  isActive: true,
+                  icon: UserIcon,
+                },
+              ]
+            : []),
         ],
       },
     ],
@@ -83,8 +88,19 @@
   </Sidebar.Content>
   <Sidebar.Footer>
     <!-- <NavUser user={data.user} /> -->
-    {#if page.data.session?.user}
-      <!-- <NavUserCustom user={page.data.session?.user} /> -->
+    {#if page.data.session}
+      <Sidebar.Menu>
+        <Sidebar.MenuItem onclick={() => signOut()}>
+          <Sidebar.MenuButton class="cursor-pointer">
+            {#snippet child({ props })}
+              <div {...props}>
+                <LogOut />
+                <span>Sign out</span>
+              </div>
+            {/snippet}
+          </Sidebar.MenuButton>
+        </Sidebar.MenuItem>
+      </Sidebar.Menu>
     {:else}
       <Sidebar.Menu>
         <Sidebar.MenuItem onclick={() => signIn()}>
