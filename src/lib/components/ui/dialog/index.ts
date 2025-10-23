@@ -1,7 +1,7 @@
 import * as BitsUI from "bits-ui"
 
-console.log("BitsUI imported:", typeof BitsUI, Object.keys(BitsUI || {}).slice(0, 10))
-console.log("Dialog:", typeof BitsUI.Dialog, BitsUI.Dialog)
+// console.log("BitsUI imported:", typeof BitsUI, Object.keys(BitsUI || {}).slice(0, 10))
+// console.log("Dialog:", typeof BitsUI.Dialog, BitsUI.Dialog)
 
 const Dialog = BitsUI.Dialog
 

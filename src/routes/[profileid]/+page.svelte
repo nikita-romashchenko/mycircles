@@ -42,6 +42,9 @@
   let votePostId: any
   let voteType: any
   let voteTargetAddress: any
+  let isDescriptionExpanded = false
+
+  const MAX_DESCRIPTION_LENGTH = 100
 
   $: profile = $page.data.profile as CirclesRpcProfile | null
   $: posts = $page.data.posts as PostType[]
@@ -316,9 +319,28 @@
             <span class="text-xs text-blue-500">(Your Profile)</span>
           {/if}
           <hr />
-          <p class="text-gray-500 text-xs break-all">
-            {(profile as CirclesRpcProfile).address}
-          </p>
+          <!-- {@const description = (profile as CirclesRpcProfile).description} -->
+          {#if (profile as CirclesRpcProfile).description}
+            {@const description =
+              "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Vel repellat quis, voluptate nam commodi iste nihil nesciunt ad eum inventore eveniet excepturi corrupti obcaecati itaque ipsa libero cumque porro molestiae?"}
+            {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
+            {@const displayText =
+              isTooLong && !isDescriptionExpanded
+                ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
+                : description}
+            <div class="text-gray-500 text-xs break-words">
+              <p>{displayText}</p>
+              {#if isTooLong}
+                <button
+                  onclick={() =>
+                    (isDescriptionExpanded = !isDescriptionExpanded)}
+                  class="text-blue-500 hover:text-blue-700 text-xs mt-1"
+                >
+                  {isDescriptionExpanded ? "Show less" : "Show more"}
+                </button>
+              {/if}
+            </div>
+          {/if}
         </div>
 
         <button
