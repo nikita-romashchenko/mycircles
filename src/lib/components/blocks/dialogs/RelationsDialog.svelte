@@ -14,12 +14,14 @@
       relation: Relation
       profile: CirclesRpcProfile | null
     }[][]
+    tabs?: string[]
   }
 
   let {
     open = $bindable(false),
     onLinkClick,
     contents = [[], [], []],
+    tabs = ["mutuals", "trusters", "trustouts"],
   }: Props = $props()
 </script>
 
@@ -35,7 +37,7 @@
       </Dialog.Description> -->
     </Dialog.Header>
     <div class="min-w-0 w-full">
-      <Tabs tabs={["mutuals", "trusted by", "trusts"]} {contents} {onLinkClick} />
+      <Tabs {tabs} {contents} {onLinkClick} />
     </div>
   </Dialog.Content>
 </Dialog.Root>

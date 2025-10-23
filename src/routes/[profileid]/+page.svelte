@@ -260,8 +260,16 @@
           })),
       )
 
-      // Now you have structured data for rendering
-      contents = [mutuals, trustedBy, trusts]
+      // If viewing own profile, show 3 tabs with mutuals separate
+      // If viewing someone else's profile, show 2 tabs with mutuals included in both
+      if (isOwnProfile) {
+        contents = [mutuals, trustedBy, trusts]
+      } else {
+        // Merge mutuals into trustedBy and trusts for non-own profiles
+        const trustedByWithMutuals = sortRelations([...trustedBy, ...mutuals])
+        const trustsWithMutuals = sortRelations([...trusts, ...mutuals])
+        contents = [trustedByWithMutuals, trustsWithMutuals]
+      }
     } catch (err) {
       console.error("Error fetching relations:", err)
     }
@@ -414,6 +422,7 @@
       bind:open={relationsModalOpen}
       onLinkClick={handleLinkClick}
       {contents}
+      tabs={isOwnProfile ? ["mutuals", "trusters", "trustouts"] : ["trusters", "trustouts"]}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
     <VoteMediaDialog
