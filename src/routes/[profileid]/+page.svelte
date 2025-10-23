@@ -306,13 +306,6 @@
               class="w-24 h-24 rounded-full object-cover"
             />
           </Avatar.Root>
-          {#if (profile as CirclesRpcProfile).description}
-            <div
-              class="block md:hidden bg-white p-4 shadow-lg text-black text-center max-w-md text-sm"
-            >
-              {(profile as CirclesRpcProfile).description}
-            </div>
-          {/if}
         </div>
 
         <div class="flex flex-col text-center md:text-left gap-1">
@@ -365,13 +358,6 @@
           </div>
         </button>
       </div>
-      {#if (profile as CirclesRpcProfile).description}
-        <div
-          class="hidden md:flex md:flex-col p-4 text-gray-800 text-left max-w-md text-sm ml-4"
-        >
-          <p>{(profile as CirclesRpcProfile).description}</p>
-        </div>
-      {/if}
       <hr class="mt-4 hidden md:block" />
     </div>
 
