@@ -301,7 +301,7 @@
     <!-- User info section -->
     <div class="flex flex-col">
       <div
-        class="flex flex-col items-center justify-center md:flex-row md:items-start gap-6"
+        class="flex flex-col items-center justify-center md:flex-row md:items-start md:justify-start mx-auto gap-6"
       >
         <div class="relative flex flex-col items-center">
           <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
@@ -316,16 +316,17 @@
           </Avatar.Root>
         </div>
 
-        <div class="flex flex-col text-center md:text-left gap-1">
+        <div class="flex flex-col text-center md:text-left gap-1 md:w-[320px]">
           <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
           {#if isOwnProfile}
             <span class="text-xs text-blue-500">(Your Profile)</span>
           {/if}
           <hr />
-          <!-- {@const description = (profile as CirclesRpcProfile).description} -->
           {#if (profile as CirclesRpcProfile).description}
             {@const description =
-              "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Vel repellat quis, voluptate nam commodi iste nihil nesciunt ad eum inventore eveniet excepturi corrupti obcaecati itaque ipsa libero cumque porro molestiae?"}
+              (profile as CirclesRpcProfile).description || ""}
+            <!-- {@const description =
+              "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Vel repellat quis, voluptate nam commodi iste nihil nesciunt ad eum inventore eveniet excepturi corrupti obcaecati itaque ipsa libero cumque porro molestiae?"} -->
             {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
             <div class="text-gray-500 text-xs break-words max-w-xs">
               <p
