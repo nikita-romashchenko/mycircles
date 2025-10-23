@@ -352,18 +352,29 @@
           onclick={openRelationsModal}
           class="flex flex-row gap-6 cursor-pointer"
         >
-          <div class="flex flex-col">
-            <p>mutuals</p>
-            <p>{contents[0].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusted by</p>
-            <p>{contents[1].length}</p>
-          </div>
-          <div class="flex flex-col">
-            <p>trusts</p>
-            <p>{contents[2].length}</p>
-          </div>
+          {#if isOwnProfile}
+            <div class="flex flex-col">
+              <p>mutuals</p>
+              <p>{contents[0]?.length || 0}</p>
+            </div>
+            <div class="flex flex-col">
+              <p>trusters</p>
+              <p>{contents[1]?.length || 0}</p>
+            </div>
+            <div class="flex flex-col">
+              <p>trustouts</p>
+              <p>{contents[2]?.length || 0}</p>
+            </div>
+          {:else}
+            <div class="flex flex-col">
+              <p>trusters</p>
+              <p>{contents[0]?.length || 0}</p>
+            </div>
+            <div class="flex flex-col">
+              <p>trustouts</p>
+              <p>{contents[1]?.length || 0}</p>
+            </div>
+          {/if}
         </button>
       </div>
       <hr class="mt-4 hidden md:block" />
@@ -422,7 +433,9 @@
       bind:open={relationsModalOpen}
       onLinkClick={handleLinkClick}
       {contents}
-      tabs={isOwnProfile ? ["mutuals", "trusters", "trustouts"] : ["trusters", "trustouts"]}
+      tabs={isOwnProfile
+        ? ["mutuals", "trusters", "trustouts"]
+        : ["trusters", "trustouts"]}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
     <VoteMediaDialog
