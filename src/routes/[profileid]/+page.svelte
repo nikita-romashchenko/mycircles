@@ -18,6 +18,7 @@
   import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
   import { Item } from "$lib/components/ui/breadcrumb"
+  import TrustButton from "$lib/components/blocks/TrustButton.svelte"
 
   const limit = 1
 
@@ -43,6 +44,7 @@
   let voteType: any
   let voteTargetAddress: any
   let isDescriptionExpanded = false
+  let isTrusted = false
 
   const MAX_DESCRIPTION_LENGTH = 100
 
@@ -206,6 +208,19 @@
 
       const data: Relation[] = await res.json()
 
+      // Check if we trust this profile (if not our own profile)
+      if (!isOwnProfile && $page.data.session?.user?.safeAddress) {
+        const currentUserAddress = $page.data.session.user.safeAddress
+        const trustRelation = data.find(
+          (item) =>
+            item.relationItem.objectAvatar.toLowerCase() ===
+              currentUserAddress.toLowerCase() &&
+            (item.relationItem.relation === "trustedBy" ||
+              item.relationItem.relation === "mutuallyTrusts"),
+        )
+        isTrusted = !!trustRelation
+      }
+
       // Extract addresses of related users
       const relationAddresses = data.map(
         (item) => item.relationItem.objectAvatar,
@@ -274,6 +289,54 @@
       console.error("Error fetching relations:", err)
     }
   }
+  async function handleTrust() {
+    if (!profile) return
+
+    try {
+      const response = await fetch("/api/circles/trust", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetAddress: (profile as CirclesRpcProfile).address,
+        }),
+      })
+
+      if (response.ok) {
+        isTrusted = true
+        // Refresh relations to update counts
+        await fetchRelations((profile as CirclesRpcProfile).address)
+      }
+    } catch (err) {
+      console.error("Error trusting user:", err)
+    }
+  }
+
+  async function handleUntrust() {
+    if (!profile) return
+
+    try {
+      const response = await fetch("/api/circles/untrust", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          targetAddress: (profile as CirclesRpcProfile).address,
+        }),
+      })
+
+      if (response.ok) {
+        isTrusted = false
+        // Refresh relations to update counts
+        await fetchRelations((profile as CirclesRpcProfile).address)
+      }
+    } catch (err) {
+      console.error("Error untrusting user:", err)
+    }
+  }
+
   run(() => {
     console.log("Form:", form)
   })
@@ -303,7 +366,7 @@
       <div
         class="flex flex-col items-center justify-center md:flex-row md:items-start md:justify-start mx-auto gap-6"
       >
-        <div class="relative flex flex-col items-center">
+        <div class="flex flex-col items-center">
           <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
             <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
               ><ImageIcon /></Avatar.Fallback
@@ -314,6 +377,14 @@
               class="w-24 h-24 rounded-full object-cover"
             />
           </Avatar.Root>
+          {#if !isOwnProfile && $page.data.session?.user?.safeAddress}
+            <TrustButton
+              class="mt-2"
+              {isTrusted}
+              onTrust={handleTrust}
+              onUntrust={handleUntrust}
+            />
+          {/if}
         </div>
 
         <div class="flex flex-col text-center md:text-left gap-1 md:w-[320px]">
