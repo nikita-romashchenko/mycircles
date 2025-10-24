@@ -20,6 +20,7 @@
 
   // Derive safeAddress and data from page state
   const safeAddress = $derived(page.data.session?.user?.safeAddress)
+  const pathname = $derived(page.url.pathname)
 
   const data = $derived({
     navMain: [
@@ -28,7 +29,7 @@
         url: "#",
         items: [
           {
-            title: "Home",
+            title: "Feed",
             url: "/",
             isActive: true,
             icon: HomeIcon,
@@ -69,7 +70,7 @@
           <Sidebar.Menu>
             {#each group.items as item (item.title)}
               <Sidebar.MenuItem>
-                <Sidebar.MenuButton isActive={item.isActive}>
+                <Sidebar.MenuButton isActive={pathname === item.url}>
                   {#snippet child({ props })}
                     <a href={item.url} {...props}>
                       {#if item.icon}

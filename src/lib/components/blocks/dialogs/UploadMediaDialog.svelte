@@ -56,9 +56,19 @@
     console.log("Editor state changed:", editorState)
     const json = editorState.toJSON()
     console.log("JSON:", json)
-    const jsonString = JSON.stringify(json)
-    console.log("jsonString:", jsonString)
-    $caption = jsonString
+
+    // Check if the editor is actually empty (only has empty paragraphs)
+    const isEmpty = json.root.children.every((child: any) => {
+      return !child.children || child.children.length === 0
+    })
+
+    if (isEmpty) {
+      $caption = ""
+    } else {
+      const jsonString = JSON.stringify(json)
+      console.log("jsonString:", jsonString)
+      $caption = jsonString
+    }
   }
 
   function toggleField(field: "media" | "caption" | "location", show: boolean) {
