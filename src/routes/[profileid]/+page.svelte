@@ -38,6 +38,7 @@
     profile: CirclesRpcProfile | null
   }[][] = [[], [], []]
   let loading = false
+  let loadingRelations = true
   let allLoaded = false
   let sentinel: HTMLDivElement
   let votePostId: any
@@ -287,6 +288,8 @@
       }
     } catch (err) {
       console.error("Error fetching relations:", err)
+    } finally {
+      loadingRelations = false
     }
   }
   async function handleTrust() {
@@ -377,7 +380,7 @@
               class="w-24 h-24 rounded-full object-cover"
             />
           </Avatar.Root>
-          {#if !isOwnProfile && $page.data.session?.user?.safeAddress}
+          {#if !isOwnProfile && $page.data.session?.user?.safeAddress && !loadingRelations}
             <TrustButton
               class="mt-2"
               {isTrusted}
