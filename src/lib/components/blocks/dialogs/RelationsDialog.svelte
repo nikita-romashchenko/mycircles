@@ -1,7 +1,9 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog"
   import * as Avatar from "$lib/components/ui/avatar/index"
+  import * as Tooltip from "$lib/components/ui/tooltip"
   import ImageIcon from "@lucide/svelte/icons/image"
+  import CircleHelp from "@lucide/svelte/icons/circle-help"
   import type { CirclesRpcProfile, Relation } from "$lib/types"
   import { onMount } from "svelte"
 
@@ -94,7 +96,23 @@
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
   <Dialog.Content class="h-[40vh] max-h-[90vh] w-full max-w-full">
     <Dialog.Header>
-      <Dialog.Title>Relations</Dialog.Title>
+      <div class="flex items-center gap-2">
+        <Dialog.Title>Relations</Dialog.Title>
+        <Tooltip.Provider>
+          <Tooltip.Root>
+            <Tooltip.Trigger>
+              <CircleHelp class="w-4 h-4 text-gray-500 hover:text-gray-700" />
+            </Tooltip.Trigger>
+            <Tooltip.Content>
+              <p class="max-w-xs text-sm">
+                Mutuals: People who trust each other<br />
+                Trusters: People who trust you<br />
+                Trustouts: People you trust
+              </p>
+            </Tooltip.Content>
+          </Tooltip.Root>
+        </Tooltip.Provider>
+      </div>
     </Dialog.Header>
     <div class="w-full min-w-0">
       <!-- Tab headers -->
