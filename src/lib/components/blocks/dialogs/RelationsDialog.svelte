@@ -3,6 +3,7 @@
   import * as Avatar from "$lib/components/ui/avatar/index"
   import ImageIcon from "@lucide/svelte/icons/image"
   import type { CirclesRpcProfile, Relation } from "$lib/types"
+  import { onMount } from "svelte"
 
   interface Props {
     open?: boolean
@@ -22,6 +23,71 @@
   }: Props = $props()
 
   let activeTab = $state(0)
+  let displayCounts = $state([20, 20, 20]) // Initial items to show per tab
+  let sentinel = $state<HTMLDivElement | null>(null)
+  let scrollContainer = $state<HTMLDivElement | null>(null)
+  let observers: IntersectionObserver[] = []
+  const ITEMS_PER_LOAD = 20
+
+  // Get displayed items for current tab
+  let displayedItems = $derived(
+    contents[activeTab]?.slice(0, displayCounts[activeTab]) || [],
+  )
+  let hasMore = $derived(
+    contents[activeTab] &&
+      displayCounts[activeTab] < contents[activeTab].length,
+  )
+
+  function loadMore(tabIndex: number) {
+    if (displayCounts[tabIndex] < (contents[tabIndex]?.length || 0)) {
+      displayCounts[tabIndex] = displayCounts[tabIndex] + ITEMS_PER_LOAD
+    }
+  }
+
+  function resetDisplayCount() {
+    displayCounts = [20, 20, 20]
+  }
+
+  // Setup observer for sentinel
+  $effect(() => {
+    // Cleanup existing observers
+    observers.forEach((obs) => obs.disconnect())
+    observers = []
+
+    if (!sentinel) return
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting && hasMore) {
+          loadMore(activeTab)
+        }
+      },
+      { rootMargin: "100px" },
+    )
+
+    observer.observe(sentinel)
+    observers.push(observer)
+
+    return () => {
+      observer.disconnect()
+    }
+  })
+
+  // Reset scroll position when switching tabs
+  $effect(() => {
+    // Track activeTab to trigger when it changes
+    activeTab
+    if (scrollContainer) {
+      scrollContainer.scrollTop = 0
+    }
+  })
+
+  // Reset display counts when dialog closes
+  $effect(() => {
+    if (!open) {
+      resetDisplayCount()
+    }
+  })
 </script>
 
 <Dialog.Root bind:open>
@@ -48,12 +114,15 @@
       </div>
 
       <!-- Tab content -->
-      <div class="p-2 md:p-4 h-[28vh] overflow-auto w-full min-w-0">
+      <div
+        bind:this={scrollContainer}
+        class="p-2 md:p-4 h-[28vh] overflow-auto w-full min-w-0"
+      >
         {#if contents[activeTab]}
           {#if contents[activeTab].length === 0}
             <p class="text-gray-500">No data found.</p>
           {:else}
-            {#each contents[activeTab] as relation}
+            {#each displayedItems as relation}
               {#if !relation.profile}{:else}
                 <a
                   href={`/${relation.profile.address}`}
@@ -87,6 +156,15 @@
                 </a>
               {/if}
             {/each}
+
+            <!-- Sentinel for infinite scroll -->
+            <div bind:this={sentinel} class="h-4"></div>
+
+            {#if hasMore}
+              <p class="text-center text-gray-500 text-sm">Loading more...</p>
+            {:else if displayedItems.length > 0}
+              <p class="text-center text-gray-500 text-sm">All loaded</p>
+            {/if}
           {/if}
         {/if}
       </div>
