@@ -17,6 +17,7 @@
   import ImageIcon from "@lucide/svelte/icons/image"
   import { Item } from "$lib/components/ui/breadcrumb"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
+  import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
 
   const limit = 1
   const ITEMS_PER_LOAD = 20
@@ -123,9 +124,10 @@
   const handleVote = async (postId: string, type: "upVote" | "downVote") => {
     console.log("Voting on post:", postId, "Type:", type)
 
-    // Find the post to get target address
+    // Find the post to get target address (profile owner where post was posted)
     const post = posts.find((p) => p._id === postId)
     voteTargetAddress = post?.postedToAddress || post?.creatorAddress
+    voteProfileOwnerAddress = post?.postedToAddress || post?.creatorAddress
 
     // Open the vote dialog
     voteModalOpen = true
@@ -150,6 +152,45 @@
     }
 
     try {
+      // Only send tokens for upvotes (not downvotes)
+      if (type === "upVote") {
+        // Get avatar for token transfer
+        const avatar = avatarStore.getAvatar()
+        if (!avatar) {
+          alert("Please wait for avatar to initialize")
+          throw new Error("Avatar not initialized")
+        }
+
+        // Get the target address (profile owner where post was posted)
+        const post = posts[postIndex]
+        const targetAddress = post.postedToAddress || post.creatorAddress
+
+        if (!targetAddress) {
+          throw new Error("No target address found for vote")
+        }
+
+        console.log(`💰 Sending ${balanceChange} CRC to ${targetAddress} for ${type}...`)
+
+        // Convert CRC amount to atto-circles (18 decimals)
+        const amountInAttoCircles = BigInt(balanceChange) * BigInt(10 ** 18)
+
+        // Transfer tokens using the SDK with wrapped balances
+        // Only use tokens from the profile owner (where the post was posted)
+        const options = {
+          useWrappedBalances: true, // Use wrapped tokens (ERC20)
+          fromTokens: [targetAddress as `0x${string}`] // Only use tokens from the profile owner
+        }
+
+        const receipt = await avatar.transfer.advanced(
+          targetAddress as `0x${string}`,
+          amountInAttoCircles.toString(),
+          options
+        )
+
+        console.log(`✅ Token transfer successful. Hash: ${receipt.transactionHash}`)
+      }
+
+      // Update the database after successful token transfer (or for downvotes)
       const response = await fetch("/api/posts/vote", {
         method: "POST",
         headers: {
@@ -163,16 +204,15 @@
       })
 
       if (!response.ok) {
-        // Revert on error
-        if (postIndex !== -1) {
-          posts[postIndex].balance =
-            type === "upVote"
-              ? posts[postIndex].balance - balanceChange
-              : posts[postIndex].balance + balanceChange
+        if (type === "upVote") {
+          console.warn("Database update failed, but tokens were transferred")
+        } else {
+          throw new Error("Vote update failed")
         }
-        console.error("Vote failed")
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.error("Error submitting vote:", err)
+
       // Revert on error
       if (postIndex !== -1) {
         posts[postIndex].balance =
@@ -180,7 +220,8 @@
             ? posts[postIndex].balance - balanceChange
             : posts[postIndex].balance + balanceChange
       }
-      console.error("Error submitting vote:", err)
+
+      alert(`Failed to vote: ${err.message || 'Please try again.'}`)
     }
   }
 
@@ -217,24 +258,17 @@
     })
   }
 
-  async function fetchRelations(address: string) {
+  async function fetchRelations(address: string, skipTrustCheck = false) {
     try {
       const res = await fetch(`/api/circles/relations?address=${address}`)
       if (!res.ok) throw new Error("Failed to fetch relations")
 
       const data: Relation[] = await res.json()
 
-      // Check if we trust this profile (if not our own profile)
-      if (!isOwnProfile && $page.data.session?.user?.safeAddress) {
-        const currentUserAddress = $page.data.session.user.safeAddress
-        const trustRelation = data.find(
-          (item) =>
-            item.relationItem.objectAvatar.toLowerCase() ===
-              currentUserAddress.toLowerCase() &&
-            (item.relationItem.relation === "trustedBy" ||
-              item.relationItem.relation === "mutuallyTrusts"),
-        )
-        isTrusted = !!trustRelation
+      // Check if we trust this profile using the avatarStore (if not our own profile)
+      // Skip this check if we just performed a trust/untrust action (to avoid race conditions)
+      if (!skipTrustCheck && !isOwnProfile && $page.data.session?.user?.safeAddress) {
+        await checkTrustStatusFromAvatar(address)
       }
 
       // Sort relations by type (but don't fetch profiles yet)
@@ -330,6 +364,34 @@
       loadingMoreProfiles = false
     }
   }
+  async function checkTrustStatusFromAvatar(targetAddress: string) {
+    try {
+      // Wait for avatar to be ready with retry logic
+      let retries = 0
+      const maxRetries = 10 // Wait up to 5 seconds
+
+      while (!avatarStore.isReady && retries < maxRetries) {
+        console.log(`Avatar not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`)
+        await new Promise(resolve => setTimeout(resolve, 500))
+        retries++
+      }
+
+      const avatar = avatarStore.getAvatar()
+      if (!avatar) {
+        console.warn("Avatar not initialized after waiting, cannot check trust status")
+        // Don't set isTrusted, leave it as default (false)
+        return
+      }
+
+      // Check trust status using the SDK
+      isTrusted = await avatar.trust.isTrusting(targetAddress as `0x${string}`)
+      console.log(`✅ Trust status for ${targetAddress}: ${isTrusted}`)
+    } catch (err) {
+      console.error("Error checking trust status from avatar:", err)
+      // Don't set isTrusted on error, leave it as default (false)
+    }
+  }
+
   async function handleTrust() {
     if (!profile) return
 
@@ -351,10 +413,18 @@
         await fetchRelations((profile as CirclesRpcProfile).address)
         isTrusted = true
       }
-    } catch (err) {
-      console.error("Error trusting user:", err)
-    }
-  }
+
+      const targetAddress = (profile as CirclesRpcProfile).address
+      console.log(`🔵 Trusting ${targetAddress}...`)
+
+      // Add trust using the SDK
+      const receipt = await avatar.trust.add(targetAddress as `0x${string}`)
+      console.log(`✅ Trust transaction successful. Hash: ${receipt.transactionHash}`)
+
+      // Update UI state
+      isTrusted = true
+
+      // Refresh relations to update counts (skip trust check to avoid race condition)
 
   async function handleUntrust() {
     if (!profile) return
@@ -376,8 +446,22 @@
         await fetchRelations((profile as CirclesRpcProfile).address)
         isTrusted = false
       }
-    } catch (err) {
+
+      const targetAddress = (profile as CirclesRpcProfile).address
+      console.log(`🔴 Untrusting ${targetAddress}...`)
+
+      // Remove trust using the SDK
+      const receipt = await avatar.trust.remove(targetAddress as `0x${string}`)
+      console.log(`✅ Untrust transaction successful. Hash: ${receipt.transactionHash}`)
+
+      // Update UI state
+      isTrusted = false
+
+      // Refresh relations to update counts (skip trust check to avoid race condition)
+      await fetchRelations(targetAddress, true)
+    } catch (err: any) {
       console.error("Error untrusting user:", err)
+      alert(`Failed to untrust: ${err.message || 'Please try again.'}`)
     }
   }
 
@@ -561,6 +645,7 @@
       postId={votePostId}
       type={voteType}
       targetAddress={voteTargetAddress}
+      profileOwnerAddress={voteProfileOwnerAddress}
       onSubmit={handleVoteSubmit}
       bind:open={voteModalOpen}
     />

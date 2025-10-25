@@ -4,8 +4,7 @@ import { Interaction } from "$lib/models/Interaction"
 import { Post } from "$lib/models/Post"
 import mongoose, { type ObjectId } from "mongoose"
 import { env } from "$env/dynamic/private"
-import { CirclesData, CirclesRpc } from "@circles-sdk/data"
-import { Profiles } from "@circles-sdk/profiles"
+import { CirclesRpc } from "@circles-sdk/rpc"
 import { Profile } from "$lib/models/Profile"
 
 interface ProfileDoc {
@@ -22,13 +21,11 @@ await mongoose
 
 export async function getFilteredRelationsWithProfiles(address: string) {
   const rpc = new CirclesRpc("https://rpc.aboutcircles.com/")
-  const circlesData = new CirclesData(rpc)
 
   try {
     // Get aggregated relations
-    const relations = await circlesData.getAggregatedTrustRelations(
-      address.toLowerCase() as `0x${string}`,
-      2,
+    const relations = await rpc.trust.getAggregatedTrustRelations(
+      address.toLowerCase() as `0x${string}`
     )
 
     // Extract objectAvatars

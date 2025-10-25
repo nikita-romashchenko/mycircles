@@ -8,8 +8,26 @@
   import AppSidebar from "$lib/components/app-sidebar.svelte"
   import { Separator } from "$lib/components/ui/separator"
   import * as Breadcrumb from "$lib/components/ui/breadcrumb/index"
+  import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { page } from "$app/stores"
+  import { browser } from "$app/environment"
 
-  export let data: any
+  let { data }: { data: any } = $props()
+
+  // Initialize avatar when user is logged in
+  // Track only the safeAddress to avoid unnecessary re-initializations
+  $effect(() => {
+    if (!browser) return
+
+    const safeAddress = $page.data.session?.user?.safeAddress
+    if (safeAddress) {
+      console.log('🔄 Initializing avatar for user:', safeAddress)
+      avatarStore.initialize(safeAddress)
+    } else {
+      console.log('🔄 No session, resetting avatar')
+      avatarStore.reset()
+    }
+  })
 </script>
 
 <AuthDataManager />
