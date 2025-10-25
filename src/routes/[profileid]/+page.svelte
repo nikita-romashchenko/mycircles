@@ -306,6 +306,8 @@
         }),
       })
 
+      console.log("handleTrust: ", response.ok)
+
       if (response.ok) {
         isTrusted = true
         // Refresh relations to update counts
@@ -329,6 +331,7 @@
           targetAddress: (profile as CirclesRpcProfile).address,
         }),
       })
+      console.log("handleUntrust: ", response.ok)
 
       if (response.ok) {
         isTrusted = false

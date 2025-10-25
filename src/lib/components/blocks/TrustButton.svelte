@@ -25,10 +25,10 @@
     try {
       if (isTrusted) {
         await onUntrust()
-        isTrusted = false
+        // isTrusted = false
       } else {
         await onTrust()
-        isTrusted = true
+        // isTrusted = true
       }
     } catch (err) {
       console.error("Error toggling trust:", err)
