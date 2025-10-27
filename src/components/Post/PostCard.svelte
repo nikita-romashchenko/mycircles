@@ -128,7 +128,7 @@
       <div class="flex flex-col gap-1">
         <div class="flex flex-row gap-1 items-center">
           <a
-            href="/{post.creatorProfile?.safeAddress}"
+            href="/{post.creatorAddress}"
             class="flex flex-row items-center gap-2"
           >
             <Avatar.Root class="rounded-full object-cover">
@@ -168,13 +168,13 @@
         </div>
 
         {#if post.postedTo}
-          <span class="text-sm text-gray-500 ml-14">
+          <!-- <span class="text-sm text-gray-500 ml-14">
             posted on <a
               href="/{post.postedTo.safeAddress}"
               class="font-semibold text-gray-700 hover:underline"
               >@{post.postedTo.username}</a
             > profile
-          </span>
+          </span> -->
         {/if}
       </div>
       {#if post.caption}
