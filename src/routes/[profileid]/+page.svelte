@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from "svelte/legacy"
-
   import type {
     Post as PostType,
     CirclesRpcProfile,
@@ -22,44 +20,55 @@
 
   const limit = 1
 
-  let posts: PostType[] = []
-  let profile: CirclesRpcProfile | null
-  let isOwnProfile: boolean
-  let isRpcProfile: boolean = false
-  let error: string | null = null
+  let posts = $state<PostType[]>([])
+  let profile = $state<CirclesRpcProfile | null>(null)
+  let isOwnProfile = $state<boolean>(false)
+  let isRpcProfile = $state<boolean>(false)
+  let error = $state<string | null>(null)
 
-  let form = $page.data.form
+  let form = $state($page.data.form)
 
-  let relationsModalOpen = false
-  let uploadModalOpen = false
-  let voteModalOpen = false
-  let contents: {
-    relation: Relation
-    profile: CirclesRpcProfile | null
-  }[][] = [[], [], []]
-  let loading = false
-  let loadingRelations = true
-  let allLoaded = false
+  let relationsModalOpen = $state(false)
+  let uploadModalOpen = $state(false)
+  let voteModalOpen = $state(false)
+  let contents = $state<
+    {
+      relation: Relation
+      profile: CirclesRpcProfile | null
+    }[][]
+  >([[], [], []])
+  let loading = $state(false)
+  let loadingRelations = $state(true)
+  let allLoaded = $state(false)
   let sentinel: HTMLDivElement
-  let votePostId: any
-  let voteType: any
-  let voteTargetAddress: any
-  let isDescriptionExpanded = false
-  let isTrusted = false
+  let votePostId = $state<any>(undefined)
+  let voteType = $state<any>(undefined)
+  let voteTargetAddress = $state<any>(undefined)
+  let isDescriptionExpanded = $state(false)
+  let isTrusted = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 100
 
-  $: profile = $page.data.profile as CirclesRpcProfile | null
-  $: posts = $page.data.posts as PostType[]
-  $: skip = posts.length
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
-  $: isRpcProfile = $page.data.isRpcProfile as boolean
-  $: error = $page.data.error as string | null
-  $: console.log("profile:", $page.data.profile)
-  $: console.log("posts:", posts)
-  $: console.log("page.data.posts:", $page.data.posts)
-  $: console.log("isRpcProfile:", isRpcProfile)
-  $: console.log("error:", error)
+  let skip = $derived(posts.length)
+
+  // Sync with page data
+  $effect(() => {
+    profile = $page.data.profile as CirclesRpcProfile | null
+    posts = $page.data.posts as PostType[]
+    isOwnProfile = $page.data.isOwnProfile as boolean
+    isRpcProfile = $page.data.isRpcProfile as boolean
+    error = $page.data.error as string | null
+    form = $page.data.form
+  })
+
+  // Debug logging
+  $effect(() => {
+    console.log("profile:", $page.data.profile)
+    console.log("posts:", posts)
+    console.log("page.data.posts:", $page.data.posts)
+    console.log("isRpcProfile:", isRpcProfile)
+    console.log("error:", error)
+  })
 
   async function loadMore() {
     if (loading) return
@@ -309,9 +318,9 @@
       console.log("handleTrust: ", response.ok)
 
       if (response.ok) {
-        isTrusted = true
         // Refresh relations to update counts
         await fetchRelations((profile as CirclesRpcProfile).address)
+        isTrusted = true
       }
     } catch (err) {
       console.error("Error trusting user:", err)
@@ -334,20 +343,20 @@
       console.log("handleUntrust: ", response.ok)
 
       if (response.ok) {
-        isTrusted = false
         // Refresh relations to update counts
         await fetchRelations((profile as CirclesRpcProfile).address)
+        isTrusted = false
       }
     } catch (err) {
       console.error("Error untrusting user:", err)
     }
   }
 
-  run(() => {
+  $effect(() => {
     console.log("Form:", form)
   })
 
-  run(() => {
+  $effect(() => {
     // All profiles are now RPC profiles
     if (browser && profile) {
       const address = (profile as CirclesRpcProfile).address
