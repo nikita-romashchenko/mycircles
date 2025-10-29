@@ -15,6 +15,10 @@
       profile: CirclesRpcProfile | null
     }[][]
     tabs?: string[]
+    onLoadMore?: (tabIndex: number) => Promise<void>
+    loadedCounts?: number[]
+    totalCounts?: number[]
+    loadingMoreProfiles?: boolean
   }
 
   let {
@@ -22,32 +26,27 @@
     onLinkClick,
     contents = [[], [], []],
     tabs = ["mutuals", "trusters", "trustouts"],
+    onLoadMore,
+    loadedCounts = [0, 0, 0],
+    totalCounts = [0, 0, 0],
+    loadingMoreProfiles = false,
   }: Props = $props()
 
   let activeTab = $state(0)
-  let displayCounts = $state([20, 20, 20]) // Initial items to show per tab
   let sentinel = $state<HTMLDivElement | null>(null)
   let scrollContainer = $state<HTMLDivElement | null>(null)
   let observers: IntersectionObserver[] = []
-  const ITEMS_PER_LOAD = 20
 
-  // Get displayed items for current tab
+  // Get displayed items for current tab (only show items with loaded profiles)
   let displayedItems = $derived(
-    contents[activeTab]?.slice(0, displayCounts[activeTab]) || [],
+    contents[activeTab]?.slice(0, loadedCounts[activeTab]) || [],
   )
-  let hasMore = $derived(
-    contents[activeTab] &&
-      displayCounts[activeTab] < contents[activeTab].length,
-  )
+  let hasMore = $derived(loadedCounts[activeTab] < totalCounts[activeTab])
 
-  function loadMore(tabIndex: number) {
-    if (displayCounts[tabIndex] < (contents[tabIndex]?.length || 0)) {
-      displayCounts[tabIndex] = displayCounts[tabIndex] + ITEMS_PER_LOAD
+  async function loadMore(tabIndex: number) {
+    if (onLoadMore && !loadingMoreProfiles) {
+      await onLoadMore(tabIndex)
     }
-  }
-
-  function resetDisplayCount() {
-    displayCounts = [20, 20, 20]
   }
 
   // Setup observer for sentinel
@@ -81,13 +80,6 @@
     activeTab
     if (scrollContainer) {
       scrollContainer.scrollTop = 0
-    }
-  })
-
-  // Reset display counts when dialog closes
-  $effect(() => {
-    if (!open) {
-      resetDisplayCount()
     }
   })
 </script>
@@ -178,8 +170,12 @@
             <!-- Sentinel for infinite scroll -->
             <div bind:this={sentinel} class="h-4"></div>
 
-            {#if hasMore}
+            {#if loadingMoreProfiles}
               <p class="text-center text-gray-500 text-sm">Loading more...</p>
+            {:else if hasMore}
+              <p class="text-center text-gray-500 text-sm">
+                Scroll for more...
+              </p>
             {:else if displayedItems.length > 0}
               <p class="text-center text-gray-500 text-sm">All loaded</p>
             {/if}

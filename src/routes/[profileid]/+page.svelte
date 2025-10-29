@@ -19,6 +19,7 @@
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
 
   const limit = 1
+  const ITEMS_PER_LOAD = 20
 
   let posts = $state<PostType[]>([])
   let profile = $state<CirclesRpcProfile | null>(null)
@@ -37,8 +38,11 @@
       profile: CirclesRpcProfile | null
     }[][]
   >([[], [], []])
+  let allRelations = $state<Relation[][]>([[], [], []]) // Store all relations without profiles
+  let loadedCounts = $state([0, 0, 0]) // Track how many profiles loaded per tab
   let loading = $state(false)
   let loadingRelations = $state(true)
+  let loadingMoreProfiles = $state(false)
   let allLoaded = $state(false)
   let sentinel = $state<HTMLDivElement>()
   let votePostId = $state<any>(undefined)
@@ -233,18 +237,72 @@
         isTrusted = !!trustRelation
       }
 
-      // Extract addresses of related users
-      const relationAddresses = data.map(
+      // Sort relations by type (but don't fetch profiles yet)
+      const mutuals = data.filter(
+        (item) => item.relationItem.relation === "mutuallyTrusts",
+      )
+      const trustedBy = data.filter(
+        (item) => item.relationItem.relation === "trustedBy",
+      )
+      const trusts = data.filter(
+        (item) => item.relationItem.relation === "trusts",
+      )
+
+      // Store all relations without profiles
+      if (isOwnProfile) {
+        allRelations = [mutuals, trustedBy, trusts]
+      } else {
+        // Merge mutuals into trustedBy and trusts for non-own profiles
+        const trustedByWithMutuals = [...trustedBy, ...mutuals]
+        const trustsWithMutuals = [...trusts, ...mutuals]
+        allRelations = [trustedByWithMutuals, trustsWithMutuals]
+      }
+
+      // Initialize contents arrays with empty profiles
+      contents = allRelations.map((tabRelations) =>
+        tabRelations.map((relation) => ({
+          relation,
+          profile: null,
+        })),
+      )
+
+      // Load initial batch of profiles for each tab
+      loadedCounts = [0, 0, 0]
+      await Promise.all(
+        allRelations.map((_, tabIndex) => loadMoreRelationProfiles(tabIndex)),
+      )
+    } catch (err) {
+      console.error("Error fetching relations:", err)
+    } finally {
+      loadingRelations = false
+    }
+  }
+
+  async function loadMoreRelationProfiles(tabIndex: number) {
+    if (loadingMoreProfiles) return
+    if (loadedCounts[tabIndex] >= allRelations[tabIndex].length) return
+
+    loadingMoreProfiles = true
+    try {
+      const start = loadedCounts[tabIndex]
+      const end = Math.min(
+        start + ITEMS_PER_LOAD,
+        allRelations[tabIndex].length,
+      )
+      const relationsToLoad = allRelations[tabIndex].slice(start, end)
+
+      // Extract addresses to fetch
+      const addresses = relationsToLoad.map(
         (item) => item.relationItem.objectAvatar,
       )
 
-      // Fetch all their profiles
+      // Fetch profiles for this batch
       const profilesResponse = await fetch("/api/circles/batchProfiles", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ addresses: relationAddresses }),
+        body: JSON.stringify({ addresses }),
       })
       const { profiles } = (await profilesResponse.json()) as {
         profiles: (CirclesRpcProfile | null)[]
@@ -255,52 +313,21 @@
         profiles.map((p) => [p?.address.toLowerCase(), p]),
       )
 
-      // Helper to get profile by address (fallback null if missing)
-      const getProfile = (address: string) =>
-        profileMap.get(address.toLowerCase()) || null
-
-      // Sort relations + attach profiles
-      const mutuals = sortRelations(
-        data
-          .filter((item) => item.relationItem.relation === "mutuallyTrusts")
-          .map((item) => ({
-            relation: item,
-            profile: getProfile(item.relationItem.objectAvatar),
-          })),
-      )
-
-      const trustedBy = sortRelations(
-        data
-          .filter((item) => item.relationItem.relation === "trustedBy")
-          .map((item) => ({
-            relation: item,
-            profile: getProfile(item.relationItem.objectAvatar),
-          })),
-      )
-
-      const trusts = sortRelations(
-        data
-          .filter((item) => item.relationItem.relation === "trusts")
-          .map((item) => ({
-            relation: item,
-            profile: getProfile(item.relationItem.objectAvatar),
-          })),
-      )
-
-      // If viewing own profile, show 3 tabs with mutuals separate
-      // If viewing someone else's profile, show 2 tabs with mutuals included in both
-      if (isOwnProfile) {
-        contents = [mutuals, trustedBy, trusts]
-      } else {
-        // Merge mutuals into trustedBy and trusts for non-own profiles
-        const trustedByWithMutuals = sortRelations([...trustedBy, ...mutuals])
-        const trustsWithMutuals = sortRelations([...trusts, ...mutuals])
-        contents = [trustedByWithMutuals, trustsWithMutuals]
+      // Update contents with loaded profiles
+      for (let i = start; i < end; i++) {
+        const relation = allRelations[tabIndex][i]
+        const profile =
+          profileMap.get(relation.relationItem.objectAvatar.toLowerCase()) ||
+          null
+        contents[tabIndex][i] = { relation, profile }
       }
+
+      // Update loaded count
+      loadedCounts[tabIndex] = end
     } catch (err) {
-      console.error("Error fetching relations:", err)
+      console.error("Error loading more profiles:", err)
     } finally {
-      loadingRelations = false
+      loadingMoreProfiles = false
     }
   }
   async function handleTrust() {
@@ -525,6 +552,10 @@
       tabs={isOwnProfile
         ? ["mutuals", "trusters", "trustouts"]
         : ["trusters", "trustouts"]}
+      onLoadMore={loadMoreRelationProfiles}
+      {loadedCounts}
+      totalCounts={allRelations.map((tab) => tab.length)}
+      {loadingMoreProfiles}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
     <VoteMediaDialog
