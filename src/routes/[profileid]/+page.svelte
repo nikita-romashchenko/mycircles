@@ -51,7 +51,7 @@
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
 
-  const MAX_DESCRIPTION_LENGTH = 100
+  const MAX_DESCRIPTION_LENGTH = 150
 
   let skip = $derived(posts.length)
 
@@ -440,16 +440,15 @@
           {#if (profile as CirclesRpcProfile).description}
             {@const description =
               (profile as CirclesRpcProfile).description || ""}
-            <!-- {@const description =
-              "Lorem, ipsum dolor sit amet consectetur adipisicing elit. Vel repellat quis, voluptate nam commodi iste nihil nesciunt ad eum inventore eveniet excepturi corrupti obcaecati itaque ipsa libero cumque porro molestiae?"} -->
             {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
+            {@const displayText = isDescriptionExpanded
+              ? description
+              : isTooLong
+                ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
+                : description}
             <div class="text-gray-500 text-xs break-words max-w-xs">
-              <p
-                class="transition-all duration-300 {isDescriptionExpanded
-                  ? ''
-                  : 'line-clamp-3'}"
-              >
-                {description}
+              <p class="transition-all duration-300">
+                {displayText}
               </p>
               {#if isTooLong}
                 <button
