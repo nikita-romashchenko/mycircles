@@ -40,7 +40,7 @@
   let loading = $state(false)
   let loadingRelations = $state(true)
   let allLoaded = $state(false)
-  let sentinel: HTMLDivElement
+  let sentinel = $state<HTMLDivElement>()
   let votePostId = $state<any>(undefined)
   let voteType = $state<any>(undefined)
   let voteTargetAddress = $state<any>(undefined)
@@ -101,7 +101,9 @@
     }
   }
 
-  onMount(() => {
+  $effect(() => {
+    if (!sentinel) return
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) loadMore()
@@ -109,7 +111,7 @@
       { rootMargin: "200px" }, // trigger slightly before reaching bottom
     )
 
-    if (sentinel) observer.observe(sentinel)
+    observer.observe(sentinel)
 
     return () => observer.disconnect()
   })
