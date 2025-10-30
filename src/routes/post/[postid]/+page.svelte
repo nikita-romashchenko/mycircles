@@ -8,16 +8,15 @@
   let voteModalOpen = false
   let votePostId: any
   let voteType: any
-  let voteTargetAddress: any
   let localPost = $state<PostType | null>(null)
 
-  $: basePost = $page.data.post as PostType
-  $: profile = $page.data.profile as CirclesRpcProfile
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
+  let basePost = $derived($page.data.post as PostType)
+  let profile = $derived($page.data.profile as CirclesRpcProfile)
+  let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
 
   // Use local post for optimistic updates, fallback to base post
-  $: post = localPost || basePost
-  $: voteTargetAddress = post?.postedToAddress || post?.creatorAddress
+  let post = $derived(localPost || basePost)
+  let voteTargetAddress = $derived(post?.postedToAddress || post?.creatorAddress)
 
   // Reset local post when base post changes
   $effect(() => {
