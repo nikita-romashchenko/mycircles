@@ -88,8 +88,8 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="h-[70vh] md:h-[40vh] max-h-[90vh] w-full max-w-full">
-    <Dialog.Header>
+  <Dialog.Content class="h-[70vh] md:h-[40vh] max-h-[90vh] w-full max-w-full flex flex-col overflow-hidden">
+    <Dialog.Header class="flex-shrink-0">
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
         <CustomTooltip
@@ -101,9 +101,9 @@
         </CustomTooltip>
       </div>
     </Dialog.Header>
-    <div class="w-full min-w-0">
+    <div class="w-full min-w-0 flex-1 flex flex-col overflow-hidden">
       <!-- Tab headers -->
-      <div class="flex border-b">
+      <div class="flex border-b flex-shrink-0">
         {#each tabs as tab, i}
           <button
             type="button"
@@ -121,7 +121,7 @@
       <!-- Tab content -->
       <div
         bind:this={scrollContainer}
-        class="p-2 md:p-4 h-[58vh] md:h-[28vh] overflow-auto w-full min-w-0"
+        class="p-2 md:p-4 flex-1 overflow-auto w-full min-w-0"
       >
         {#if contents[activeTab]}
           {#if contents[activeTab].length === 0}
