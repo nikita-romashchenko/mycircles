@@ -557,6 +557,7 @@
       {loadedCounts}
       totalCounts={allRelations.map((tab) => tab.length)}
       {loadingMoreProfiles}
+      {isOwnProfile}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
     <VoteMediaDialog

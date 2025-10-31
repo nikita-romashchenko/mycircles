@@ -1,7 +1,7 @@
 <script lang="ts">
   import * as Dialog from "$lib/components/ui/dialog"
   import * as Avatar from "$lib/components/ui/avatar/index"
-  import * as Tooltip from "$lib/components/ui/tooltip"
+  import CustomTooltip from "$lib/components/ui/CustomTooltip.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
   import CircleHelp from "@lucide/svelte/icons/circle-help"
   import type { CirclesRpcProfile, Relation } from "$lib/types"
@@ -19,6 +19,7 @@
     loadedCounts?: number[]
     totalCounts?: number[]
     loadingMoreProfiles?: boolean
+    isOwnProfile?: boolean
   }
 
   let {
@@ -30,6 +31,7 @@
     loadedCounts = [0, 0, 0],
     totalCounts = [0, 0, 0],
     loadingMoreProfiles = false,
+    isOwnProfile = false,
   }: Props = $props()
 
   let activeTab = $state(0)
@@ -90,20 +92,13 @@
     <Dialog.Header>
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
-        <Tooltip.Provider>
-          <Tooltip.Root>
-            <Tooltip.Trigger>
-              <CircleHelp class="w-4 h-4 text-gray-500 hover:text-gray-700" />
-            </Tooltip.Trigger>
-            <Tooltip.Content>
-              <p class="max-w-xs text-sm">
-                Mutuals: People who trust each other<br />
-                Trusters: People who trust you<br />
-                Trustouts: People you trust
-              </p>
-            </Tooltip.Content>
-          </Tooltip.Root>
-        </Tooltip.Provider>
+        <CustomTooltip
+          content={isOwnProfile
+            ? "<div class='text-xs'><strong>Mutuals:</strong> Trust each other<br /><strong>Trusters:</strong> Trust you<br /><strong>Trustouts:</strong> You trust them</div>"
+            : "<div class='text-xs'><strong>Trusters:</strong> Trust this person<br /><strong>Trustouts:</strong> This person trusts them</div>"}
+        >
+          <CircleHelp class="w-4 h-4 text-gray-500 hover:text-gray-700" />
+        </CustomTooltip>
       </div>
     </Dialog.Header>
     <div class="w-full min-w-0">
