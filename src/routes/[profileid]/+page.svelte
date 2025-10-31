@@ -17,8 +17,8 @@
   import ImageIcon from "@lucide/svelte/icons/image"
   import { Item } from "$lib/components/ui/breadcrumb"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
+  import { DEFAULT_LIMIT } from "$lib/constants"
 
-  const limit = 1
   const ITEMS_PER_LOAD = 20
 
   let posts = $state<PostType[]>([])
@@ -82,11 +82,9 @@
       // All profiles are now RPC profiles, use address field
       const address = (profile as CirclesRpcProfile).address
 
-      const str = `/api/posts/user?address=${address}&skip=${skip}&limit=${limit}`
+      const str = `/api/posts/user?address=${address}&skip=${skip}&limit=${DEFAULT_LIMIT}`
       console.log("Fetching more posts from:", str)
-      const res = await fetch(
-        `/api/posts/user?address=${address}&skip=${skip}&limit=${limit}`,
-      )
+      const res = await fetch(str)
       const data = await res.json()
 
       console.log("SERVER Fetched posts:", data)

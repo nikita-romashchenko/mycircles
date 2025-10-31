@@ -6,9 +6,9 @@
   import { onMount } from "svelte"
   import { globalState } from "$lib/stores/state.svelte"
   import { browser } from "$app/environment"
+  import { DEFAULT_LIMIT } from "$lib/constants"
 
   let posts: PostType[] = []
-  const limit = 1
   let loading = false
   let allLoaded = false
   let voteModalOpen = false
@@ -32,7 +32,7 @@
     console.log("Voting on post:", postId, "Type:", type)
 
     // Find the post to get target address
-    const post = posts.find(p => p._id === postId)
+    const post = posts.find((p) => p._id === postId)
     voteTargetAddress = post?.postedToAddress || post?.creatorAddress
 
     voteModalOpen = true
@@ -40,14 +40,19 @@
     voteType = type
   }
 
-  const handleVoteSubmit = async (postId: string, type: "upVote" | "downVote", balanceChange: number) => {
+  const handleVoteSubmit = async (
+    postId: string,
+    type: "upVote" | "downVote",
+    balanceChange: number,
+  ) => {
     // Optimistically update the post balance
-    const postIndex = posts.findIndex(p => p._id === postId)
+    const postIndex = posts.findIndex((p) => p._id === postId)
     if (postIndex !== -1) {
       const oldBalance = posts[postIndex].balance
-      posts[postIndex].balance = type === "upVote"
-        ? oldBalance + balanceChange
-        : oldBalance - balanceChange
+      posts[postIndex].balance =
+        type === "upVote"
+          ? oldBalance + balanceChange
+          : oldBalance - balanceChange
     }
 
     try {
@@ -66,18 +71,20 @@
       if (!response.ok) {
         // Revert on error
         if (postIndex !== -1) {
-          posts[postIndex].balance = type === "upVote"
-            ? posts[postIndex].balance - balanceChange
-            : posts[postIndex].balance + balanceChange
+          posts[postIndex].balance =
+            type === "upVote"
+              ? posts[postIndex].balance - balanceChange
+              : posts[postIndex].balance + balanceChange
         }
         console.error("Vote failed")
       }
     } catch (err) {
       // Revert on error
       if (postIndex !== -1) {
-        posts[postIndex].balance = type === "upVote"
-          ? posts[postIndex].balance - balanceChange
-          : posts[postIndex].balance + balanceChange
+        posts[postIndex].balance =
+          type === "upVote"
+            ? posts[postIndex].balance - balanceChange
+            : posts[postIndex].balance + balanceChange
       }
       console.error("Error submitting vote:", err)
     }
@@ -88,7 +95,9 @@
     loading = true
 
     try {
-      const res = await fetch(`/api/posts?skip=${skip}&limit=${limit}`)
+      const str = `/api/posts?skip=${skip}&limit=${DEFAULT_LIMIT}`
+      console.log("Fetching more posts from:", str)
+      const res = await fetch(str)
       const data = await res.json()
 
       console.log("SERVER Fetched posts:", data)
