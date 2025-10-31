@@ -67,10 +67,16 @@
 
   async function fetchData() {
     try {
+      console.log("Fetching profiles for post:", post._id)
+      console.log("Addresses", [
+        post.creatorAddress,
+        post.postedToAddress ?? null,
+      ])
       circlesProfiles = await fetchCirclesProfilesBatch([
         post.creatorAddress,
         post.postedToAddress ?? null,
       ])
+      console.log(`circlesProfiles for post ${post._id}`, circlesProfiles)
     } catch (e: any) {
       console.error(e.message)
     } finally {
@@ -148,7 +154,7 @@
           {#if post.postedToAddress}
             <ArrowRight class="w-4 h-4 text-gray-400" />
             <a
-              href="/{post.postedToProfile?.address}"
+              href="/{post.postedToAddress}"
               class="flex flex-row items-center gap-2"
             >
               <Avatar.Root>
