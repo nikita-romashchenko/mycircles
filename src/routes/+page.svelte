@@ -21,6 +21,8 @@
 
   $: skip = posts.length
 
+  $: console.log("Posts updated:", posts)
+
   onMount(() => {
     // set data
     console.log("Setting relation data in global state:", globalState.relations)

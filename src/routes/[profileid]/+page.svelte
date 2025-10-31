@@ -74,6 +74,10 @@
     console.log("error:", error)
   })
 
+  $effect(() => {
+    console.log("Posts updated:", posts)
+  })
+
   async function loadMore() {
     if (loading) return
     loading = true
