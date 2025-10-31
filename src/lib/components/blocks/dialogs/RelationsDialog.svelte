@@ -86,7 +86,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="h-[40vh] max-h-[90vh] w-full max-w-full">
+  <Dialog.Content class="h-[70vh] md:h-[40vh] max-h-[90vh] w-full max-w-full">
     <Dialog.Header>
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
@@ -126,7 +126,7 @@
       <!-- Tab content -->
       <div
         bind:this={scrollContainer}
-        class="p-2 md:p-4 h-[28vh] overflow-auto w-full min-w-0"
+        class="p-2 md:p-4 h-[58vh] md:h-[28vh] overflow-auto w-full min-w-0"
       >
         {#if contents[activeTab]}
           {#if contents[activeTab].length === 0}
