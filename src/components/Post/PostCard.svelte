@@ -67,16 +67,10 @@
 
   async function fetchData() {
     try {
-      console.log("Fetching profiles for post:", post._id)
-      console.log("Addresses", [
-        post.creatorAddress,
-        post.postedToAddress ?? null,
-      ])
       circlesProfiles = await fetchCirclesProfilesBatch([
         post.creatorAddress,
         post.postedToAddress ?? null,
       ])
-      console.log(`circlesProfiles for post ${post._id}`, circlesProfiles)
     } catch (e: any) {
       console.error(e.message)
     } finally {
