@@ -1,269 +1,269 @@
 <script lang="ts">
   import { SignIn } from "@auth/sveltekit/components"
-  import { signIn } from '@auth/sveltekit/client';
-  import Safe from '@safe-global/protocol-kit';
-  import { browser } from '$app/environment';
-  import { ethers } from 'ethers';
-  import { PUBLIC_RPC_URL } from '$env/static/public';
-  import { storeAuthData } from '$lib/utils/authStorage';
+  import { signIn } from "@auth/sveltekit/client"
+  import Safe from "@safe-global/protocol-kit"
+  import { browser } from "$app/environment"
+  import { ethers } from "ethers"
+  import { PUBLIC_RPC_URL } from "$env/static/public"
+  import { storeAuthData } from "$lib/utils/authStorage"
 
   const API_ENDPOINTS = {
-    CHALLENGE: '/api/auth/challenge',
-    SAFES: '/api/safes'
-  };
+    CHALLENGE: "/api/auth/challenge",
+    SAFES: "/api/safes",
+  }
 
-  export let data: any;
+  export let data: any
 
-  type AuthMethod = 'private-key' | 'metamask';
+  type AuthMethod = "private-key" | "metamask"
 
-  let showSafeForm = false;
-  let authMethod: AuthMethod = 'private-key';
-  let privateKey = '';
-  let walletAddress = '';
-  let safes: string[] = [];
-  let selectedSafe = '';
-  let loading = false;
-  let error = '';
-  let challenge: any = null;
+  let showSafeForm = false
+  let authMethod: AuthMethod = "private-key"
+  let privateKey = ""
+  let walletAddress = ""
+  let safes: string[] = []
+  let selectedSafe = ""
+  let loading = false
+  let error = ""
+  let challenge: any = null
 
   async function loadSafes() {
-    let targetWalletAddress = '';
+    let targetWalletAddress = ""
 
-    if (authMethod === 'private-key') {
+    if (authMethod === "private-key") {
       if (!privateKey.trim()) {
-        error = 'Please enter a private key';
-        return;
+        error = "Please enter a private key"
+        return
       }
       try {
-        const wallet = new ethers.Wallet(privateKey.trim());
-        targetWalletAddress = wallet.address;
+        const wallet = new ethers.Wallet(privateKey.trim())
+        targetWalletAddress = wallet.address
       } catch (err) {
-        error = 'Invalid private key format';
-        return;
+        error = "Invalid private key format"
+        return
       }
-    } else if (authMethod === 'metamask') {
+    } else if (authMethod === "metamask") {
       if (!walletAddress) {
-        error = 'Please connect MetaMask first';
-        return;
+        error = "Please connect MetaMask first"
+        return
       }
-      targetWalletAddress = walletAddress;
+      targetWalletAddress = walletAddress
     }
 
-    loading = true;
-    error = '';
+    loading = true
+    error = ""
 
     try {
       const response = await fetch(API_ENDPOINTS.SAFES, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: 'getSafesForOwner',
-          ownerAddress: targetWalletAddress
-        })
-      });
+          action: "getSafesForOwner",
+          ownerAddress: targetWalletAddress,
+        }),
+      })
 
-      const data = await response.json();
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch safes');
+        throw new Error(data.error || "Failed to fetch safes")
       }
 
-      safes = data.safes || [];
+      safes = data.safes || []
 
       if (safes.length === 0) {
-        error = 'No safes found for this wallet address';
+        error = "No safes found for this wallet address"
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to load safes';
-      safes = [];
+      error = err instanceof Error ? err.message : "Failed to load safes"
+      safes = []
     } finally {
-      loading = false;
+      loading = false
     }
   }
 
   async function connectMetaMask() {
     if (!browser || !(window as any).ethereum) {
-      error = 'MetaMask not found. Please install MetaMask.';
-      return;
+      error = "MetaMask not found. Please install MetaMask."
+      return
     }
 
-    loading = true;
-    error = '';
+    loading = true
+    error = ""
 
     try {
-      const ethereum = (window as any).ethereum;
-      const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+      const ethereum = (window as any).ethereum
+      const accounts = await ethereum.request({ method: "eth_requestAccounts" })
       if (accounts.length > 0) {
-        walletAddress = accounts[0];
-        authMethod = 'metamask';
-        await loadSafes();
+        walletAddress = accounts[0]
+        authMethod = "metamask"
+        await loadSafes()
       } else {
-        error = 'No accounts found in MetaMask';
+        error = "No accounts found in MetaMask"
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to connect to MetaMask';
+      error =
+        err instanceof Error ? err.message : "Failed to connect to MetaMask"
     } finally {
-      loading = false;
+      loading = false
     }
   }
 
   function handleSafeLogin() {
-    showSafeForm = true;
-    authMethod = 'private-key';
+    showSafeForm = true
+    authMethod = "private-key"
   }
 
   function handleMetaMaskLogin() {
-    showSafeForm = true;
-    connectMetaMask();
+    showSafeForm = true
+    connectMetaMask()
   }
 
   async function generateChallenge() {
-    loading = true;
-    error = '';
+    loading = true
+    error = ""
 
     try {
-      const response = await fetch(API_ENDPOINTS.CHALLENGE);
-      const data = await response.json();
+      const response = await fetch(API_ENDPOINTS.CHALLENGE)
+      const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate challenge');
+        throw new Error(data.error || "Failed to generate challenge")
       }
 
-      challenge = data;
-      return challenge;
+      challenge = data
+      return challenge
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Failed to generate challenge';
-      return null;
+      error =
+        err instanceof Error ? err.message : "Failed to generate challenge"
+      return null
     } finally {
-      loading = false;
+      loading = false
     }
   }
 
   async function signChallengeAndAuthenticate() {
     if (!selectedSafe) {
-      error = 'Please select a safe';
-      return;
+      error = "Please select a safe"
+      return
     }
 
-    if (authMethod === 'private-key' && !privateKey) {
-      error = 'Please enter your private key';
-      return;
+    if (authMethod === "private-key" && !privateKey) {
+      error = "Please enter your private key"
+      return
     }
 
-    if (authMethod === 'metamask' && !walletAddress) {
-      error = 'Please connect MetaMask';
-      return;
+    if (authMethod === "metamask" && !walletAddress) {
+      error = "Please connect MetaMask"
+      return
     }
 
-    loading = true;
-    error = '';
+    loading = true
+    error = ""
 
     try {
       // Step 1: Generate challenge if not already done
       if (!challenge) {
-        await generateChallenge();
-        if (!challenge) return;
+        await generateChallenge()
+        if (!challenge) return
       }
 
-      let signature: string;
-      let walletOwner: string;
-      let protocolKit;
+      let signature: string
+      let walletOwner: string
+      let protocolKit
 
-      if (authMethod === 'private-key') {
-        const wallet = new ethers.Wallet(privateKey);
-        walletOwner = wallet.address;
+      if (authMethod === "private-key") {
+        const wallet = new ethers.Wallet(privateKey)
+        walletOwner = wallet.address
 
         // For private key method, create Safe instance and sign with Safe SDK
         protocolKit = await Safe.init({
           provider: PUBLIC_RPC_URL,
           signer: privateKey,
-          safeAddress: selectedSafe
-        });
-
-      } else if(authMethod === 'metamask') {
+          safeAddress: selectedSafe,
+        })
+      } else if (authMethod === "metamask") {
         // For MetaMask, create Safe instance with MetaMask provider
         if (!browser || !(window as any).ethereum) {
-          throw new Error('MetaMask not available');
+          throw new Error("MetaMask not available")
         }
 
-        const eip1193Provider = (window as any).ethereum;
-        const provider = new ethers.BrowserProvider(eip1193Provider);
-        const signer = await provider.getSigner();
+        const eip1193Provider = (window as any).ethereum
+        const provider = new ethers.BrowserProvider(eip1193Provider)
+        const signer = await provider.getSigner()
 
-        walletOwner = signer.address;
+        walletOwner = signer.address
 
         protocolKit = await Safe.init({
           provider: eip1193Provider,
           signer: walletOwner,
-          safeAddress: selectedSafe
-        });
+          safeAddress: selectedSafe,
+        })
       } else {
-        throw new Error('Invalid auth method');
-      }   
+        throw new Error("Invalid auth method")
+      }
 
-
-      const safeMessage = await protocolKit.createMessage(challenge.message);
-      const signedSafeMessage = await protocolKit.signMessage(safeMessage);
-      signature = signedSafeMessage.encodedSignatures();
+      const safeMessage = await protocolKit.createMessage(challenge.message)
+      const signedSafeMessage = await protocolKit.signMessage(safeMessage)
+      signature = signedSafeMessage.encodedSignatures()
 
       // Step 2: Authenticate with the signed challenge
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         message: challenge.message,
         signature: signature,
         walletOwner: walletOwner,
         safeAddress: selectedSafe.toLowerCase(),
         authMethod: authMethod,
         redirect: false,
-      });
+      })
 
       if (result?.error) {
-        error = 'Authentication failed: ' + result.error;
+        error = "Authentication failed: " + result.error
       } else if (result?.ok) {
         // Store auth data based on auth method
-        if (authMethod === 'private-key') {
+        if (authMethod === "private-key") {
           storeAuthData({
-            sessionType: 'privatekey',
+            sessionType: "privatekey",
             privateKey: privateKey.trim(),
-            safeAddress: selectedSafe
-          });
-        } else if (authMethod === 'metamask') {
+            safeAddress: selectedSafe,
+          })
+        } else if (authMethod === "metamask") {
           storeAuthData({
-            sessionType: 'metamask',
-            safeAddress: selectedSafe
-          });
+            sessionType: "metamask",
+            safeAddress: selectedSafe,
+          })
         }
-        window.location.href = '/protected';
+        window.location.href = "/"
       }
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Sign in failed';
+      error = err instanceof Error ? err.message : "Sign in failed"
     } finally {
-      loading = false;
+      loading = false
     }
   }
 
   function resetForm() {
-    showSafeForm = false;
-    authMethod = 'private-key';
-    privateKey = '';
-    walletAddress = '';
-    safes = [];
-    selectedSafe = '';
-    error = '';
-    loading = false;
-    challenge = null;
+    showSafeForm = false
+    authMethod = "private-key"
+    privateKey = ""
+    walletAddress = ""
+    safes = []
+    selectedSafe = ""
+    error = ""
+    loading = false
+    challenge = null
   }
 
-  function switchAuthMethod(method: 'private-key' | 'metamask') {
-    authMethod = method;
-    error = '';
-    safes = [];
-    selectedSafe = '';
-    if (method === 'private-key') {
-      walletAddress = '';
+  function switchAuthMethod(method: "private-key" | "metamask") {
+    authMethod = method
+    error = ""
+    safes = []
+    selectedSafe = ""
+    if (method === "private-key") {
+      walletAddress = ""
     } else {
-      privateKey = '';
+      privateKey = ""
     }
   }
 </script>
@@ -277,23 +277,29 @@
 
     {#if !showSafeForm}
       <div class="auth-methods">
-          <!-- OAuth buttons -->
+        <!-- OAuth buttons -->
         <SignIn provider="google">
           {#snippet submitButton()}
-              <div  class="buttonPrimary">Continue with Google</div>
-            {/snippet}
+            <div class="buttonPrimary">Continue with Google</div>
+          {/snippet}
         </SignIn>
-
 
         <div class="divider">
           <span>or</span>
         </div>
 
         <button class="safe-key-button" onclick={handleSafeLogin}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-            <circle cx="12" cy="16" r="1"/>
-            <path d="m7 11V7a5 5 0 0 1 10 0v4"/>
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <circle cx="12" cy="16" r="1" />
+            <path d="m7 11V7a5 5 0 0 1 10 0v4" />
           </svg>
           Sign in with Safe Private Key
         </button>
@@ -305,20 +311,30 @@
     {:else}
       <div class="safe-form">
         <button class="back-button" onclick={resetForm}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="m12 19-7-7 7-7"/>
-            <path d="M19 12H5"/>
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
           </svg>
           Back to login options
         </button>
 
-    {#if authMethod === 'metamask'}
+        {#if authMethod === "metamask"}
           <div class="form-section">
             <div class="connected-wallet">
               <label class="form-label">Connected Wallet</label>
               <div class="wallet-address">{walletAddress}</div>
               <div class="method-switcher">
-                <button class="switch-method-button" onclick={() => switchAuthMethod('private-key')}>
+                <button
+                  class="switch-method-button"
+                  onclick={() => switchAuthMethod("private-key")}
+                >
                   Use Private Key Instead
                 </button>
               </div>
@@ -335,7 +351,10 @@
               class="form-input"
             />
             <div class="method-switcher">
-              <button class="switch-method-button" onclick={() => switchAuthMethod('metamask')}>
+              <button
+                class="switch-method-button"
+                onclick={() => switchAuthMethod("metamask")}
+              >
                 Use MetaMask Instead
               </button>
             </div>
@@ -344,7 +363,7 @@
               onclick={loadSafes}
               disabled={loading || !privateKey.trim()}
             >
-              {loading ? 'Loading...' : 'Load Available Safes'}
+              {loading ? "Loading..." : "Load Available Safes"}
             </button>
           </div>
         {/if}
@@ -356,7 +375,11 @@
         {#if safes.length > 0}
           <div class="form-section">
             <label for="safeSelect" class="form-label">Select Safe</label>
-            <select id="safeSelect" bind:value={selectedSafe} class="form-select">
+            <select
+              id="safeSelect"
+              bind:value={selectedSafe}
+              class="form-select"
+            >
               <option value="">Choose a Safe...</option>
               {#each safes as safe}
                 <option value={safe}>
@@ -369,9 +392,12 @@
               <button
                 class="signin-button"
                 onclick={signChallengeAndAuthenticate}
-                disabled={loading || !selectedSafe || (authMethod === 'private-key' && !privateKey) || (authMethod === 'metamask' && !walletAddress)}
+                disabled={loading ||
+                  !selectedSafe ||
+                  (authMethod === "private-key" && !privateKey) ||
+                  (authMethod === "metamask" && !walletAddress)}
               >
-                {loading ? 'Authenticating...' : 'Sign in with Safe'}
+                {loading ? "Authenticating..." : "Sign in with Safe"}
               </button>
             {/if}
           </div>
@@ -457,7 +483,7 @@
   }
 
   .divider::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 0;

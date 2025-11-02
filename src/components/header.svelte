@@ -54,16 +54,6 @@
       {/if}
     </div>
   </div>
-  <!-- <nav>
-    <ul class="navItems">
-      <li class="navItem"><a href="/">Home</a></li>
-      <li class="navItem"><a href="/protected">Protected</a></li>
-      <li class="navItem"><a href="/media">Media</a></li>
-      <li class="navItem">
-        <a href={`/${page.data.session?.user.safeAddress}`}>Profile</a>
-      </li>
-    </ul>
-  </nav> -->
 </header>
 
 <style>
