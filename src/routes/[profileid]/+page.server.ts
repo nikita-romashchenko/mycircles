@@ -18,6 +18,7 @@ import { fetchCirclesProfile } from "$lib/utils/circlesRpc"
 import { Profile } from "$lib/models/Profile"
 import { getProfileFeed } from "$lib/server/posts"
 import { DEFAULT_LIMIT, DEFAULT_SKIP } from "$lib/constants"
+import { Notification } from "$lib/models/Notification"
 
 // Connect to MongoDB
 await mongoose
@@ -231,6 +232,24 @@ export const actions = {
         throw new Error("Video posts are not supported yet.")
       }
       console.log("Post created with ID:", postDoc._id)
+
+      // Create notification if posting on someone else's profile
+      if (postToAddress && postToAddress !== creatorAddress) {
+        try {
+          await Notification.create({
+            recipientId: postToAddress,
+            senderId: creatorAddress,
+            type: "post_on_profile",
+            postId: postDoc._id,
+            message: "Someone posted on your profile",
+            read: false,
+          })
+          console.log(`Created notification for post on profile ${postToAddress}`)
+        } catch (notifErr) {
+          console.error("Error creating notification:", notifErr)
+          // Don't fail the post if notification creation fails
+        }
+      }
 
       return message(form, "Upload media form posted successfully!")
     } catch (err: any) {

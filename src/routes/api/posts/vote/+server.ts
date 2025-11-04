@@ -3,6 +3,7 @@ import type { RequestHandler } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Post } from "$lib/models/Post"
+import { Notification } from "$lib/models/Notification"
 
 // Connect to MongoDB
 await mongoose
@@ -14,7 +15,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
   try {
     const session = await locals.auth()
 
-    if (!session?.user?.profileId) {
+    if (!session?.user?.profileId || !session?.user?.safeAddress) {
       return json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -52,6 +53,27 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     console.log(`Updating post ${postId} balance to ${targetPost.balance}`)
 
     await targetPost.save()
+
+    // Create notification if voter is not the post creator
+    const voterAddress = session.user.safeAddress.toLowerCase()
+    const postCreatorAddress = targetPost.creatorAddress.toLowerCase()
+
+    if (voterAddress !== postCreatorAddress) {
+      try {
+        await Notification.create({
+          recipientId: postCreatorAddress,
+          senderId: voterAddress,
+          type: "vote",
+          postId: targetPost._id,
+          message: `Someone ${type === "upVote" ? "upvoted" : "downvoted"} your post`,
+          read: false,
+        })
+        console.log(`Created notification for vote on post ${postId}`)
+      } catch (notifErr) {
+        console.error("Error creating notification:", notifErr)
+        // Don't fail the vote if notification creation fails
+      }
+    }
 
     return json({
       success: true,
