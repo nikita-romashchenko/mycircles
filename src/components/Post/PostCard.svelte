@@ -12,7 +12,6 @@
   import ImageIcon from "@lucide/svelte/icons/image"
 
   import type { CirclesRpcProfile, Post } from "$lib/types"
-  import { fetchCirclesProfilesBatch } from "$lib/utils/circlesRpc"
   import { onMount } from "svelte"
 
   interface Props {
@@ -67,10 +66,22 @@
 
   async function fetchData() {
     try {
-      circlesProfiles = await fetchCirclesProfilesBatch([
-        post.creatorAddress,
-        post.postedToAddress ?? null,
-      ])
+      const response = await fetch('/api/circles/batchProfiles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          addresses: [post.creatorAddress, post.postedToAddress ?? null],
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch profiles')
+      }
+
+      const data = await response.json()
+      circlesProfiles = data.profiles
     } catch (e: any) {
       console.error(e.message)
     } finally {
