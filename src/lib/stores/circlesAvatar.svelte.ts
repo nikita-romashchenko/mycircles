@@ -32,7 +32,7 @@
 import { HumanAvatar } from '@aboutcircles/sdk';
 import { SafeContractRunner } from '@aboutcircles/sdk-runner';
 import { Core } from '@aboutcircles/sdk-core';
-import { createPublicClient, http } from 'viem';
+import { createPublicClient, createWalletClient, custom, http } from 'viem';
 import { gnosis } from 'viem/chains';
 import { getAuthData } from '$lib/utils/authStorage';
 import { browser } from '$app/environment';
@@ -108,29 +108,27 @@ class CirclesAvatarStore {
 
       console.log('📝 MetaMask signer address:', signerAddress);
 
-      // For MetaMask, create a Safe instance using the browser provider
-      // then wrap it in a way compatible with the SDK's runner interface
-      const safeSdk = await Safe.init({
-        provider: ethereum,
-        signer: signerAddress,
-        safeAddress: safeAddress as `0x${string}`
+      // Create a viem wallet client using MetaMask provider
+      // This ensures transactions are sent through MetaMask, not a static RPC
+      const walletClient = createWalletClient({
+        chain: gnosis,
+        transport: custom(ethereum)
       });
 
-      console.log('✅ Safe SDK initialized with MetaMask');
+      console.log('✅ Wallet client created for MetaMask');
 
-      // Create a minimal runner wrapper that uses Safe SDK for transactions
+      // Create the runner with MetaMask's transport for transaction signing
       const runner = new SafeContractRunner(
         publicClient,
         signerAddress as `0x${string}`,
-        PUBLIC_RPC_URL,
+        ethereum, // Pass MetaMask provider instead of RPC URL
         safeAddress as `0x${string}`
       );
 
-      // Note: For MetaMask, the runner will use Safe SDK internally via the provider
-      // We initialize it to satisfy the HumanAvatar constructor
+      // Initialize the runner
       try {
         await runner.init(safeAddress as `0x${string}`);
-        console.log('✅ SafeContractRunner initialized');
+        console.log('✅ SafeContractRunner initialized with MetaMask');
       } catch (initErr) {
         console.warn('⚠️  SafeContractRunner init warning (may still work):', initErr);
       }

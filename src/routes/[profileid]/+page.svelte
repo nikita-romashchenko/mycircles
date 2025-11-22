@@ -4,7 +4,7 @@
     CirclesRpcProfile,
     Relation,
   } from "$lib/types"
-  import { page } from "$app/stores"
+  import { page as pageStore } from "$app/stores"
   import { browser } from "$app/environment"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
@@ -14,17 +14,27 @@
   import ImageIcon from "@lucide/svelte/icons/image"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
   import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { postReloadStore } from "$lib/stores/postReload.svelte"
   import { DEFAULT_LIMIT } from "$lib/constants"
+
+  // Subscribe to reload signals
+  let reloadSignal = $derived.by(() => {
+    // This is a derived that will update whenever the store changes
+    $postReloadStore
+    return $postReloadStore
+  })
 
   const ITEMS_PER_LOAD = 20
 
   let posts = $state<PostType[]>([])
-  let profile = $state<CirclesRpcProfile | null>(null)
-  let isOwnProfile = $state<boolean>(false)
-  let isRpcProfile = $state<boolean>(false)
-  let error = $state<string | null>(null)
 
-  let form = $state($page.data.form)
+  // Use derived values to read from page data (avoid state sync loops)
+  let profile = $derived(($pageStore.data.profile as CirclesRpcProfile | null))
+  let isOwnProfile = $derived(!!($pageStore.data.isOwnProfile as boolean))
+  let isRpcProfile = $derived(!!($pageStore.data.isRpcProfile as boolean))
+  let error = $derived(($pageStore.data.error as string | null))
+
+  let form = $state($pageStore.data.form)
 
   let relationsModalOpen = $state(false)
   let uploadModalOpen = $state(false)
@@ -43,26 +53,43 @@
   let sentinel = $state<HTMLDivElement>()
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
+  let maxReplenishableAmount = $state<string | null>(null)
+  let maxReplenishableLoading = $state(false)
+  let maxFlow = $state<string | null>(null)
+  let maxFlowLoading = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 150
 
   let skip = $derived(posts.length)
   let initialPostsLoaded = $state(false)
+  let lastProfileAddress = $state<string | null>(null)
+  let lastProcessedSignal = $state(0)
 
-  // Sync with page data
-  $effect(() => {
-    profile = $page.data.profile as CirclesRpcProfile | null
-    posts = $page.data.posts as PostType[]
-    isOwnProfile = $page.data.isOwnProfile as boolean
-    isRpcProfile = $page.data.isRpcProfile as boolean
-    error = $page.data.error as string | null
-    form = $page.data.form
+  // Track profile address changes to reset loading flag
+  $effect.pre(() => {
+    const newAddress = ($pageStore.data.profile as CirclesRpcProfile | null)?.address
+
+    if (newAddress && newAddress !== lastProfileAddress) {
+      lastProfileAddress = newAddress
+      initialPostsLoaded = false
+    }
   })
 
   // Load initial posts after page renders (non-blocking)
   $effect(() => {
     if (browser && profile && !initialPostsLoaded && isRpcProfile) {
       initialPostsLoaded = true
+      loadInitialPosts()
+    }
+  })
+
+  // Watch for post reload signals (e.g., after upload)
+  $effect(() => {
+    // Only trigger when signal value changes (increases), not on every render
+    if (browser && profile && reloadSignal > lastProcessedSignal && initialPostsLoaded) {
+      console.log("Post reload signal received, reloading posts...", reloadSignal)
+      lastProcessedSignal = reloadSignal // Mark this signal as processed
+      initialPostsLoaded = false
       loadInitialPosts()
     }
   })
@@ -95,9 +122,9 @@
 
   // Debug logging
   $effect(() => {
-    console.log("profile:", $page.data.profile)
+    console.log("profile:", $pageStore.data.profile)
     console.log("posts:", posts)
-    console.log("page.data.posts:", $page.data.posts)
+    console.log("pageStore.data.posts:", $pageStore.data.posts)
     console.log("isRpcProfile:", isRpcProfile)
     console.log("error:", error)
   })
@@ -175,7 +202,7 @@
 
       // Check if we trust this profile using the avatarStore (if not our own profile)
       // Skip this check if we just performed a trust/untrust action (to avoid race conditions)
-      if (!skipTrustCheck && !isOwnProfile && $page.data.session?.user?.safeAddress) {
+      if (!skipTrustCheck && !isOwnProfile && $pageStore.data.session?.user?.safeAddress) {
         await checkTrustStatusFromAvatar(address)
       }
 
@@ -272,6 +299,63 @@
       loadingMoreProfiles = false
     }
   }
+  async function fetchMaxReplenishableAmount(toAddress: string) {
+    if (!toAddress) return
+
+    try {
+      maxReplenishableLoading = true
+      const url = `/api/circles/max-replenishable-amount?to=${encodeURIComponent(toAddress)}`
+      console.log(`Fetching max replenishable amount to: ${toAddress}`)
+      const res = await fetch(url)
+
+      if (!res.ok) {
+        console.error("Failed to fetch max replenishable amount:", res.statusText)
+        return
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        maxReplenishableAmount = data.maxReplenishableAmount
+        console.log(`✅ Max replenishable amount: ${data.maxReplenishableAmount}`)
+        console.log(`  - Max flow: ${data.maxFlow}, Current balance: ${data.currentBalance}`)
+      } else {
+        console.error("Max replenishable amount error:", data.error)
+      }
+    } catch (err) {
+      console.error("Error fetching max replenishable amount:", err)
+    } finally {
+      maxReplenishableLoading = false
+    }
+  }
+
+  async function fetchMaxFlowToAvatar(toAddress: string) {
+    if (!toAddress) return
+
+    try {
+      maxFlowLoading = true
+      const url = `/api/circles/max-flow?to=${encodeURIComponent(toAddress)}`
+      console.log(`Fetching max flow to avatar: ${toAddress}`)
+      const res = await fetch(url)
+
+      if (!res.ok) {
+        console.error("Failed to fetch max flow:", res.statusText)
+        return
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        maxFlow = data.maxFlow
+        console.log(`✅ Max flow to avatar: ${data.maxFlow}`)
+      } else {
+        console.error("Max flow error:", data.error)
+      }
+    } catch (err) {
+      console.error("Error fetching max flow:", err)
+    } finally {
+      maxFlowLoading = false
+    }
+  }
+
   async function checkTrustStatusFromAvatar(targetAddress: string) {
     try {
       // Wait for avatar to be ready with retry logic
@@ -300,16 +384,29 @@
     }
   }
 
+  async function waitForAvatar(maxWaitTime: number = 10000): Promise<any> {
+    const startTime = Date.now()
+    while (Date.now() - startTime < maxWaitTime) {
+      const avatar = avatarStore.getAvatar()
+      if (avatar) return avatar
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    throw new Error("Avatar initialization timeout")
+  }
+
   async function handleTrust() {
     if (!profile) return
 
     try {
       const targetAddress = (profile as CirclesRpcProfile).address
 
-      // Get avatar from store
-      const avatar = avatarStore.getAvatar()
+      // Wait for avatar to be ready (with timeout)
+      console.log("⏳ Waiting for avatar to be ready...")
+      const avatar = await waitForAvatar()
+
       if (!avatar) {
-        alert("Avatar not ready. Please wait a moment and try again.")
+        const error = avatarStore.initError
+        alert(error || "Avatar not ready. Please try again.")
         return
       }
 
@@ -336,10 +433,13 @@
     try {
       const targetAddress = (profile as CirclesRpcProfile).address
 
-      // Get avatar from store
-      const avatar = avatarStore.getAvatar()
+      // Wait for avatar to be ready (with timeout)
+      console.log("⏳ Waiting for avatar to be ready...")
+      const avatar = await waitForAvatar()
+
       if (!avatar) {
-        alert("Avatar not ready. Please wait a moment and try again.")
+        const error = avatarStore.initError
+        alert(error || "Avatar not ready. Please try again.")
         return
       }
 
@@ -370,6 +470,10 @@
       const address = (profile as CirclesRpcProfile).address
       if (address) {
         fetchRelations(address)
+        // Fetch max replenishable amount for this token
+        fetchMaxReplenishableAmount(address)
+        // Fetch max flow from current user to this profile
+        fetchMaxFlowToAvatar(address)
       }
     }
   })
@@ -400,7 +504,7 @@
               class="w-24 h-24 rounded-full object-cover"
             />
           </Avatar.Root>
-          {#if !isOwnProfile && $page.data.session?.user?.safeAddress && !loadingRelations}
+          {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
             <TrustButton
               class="mt-2"
               {isTrusted}
@@ -474,6 +578,39 @@
       <hr class="mt-4 hidden md:block" />
     </div>
 
+    <!-- Max Flow and Max Replenishable Amount section -->
+    {#if $pageStore.data.session?.user?.safeAddress && !isOwnProfile && (maxFlow || maxFlowLoading || maxReplenishableAmount || maxReplenishableLoading)}
+      <div class="mt-6 flex flex-col items-center justify-center gap-4 px-4">
+        <!-- Max Flow to Avatar -->
+        {#if maxFlow || maxFlowLoading}
+          <div class="flex flex-col items-center justify-center gap-2">
+            <p class="text-sm text-gray-600">Max flow to this avatar:</p>
+            {#if maxFlowLoading}
+              <p class="text-gray-500">Loading...</p>
+            {:else if maxFlow}
+              <p class="text-lg font-semibold text-blue-600">
+                {Number(maxFlow) / 1e18 > 1e15 ? '∞' : (Number(maxFlow) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+              </p>
+            {/if}
+          </div>
+        {/if}
+
+        <!-- Max Replenishable Amount -->
+        {#if maxReplenishableAmount || maxReplenishableLoading}
+          <div class="flex flex-col items-center justify-center gap-2">
+            <p class="text-sm text-gray-600">Max replenishable amount:</p>
+            {#if maxReplenishableLoading}
+              <p class="text-gray-500">Loading...</p>
+            {:else if maxReplenishableAmount}
+              <p class="text-lg font-semibold text-green-600">
+                {Number(maxReplenishableAmount) / 1e18 > 1e15 ? '∞' : (Number(maxReplenishableAmount) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+              </p>
+            {/if}
+          </div>
+        {/if}
+      </div>
+    {/if}
+
     <!-- Upload bttn section -->
     <div class="mt-4 flex flex-row justify-center items-center gap-10">
       <div class="flex flex-col items-center justify-center mt-4">
@@ -536,6 +673,6 @@
       {loadingMoreProfiles}
       {isOwnProfile}
     />
-    <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
+    <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} profileAddress={profile?.address} />
   {/if}
 {/if}

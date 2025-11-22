@@ -11,7 +11,9 @@ await mongoose
   .catch((err) => console.error("MongoDB connection error:", err))
 
 // Add Search Params for limit and skip
-export const load: PageServerLoad = async ({ parent }) => {
+export const load: PageServerLoad = async ({ parent, depends }) => {
+  depends("posts")
+
   try {
     const parentData = await parent()
     const session = parentData.session

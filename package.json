@@ -39,6 +39,7 @@
     "@aboutcircles/sdk": "^0.1.2",
     "@aboutcircles/sdk-core": "^0.1.1",
     "@aboutcircles/sdk-runner": "^0.1.1",
+    "@aboutcircles/sdk-transfers": "^0.1.1",
     "@auth/sveltekit": "latest",
     "@aws-sdk/client-s3": "^3.888.0",
     "@safe-global/protocol-kit": "^6.1.1",

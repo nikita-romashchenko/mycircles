@@ -120,7 +120,7 @@
         </div>
       {:else}
         <span class="text-gray-400 z-10"
-          >Drag & drop files here or click to select</span
+          >Click to select photo</span
         >
       {/if}
     </div>

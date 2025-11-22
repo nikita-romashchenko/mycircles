@@ -81,8 +81,20 @@ const processImage = async (image: File) => {
   const ext = image.name.split(".").pop()?.toLowerCase()
   const fileName = `${randomUUID()}.jpeg`
 
+  console.log(`Processing image: ${image.name}, size: ${image.size} bytes`)
+
+  if (image.size === 0) {
+    throw new ProcessMediaError(`File is empty: ${image.name}`)
+  }
+
   const arrayBuffer = await image.arrayBuffer()
   let buffer = Buffer.from(arrayBuffer)
+
+  console.log(`Buffer created: ${buffer.length} bytes`)
+
+  if (buffer.length === 0) {
+    throw new ProcessMediaError(`Buffer is empty after conversion: ${image.name}`)
+  }
 
   // TODO: remove temporary HEIC/HEIF support later
   if (ext === "heic" || ext === "heif") {
@@ -92,8 +104,10 @@ const processImage = async (image: File) => {
       format: "JPEG",
       quality: 1.0,
     })
+    console.log(`After HEIC conversion: ${buffer.length} bytes`)
   }
 
+  console.log(`Processing with sharp...`)
   const processedBuffer = await sharp(buffer, { limitInputPixels: false }) // HEIC input
     .jpeg({ quality: 80 })
     .toBuffer()
@@ -134,6 +148,13 @@ export const processAndUploadMedia = async (formData: FormData) => {
   try {
     const media = formData.getAll("media") as File[]
     const bucket = env.MINIO_BUCKET || "uploads"
+
+    console.log(`Processing media: ${media.length} files`)
+
+    if (media.length === 0) {
+      throw new ProcessMediaError("No media files to process")
+    }
+
     const type: "image" | "video" | "album" = getMediaType(media)
 
     console.log(

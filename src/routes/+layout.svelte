@@ -9,12 +9,13 @@
   import { Separator } from "$lib/components/ui/separator"
   import * as Breadcrumb from "$lib/components/ui/breadcrumb/index"
   import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { initializeSafeBrowserRunner } from "$lib/stores/safeBrowserRunner.svelte"
   import { page } from "$app/stores"
   import { browser } from "$app/environment"
 
   let { data }: { data: any } = $props()
 
-  // Initialize avatar when user is logged in
+  // Initialize avatar and SafeBrowserRunner when user is logged in
   // Track only the safeAddress to avoid unnecessary re-initializations
   $effect(() => {
     if (!browser) return
@@ -23,6 +24,15 @@
     if (safeAddress) {
       console.log('🔄 Initializing avatar for user:', safeAddress)
       avatarStore.initialize(safeAddress)
+
+      // Initialize SafeBrowserRunner for batch transactions
+      initializeSafeBrowserRunner(safeAddress)
+        .then(() => {
+          console.log('✅ SafeBrowserRunner initialized for user:', safeAddress)
+        })
+        .catch((err) => {
+          console.error('❌ Failed to initialize SafeBrowserRunner:', err)
+        })
     } else {
       console.log('🔄 No session, resetting avatar')
       avatarStore.reset()

@@ -3,6 +3,7 @@ import type { RequestHandler } from "./$types"
 import mongoose from "mongoose"
 import { env } from "$env/dynamic/private"
 import { Profile } from "$lib/models/Profile"
+import { Sdk } from "@aboutcircles/sdk"
 
 // Connect to MongoDB
 await mongoose
@@ -34,51 +35,29 @@ export const GET: RequestHandler = async ({ url, locals }) => {
       )
     }
 
-    // Use direct RPC call to find path and get max flow
-    const rpcUrl = "https://rpc.aboutcircles.com/"
-    const rpcResponse = await fetch(rpcUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        jsonrpc: "2.0",
-        id: 0,
-        method: "circlesV2_findPath",
-        params: [
-          {
-            Source: userProfile.safeAddress,
-            Sink: toAddress,
-            TargetFlow: "99999999999999999999999999999999999",
-            WithWrap: true
-          },
-        ],
-      }),
+    // Initialize SDK with RPC endpoint to access advanced pathfinding
+    const sdk = new Sdk()
+
+    // Use advanced pathfinding: find max flow from current user to the target avatar
+    // Include wrapped token balances in the calculation
+    const maxFlow = await sdk.rpc.pathfinder.findMaxFlow({
+      from: userProfile.safeAddress as `0x${string}`,
+      to: toAddress as `0x${string}`,
+      useWrappedBalances: true,
     })
 
-    if (!rpcResponse.ok) {
-      throw new Error(`RPC request failed: ${rpcResponse.statusText}`)
-    }
-
-    const rpcData = await rpcResponse.json()
-
-    if (rpcData.error) {
-      throw new Error(`RPC error: ${rpcData.error.message || "Unknown error"}`)
-    }
-
-    // Extract max flow from the result
-    const maxFlow = rpcData.result?.maxFlow || "0"
+    console.log(`Max flow from ${userProfile.safeAddress} to ${toAddress}: ${maxFlow.toString()}`)
 
     return json({
       success: true,
-      maxFlow: maxFlow,
+      maxFlow: maxFlow.toString(),
       from: userProfile.safeAddress,
       to: toAddress,
     })
   } catch (err: any) {
-    console.error("Error getting max transferable amount:", err)
+    console.error("Error getting max flow:", err)
     return json(
-      { error: err.message || "Failed to get max transferable amount" },
+      { error: err.message || "Failed to get max flow" },
       { status: 500 }
     )
   }

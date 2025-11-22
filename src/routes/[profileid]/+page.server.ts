@@ -109,30 +109,50 @@ export const actions = {
       const media = formData.getAll("media") as File[]
       const caption = formData.get("caption") as string
 
-      if (media.length === 0 && !caption) {
-        return new Response(
-          JSON.stringify({ error: "No main content uploaded" }),
-          {
-            status: 400,
-          },
-        )
+      console.log(`Upload attempt - caption: ${caption ? "yes" : "no"}, media files: ${media.length}`)
+
+      // Filter empty files
+      const validMedia = media.filter((file) => file.size > 0)
+
+      // Check that at least one type of content is provided
+      if (!caption && validMedia.length === 0) {
+        return fail(400, {
+          form,
+          error: "Please add either text or media to create a post"
+        })
       }
 
-      if (media.length !== 0) {
-        const result = await processAndUploadMedia(formData)
-        console.log("Media processing result:", result)
-        if (!result.success) {
-          return new Response(
-            JSON.stringify({ error: "Media processing failed" }),
-            {
-              status: 500,
-            },
-          )
+      // Process media only if files are provided
+      if (validMedia.length > 0) {
+        try {
+          // Create a new FormData with only valid files for processing
+          const mediaFormData = new FormData()
+          for (const file of validMedia) {
+            mediaFormData.append("media", file)
+          }
+          mediaFormData.append("caption", caption || "")
+
+          const result = await processAndUploadMedia(mediaFormData)
+          console.log("Media processing result:", result)
+          if (!result.success) {
+            return fail(500, {
+              form,
+              error: "Media processing failed"
+            })
+          }
+          type = result.type
+          processedMedia = result.processedMedia
+        } catch (mediaErr: any) {
+          console.error("Media upload error:", mediaErr)
+          return fail(400, {
+            form,
+            error: mediaErr.message || "Failed to process media. Please try again."
+          })
         }
-        type = result.type
-        processedMedia = result.processedMedia
       } else {
+        // Text-only post
         type = "text"
+        console.log("Creating text-only post")
       }
 
       // Get creator's safe address from session

@@ -7,6 +7,8 @@
   import { theme } from "svelte-lexical/dist/themes/default"
   import CaptionEditor from "../svelte-lexical/caption-editor/caption-editor.svelte"
   import { invalidate } from "$app/navigation"
+  import { triggerPostReload } from "$lib/stores/postReload.svelte"
+  import { page } from "$app/stores"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
@@ -15,17 +17,109 @@
   interface Props {
     open?: boolean
     pageForm: SuperValidated<Infer<UploadMediaSchema>>
+    profileAddress?: string
   }
 
-  let { open = $bindable(true), pageForm }: Props = $props()
+  let { open = $bindable(true), pageForm, profileAddress }: Props = $props()
+  let isSubmitting = $state(false)
+  let submitError = $state<string | null>(null)
+  let showBatchTransaction = $state(false)
+  let batchTransactions = $state<any[]>([])
+  let batchSummary = $state<any>(null)
+  let isExecutingBatch = $state(false)
+  let batchError = $state<string | null>(null)
+
+  async function buildBatchTransaction() {
+    if (!profileAddress) return
+
+    try {
+      batchError = null
+      isExecutingBatch = true
+      const res = await fetch("/api/circles/build-post-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ toAddress: profileAddress }),
+      })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || "Failed to build batch transaction")
+      }
+
+      const data = await res.json()
+      if (data.success) {
+        batchTransactions = data.transactions
+        batchSummary = data.summary
+        showBatchTransaction = true
+        console.log("✅ Batch transaction built:", data)
+      } else {
+        throw new Error(data.error || "Failed to build batch transaction")
+      }
+    } catch (err: any) {
+      console.error("Error building batch transaction:", err)
+      batchError = err.message || "Failed to build batch transaction"
+    } finally {
+      isExecutingBatch = false
+    }
+  }
+
+  async function executeBatchTransaction() {
+    try {
+      batchError = null
+      isExecutingBatch = true
+
+      const { getRunner } = await import("$lib/stores/safeBrowserRunner.svelte")
+
+      const runner = getRunner()
+      if (!runner) {
+        throw new Error("SafeBrowserRunner not initialized. Please refresh the page.")
+      }
+
+      console.log(`Executing batch transaction with ${batchTransactions.length} operations`)
+
+      // Send all transactions as one batch (user signs once)
+      const receipt = await runner.sendTransaction(batchTransactions as any)
+
+      console.log("✅ Batch transaction executed:", receipt.transactionHash)
+      showBatchTransaction = false
+      triggerPostReload()
+      invalidate("posts")
+      open = false
+    } catch (err: any) {
+      console.error("Error executing batch transaction:", err)
+      batchError = err.message || "Failed to execute batch transaction"
+    } finally {
+      isExecutingBatch = false
+    }
+  }
+
   const { form, errors, enhance, reset } = superForm(pageForm, {
     onResult: ({ result }) => {
+      isSubmitting = false
+      console.log("Form submission result:", result)
       if (result.type === "success") {
-        // Invalidate posts to refresh the list
-        invalidate("posts")
-        // Close the modal
-        open = false
+        console.log("✅ Post created successfully!")
+        submitError = null
+        // Build batch transaction if posting to a profile
+        if (profileAddress) {
+          buildBatchTransaction()
+        } else {
+          // If no profile address, just close the dialog
+          triggerPostReload()
+          invalidate("posts")
+          open = false
+        }
+      } else if (result.type === "failure") {
+        console.error("❌ Post creation failed:", result)
+        submitError = result.data?.error || "Failed to create post"
+      } else if (result.type === "redirect") {
+        console.log("Redirecting to:", result.location)
       }
+    },
+    onError: ({ result }) => {
+      console.error("❌ Form error:", result)
+      submitError = "An unexpected error occurred"
+      isSubmitting = false
     },
   })
   console.log("form initial values:", $form)
@@ -33,17 +127,11 @@
   const caption = fieldProxy(form, "caption")
 
   let captionEditorRef: any
-  let search = ""
-  let results: any[] = []
   let previews = $derived(
     $files.length > 0
       ? Array.from($files).map((file: File) => URL.createObjectURL(file))
       : [],
   )
-
-  let showMedia = $state(false)
-  let showCaption = $state(false)
-  let showLocation = $state(false)
 
   function removeFile(index: number) {
     const arr = Array.from($files)
@@ -71,32 +159,15 @@
     }
   }
 
-  function toggleField(field: "media" | "caption" | "location", show: boolean) {
-    // hide/show the field
-    if (field === "media") showMedia = show
-    if (field === "caption") showCaption = show
-    if (field === "location") showLocation = show
-
-    // if hiding -> reset that field in the form
-    if (!show) {
-      if (field === "media") $form.media = []
-      if (field === "caption") {
-        captionEditorRef.clear()
-        $form.caption = ""
-      }
-      if (field === "location") $form.location = undefined
-    }
-    console.log(`form toggle ${field} ${show}:`, $form)
-  }
-
   function handleOpenChange(value: boolean) {
     if (!value) {
       // Reset the form when the dialog is closed
       reset()
-      showMedia = false
-      showCaption = false
-      showLocation = false
+      submitError = null
       console.log("form reset in UploadMediaDialog:", $form)
+    } else {
+      // Clear error when opening dialog
+      submitError = null
     }
   }
 </script>
@@ -105,157 +176,141 @@
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
   <Dialog.Content class="max-h-[90vh] overflow-auto">
     <Dialog.Header>
-      <Dialog.Title>Upload media</Dialog.Title>
+      <Dialog.Title>Create Post</Dialog.Title>
       <!-- <Dialog.Description>
         Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ratione
         expedita ad quod illo, et illum amet vitae modi distinctio mollitia non
         nesciunt nemo earum repellat atque maiores quas obcaecati tenetur.
       </Dialog.Description> -->
     </Dialog.Header>
+    {#if submitError}
+      <div class="mx-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+        <p class="font-semibold">Error:</p>
+        <p>{submitError}</p>
+      </div>
+    {/if}
     <form
-      use:enhance
+      use:enhance={{
+        onSubmit: () => {
+          isSubmitting = true
+        },
+      }}
       action="?/upload"
       enctype="multipart/form-data"
       method="POST"
       class="flex flex-col gap-4 p-4"
     >
-      <!-- Drop zone container -->
-      <!-- TODO: this is not good for accessibility -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      {#if showMedia}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("media", false)}>− Remove media</Button
-        >
-        <Label for="media">Media</Label>
-
-        <div
-          class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
-        >
-          <Input
-            type="file"
-            multiple
-            name="media"
-            accept="image/*,video/*"
-            bind:files={$files}
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          />
-          {#if $files.length > 0}
-            <div
-              class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto"
-            >
-              {#each previews as src, i}
-                <!-- TODO: this is not good for accessibility -->
-                <!-- svelte-ignore a11y_click_events_have_key_events -->
-                <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                <img
-                  {src}
-                  alt="Uploaded media"
-                  class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
-                  loading="lazy"
-                  onclick={() => removeFile(i)}
-                  title="Click to remove"
-                />
-              {/each}
-            </div>
-          {:else}
-            <span class="text-gray-400 z-10 pointer-events-none"
-              >Drag & drop files here or click to select</span
-            >
-          {/if}
-        </div>
-        {#if $errors.media}
-          <p class="error">{$errors.media[0]}</p>
-        {/if}
-      {:else}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("media", true)}>+ Add media</Button
-        >
-      {/if}
-
-      {#if showCaption}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("caption", false)}>− Remove text</Button
-        >
-        <Label for="caption">Caption</Label>
-        <CaptionEditor
-          bind:this={captionEditorRef}
-          {theme}
-          onChange={handleEditorChange}
-        />
-      {:else}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("caption", true)}>+ Add text</Button
-        >
-      {/if}
-
+      <!-- Text editor -->
+      <Label for="caption">Text</Label>
+      <CaptionEditor
+        bind:this={captionEditorRef}
+        {theme}
+        onChange={handleEditorChange}
+      />
       <Input type="hidden" name="caption" bind:value={$form.caption} />
       {#if $errors.caption}
         <p class="error">{$errors.caption[0]}</p>
       {/if}
 
-      <!-- <Label for="caption">Caption</Label>
-      <Input
-        type="text"
-        name="caption"
-        bind:value={$form.caption}
-        placeholder="caption"
-      />
-      {#if $errors.caption}
-        <p class="error">{$errors.caption[0]}</p>
-      {/if} -->
-
-      <!-- <Label for="visibility">Visibility</Label>
-      <select name="visibility" bind:value={$form.visibility}>
-        <option value="public">Public</option>
-        <option value="private">Private</option>
-        <option value="friends">Friends</option>
-      </select>
-      {#if $errors.visibility}
-        <p class="error">{$errors.visibility[0]}</p>
-      {/if} -->
-
-      <!-- location dropdown here -->
-      {#if showLocation}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("location", false)}
-          >− Remove location</Button
-        >
-        <Label for="location">Location</Label>
+      <!-- Media upload -->
+      <Label for="media">Media</Label>
+      <div
+        class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
+      >
         <Input
-          type="text"
-          name="location"
-          bind:value={$form.location}
-          placeholder="location"
+          type="file"
+          multiple
+          name="media"
+          accept="image/*,video/*"
+          bind:files={$files}
+          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
         />
-        {#if $errors.location}
-          <p class="error">{$errors.location[0]}</p>
+        {#if $files.length > 0}
+          <div class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto">
+            {#each previews as src, i}
+              <!-- TODO: this is not good for accessibility -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+              <img
+                {src}
+                alt="Uploaded media"
+                class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
+                loading="lazy"
+                onclick={() => removeFile(i)}
+                title="Click to remove"
+              />
+            {/each}
+          </div>
+        {:else}
+          <span class="text-gray-400 z-10 pointer-events-none"
+            >Click to select photos</span
+          >
         {/if}
-      {:else}
-        <Button
-          class={"text-blue-500"}
-          variant={"ghost"}
-          onclick={() => toggleField("location", true)}>+ Add location</Button
-        >
+      </div>
+      {#if $errors.media}
+        <p class="error">{$errors.media[0]}</p>
       {/if}
 
-      {#if !(!showMedia && !showCaption && !showLocation)}
-        <div class="flex flex-col items-center justify-center mt-4">
-          <Button
-            disabled={!$form.caption && $form.media.length === 0}
-            type="submit">Upload</Button
-          >
-        </div>
-      {/if}
+      <!-- Upload button -->
+      <div class="flex flex-col items-center justify-center mt-4">
+        <Button
+          disabled={(!$form.caption && $form.media.length === 0) || isSubmitting}
+          type="submit">{isSubmitting ? "Creating..." : "Upload"}</Button
+        >
+      </div>
     </form>
+
+    <!-- Batch Transaction Modal -->
+    {#if showBatchTransaction && batchSummary}
+      <div class="border-t pt-4 mt-4">
+        <div class="mb-4 p-3 bg-blue-50 border border-blue-300 rounded">
+          <h3 class="font-semibold text-blue-900 mb-2">Complete Your Post</h3>
+          <p class="text-sm text-blue-800 mb-3">
+            Sign the transaction to finalize your post and transfer CRC tokens.
+          </p>
+
+          <!-- Transaction Summary -->
+          <div class="bg-white rounded p-3 mb-3 text-sm">
+            <p class="font-semibold mb-2">Transaction Summary:</p>
+            <div class="space-y-1 text-gray-700">
+              <p>• Total Amount: <span class="font-mono">{batchSummary.totalAmount} CRC</span></p>
+              <p>• To Address: <span class="font-mono text-xs">{batchSummary.toAddress.slice(0, 6)}...{batchSummary.toAddress.slice(-4)}</span></p>
+              <p>• Wrapped (30%): <span class="font-mono">{batchSummary.wrappedAmount} CRC</span></p>
+              <p>• Unwrapped (70%): <span class="font-mono">{batchSummary.unwrappedAmount} CRC</span></p>
+              <p>• Steps: <span class="font-mono">{batchSummary.transactionCount}</span></p>
+            </div>
+          </div>
+
+          {#if batchError}
+            <div class="mb-3 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+              <p class="font-semibold">Error:</p>
+              <p>{batchError}</p>
+            </div>
+          {/if}
+
+          <div class="flex gap-2">
+            <Button
+              onclick={executeBatchTransaction}
+              disabled={isExecutingBatch}
+              class="bg-blue-600 hover:bg-blue-700"
+            >
+              {isExecutingBatch ? "Processing..." : "Sign & Execute"}
+            </Button>
+            <Button
+              onclick={() => {
+                showBatchTransaction = false
+                triggerPostReload()
+                invalidate("posts")
+                open = false
+              }}
+              disabled={isExecutingBatch}
+              variant="outline"
+            >
+              Skip for Now
+            </Button>
+          </div>
+        </div>
+      </div>
+    {/if}
   </Dialog.Content>
 </Dialog.Root>

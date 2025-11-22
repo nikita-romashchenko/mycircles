@@ -154,7 +154,7 @@ export async function getProfileFeed(
         { postedToAddress: safeAddress },
       ],
     })
-      .sort({ balance: -1, createdAt: -1 })
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       //TODO: Remove deprecated populates
