@@ -4,7 +4,7 @@ import { Interaction } from "$lib/models/Interaction"
 import { Post } from "$lib/models/Post"
 import mongoose, { type ObjectId } from "mongoose"
 import { env } from "$env/dynamic/private"
-import { CirclesRpc } from "@circles-sdk/rpc"
+import { CirclesRpc } from "@aboutcircles/sdk-rpc"
 import { Profile } from "$lib/models/Profile"
 
 interface ProfileDoc {

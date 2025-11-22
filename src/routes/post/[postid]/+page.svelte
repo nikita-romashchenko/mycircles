@@ -1,73 +1,13 @@
 <script lang="ts">
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
-  import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
-  import { browser } from "$app/environment"
+  import { derived } from "svelte"
 
-  let voteModalOpen = false
-  let votePostId: any
-  let voteType: any
-  let voteTargetAddress: any
-  let localPost = $state<PostType | null>(null)
-
-  $: basePost = $page.data.post as PostType
-  $: profile = $page.data.profile as CirclesRpcProfile
-  $: isOwnProfile = $page.data.isOwnProfile as boolean
-
-  // Use local post for optimistic updates, fallback to base post
-  $: post = localPost || basePost
-  $: voteTargetAddress = post?.postedToAddress || post?.creatorAddress
-
-  // Reset local post when base post changes
-  $effect(() => {
-    if (basePost && (!localPost || localPost._id !== basePost._id)) {
-      localPost = { ...basePost }
-    }
-  })
-
-  const handleVote = async (postId: string, type: "upVote" | "downVote") => {
-    console.log("Voting on post:", postId, "Type:", type)
-    votePostId = postId
-    voteType = type
-    voteModalOpen = true
-  }
-
-  const handleVoteSubmit = async (postId: string, type: "upVote" | "downVote", balanceChange: number) => {
-    if (!localPost) return
-
-    // Store old balance for revert
-    const oldBalance = localPost.balance
-
-    // Optimistically update the post balance
-    localPost.balance = type === "upVote"
-      ? oldBalance + balanceChange
-      : oldBalance - balanceChange
-
-    try {
-      const response = await fetch("/api/posts/vote", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          postId,
-          type,
-          balanceChange,
-        }),
-      })
-
-      if (!response.ok) {
-        // Revert on error
-        localPost.balance = oldBalance
-        console.error("Vote failed")
-      }
-    } catch (err) {
-      // Revert on error
-      localPost.balance = oldBalance
-      console.error("Error submitting vote:", err)
-    }
-  }
+  let basePost = $derived($page.data.post as PostType)
+  let profile = $derived($page.data.profile as CirclesRpcProfile)
+  let isOwnProfile = $derived($page.data.isOwnProfile as boolean)
+  let post = $derived(basePost)
 </script>
 
 <div class="max-w-xl mx-auto p-4">
@@ -89,15 +29,5 @@
   </div>
 
   <!-- Post -->
-  <PostCard onVote={handleVote} {post} />
+  <PostCard {post} />
 </div>
-
-{#if browser}
-  <VoteMediaDialog
-    postId={votePostId}
-    type={voteType}
-    targetAddress={voteTargetAddress}
-    onSubmit={handleVoteSubmit}
-    bind:open={voteModalOpen}
-  />
-{/if}

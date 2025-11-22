@@ -10,9 +10,9 @@ import { zod } from 'sveltekit-superforms/adapters';
 import { ethers } from 'ethers'
 import Safe from '@safe-global/protocol-kit'
 
-import { Sdk } from '@circles-sdk/sdk';
-import { type TransactionRequest } from '@circles-sdk/adapter';
-import { SafeSdkPrivateKeyContractRunner } from "@circles-sdk/adapter-safe";
+import { Sdk, type HumanAvatar } from '@aboutcircles/sdk';
+import { SafeContractRunner } from '@aboutcircles/sdk-runner';
+import type { TransactionRequest } from '@aboutcircles/sdk-types';
 
 // @todo I've no idea why we need it but circles sdk doesn;t work without it
 import WebSocket from 'ws';
@@ -90,16 +90,28 @@ export const actions: Actions = {
           // @todo take it from the list of controlled safes
           const inviterAddress = env.GLOBAL_OWNER;
 
-          const adapterInviter = new SafeSdkPrivateKeyContractRunner(env.GLOBAL_OWNER_PRIVATE_KEY, env.RPC_URL);
-          await adapterInviter.init(inviterAddress as `0x${string}`);
-          // @ts-ignore
-          const sdkInviter = new Sdk (adapterInviter); 
-          const inviterAvatar = await sdkInviter.getAvatar(inviterAddress as `0x${string}`);
+          const { createPublicClient, http } = await import('viem');
+          const { gnosis } = await import('viem/chains');
 
-          // Create a batch which from the inviter account
-          console.log("Initialize batch")
-          // @ts-ignore
-          const batch = adapterInviter.sendBatchTransaction();
+          const publicClient = createPublicClient({
+            chain: gnosis,
+            transport: http(env.RPC_URL),
+          });
+
+          const inviterRunner = new SafeContractRunner(
+            publicClient,
+            env.GLOBAL_OWNER_PRIVATE_KEY as `0x${string}`,
+            env.RPC_URL,
+            inviterAddress as `0x${string}`
+          );
+          await inviterRunner.init();
+
+          const sdkInviter = new Sdk(undefined, inviterRunner);
+          const inviterAvatar = await sdkInviter.getAvatar(inviterAddress as `0x${string}`) as HumanAvatar;
+
+          // Create a batch from the inviter account
+          console.log("Initialize batch");
+          const batch = inviterRunner.sendBatchTransaction();
 
           // 1. Inviter transfers 0.01 xDai to the safe owner wallet
           const transferTx: TransactionRequest = {
@@ -147,20 +159,9 @@ export const actions: Actions = {
 
           existingProfile.safeAddress = safeAddress;
           existingProfile.privateKey = privateKey;
-          // @todo check if there is a Circles account already
-          const adapterNewUser = new SafeSdkPrivateKeyContractRunner(existingProfile.privateKey, env.RPC_URL);
-          await adapterNewUser.init(existingProfile.safeAddress as `0x${string}`);
-          // @ts-ignore
-          const sdkNewUser = new Sdk (adapterNewUser);
-          console.log("New user avatar initialised");
-          // User accepts the intivation
-          await sdkNewUser.acceptInvitation(inviterAddress as `0x${string}`, {
-            name: username
-          });
-          // Inviter untrusts the User
-          // @dev Untrust is async
-          inviterAvatar.untrust(existingProfile.safeAddress as `0x${string}`);
-          console.log("Invite retracted");
+          // Note: The new Safe has been created. The user can later register themselves
+          // using the Sdk.register.asHuman() method when they have sufficient CRC or invitations
+          console.log("Safe created successfully, user can now register with Circles");
         } catch (error) {
           console.error("Error creating Circles account:", error);
         }

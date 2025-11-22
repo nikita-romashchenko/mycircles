@@ -2,11 +2,8 @@
   import { invalidate } from "$app/navigation"
   import * as Card from "$lib/components/ui/card/index"
   import * as Carousel from "$lib/components/ui/carousel/index"
-  import { Button } from "$lib/components/ui/button"
   import { theme } from "svelte-lexical/dist/themes/default"
   import CaptionViewer from "$lib/components/blocks/svelte-lexical/caption-editor/caption-viewer.svelte"
-  import ArrowUp from "@lucide/svelte/icons/arrow-up"
-  import ArrowDown from "@lucide/svelte/icons/arrow-down"
   import ArrowRight from "@lucide/svelte/icons/arrow-right"
   import * as Avatar from "$lib/components/ui/avatar/index"
   import ImageIcon from "@lucide/svelte/icons/image"
@@ -18,17 +15,12 @@
   interface Props {
     post: Post
     showActions?: boolean
-    onVote: (postId: string, type: "upVote" | "downVote") => Promise<void>
   }
 
-  let { post, showActions = true, onVote }: Props = $props()
+  let { post, showActions = true }: Props = $props()
 
   let liked = $state(post.isLiked)
   let likesCount = $state(post.likesCount)
-  const handleInteraction = async (type: "upVote" | "downVote") => {
-    console.log("Handling vote interaction:", type, "for post:", post._id)
-    onVote(post._id, type)
-  }
 
   let loading = $state(true)
   let circlesProfiles: (CirclesRpcProfile | null)[] = $state([])
@@ -184,23 +176,6 @@
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
     >
-      <div class="flex flex-row gap-2 items-center">
-        <Button
-          variant={"outline"}
-          onclick={() => handleInteraction("downVote")}><ArrowDown /></Button
-        >
-        <span class="font-semibold text-base">{post.balance || 0}</span>
-        <Button variant={"outline"} onclick={() => handleInteraction("upVote")}
-          ><ArrowUp /></Button
-        >
-      </div>
-      <!-- {#if liked}
-        <Button onclick={handleLike}>Liked</Button>
-      {:else}
-        <Button variant={"outline"} onclick={handleLike}>Like</Button>
-      {/if} -->
-
-      <!-- <span>{likesCount} {likesCount > 1 ? "likes" : "like"}</span> -->
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
     </Card.Footer>
   </Card.Root>

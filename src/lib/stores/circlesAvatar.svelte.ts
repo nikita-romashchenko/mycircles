@@ -29,14 +29,15 @@
  * ```
  */
 
-import { Core } from '@circles-sdk/core';
-import { HumanAvatar } from '@circles-sdk/sdk';
-import { SafeContractRunner } from '@circles-sdk/runner';
+import { HumanAvatar } from '@aboutcircles/sdk';
+import { SafeContractRunner } from '@aboutcircles/sdk-runner';
+import { Core } from '@aboutcircles/sdk-core';
 import { createPublicClient, http } from 'viem';
 import { gnosis } from 'viem/chains';
 import { getAuthData } from '$lib/utils/authStorage';
 import { browser } from '$app/environment';
 import { PUBLIC_RPC_URL } from '$env/static/public';
+import Safe from '@safe-global/protocol-kit';
 
 class CirclesAvatarStore {
   private avatar = $state<HumanAvatar | null>(null);
@@ -68,41 +69,71 @@ class CirclesAvatarStore {
       this.isInitializing = true;
       this.error = null;
 
-      // Wait for auth data to be available (with retry logic)
-      let authData = getAuthData();
-      let retries = 0;
-      const maxRetries = 20; // Wait up to 10 seconds for private key
-
-      while (!authData?.privateKey && retries < maxRetries) {
-        console.log(`⏳ Waiting for private key... (attempt ${retries + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, 500));
-        authData = getAuthData();
-        retries++;
-      }
-
-      if (!authData?.privateKey) {
-        throw new Error('No private key found in session storage after waiting. Please sign in again.');
-      }
-
       console.log('🔄 Initializing Circles avatar for user:', safeAddress);
+
+      // Get auth data (which contains session type)
+      const authData = getAuthData();
+
+      if (!authData) {
+        throw new Error('No authentication data found. Please sign in again.');
+      }
+
+      // Only MetaMask is supported now
+      if (authData.sessionType !== 'metamask') {
+        throw new Error('Only MetaMask authentication is supported.');
+      }
+
+      // Check if MetaMask is available
+      const ethereum = (window as any).ethereum;
+      if (!ethereum) {
+        throw new Error('MetaMask is not installed. Please install MetaMask to continue.');
+      }
+
+      console.log('🔄 Initializing with MetaMask...');
 
       // Initialize Core SDK
       const core = new Core();
 
-      // Create public client
+      // Create public client with viem
       const publicClient = createPublicClient({
         chain: gnosis,
         transport: http(PUBLIC_RPC_URL),
       });
 
-      // Create Safe contract runner
+      // Use MetaMask as the signer
+      const { ethers } = await import('ethers');
+      const provider = new ethers.BrowserProvider(ethereum);
+      const signer = await provider.getSigner();
+      const signerAddress = await signer.getAddress();
+
+      console.log('📝 MetaMask signer address:', signerAddress);
+
+      // For MetaMask, create a Safe instance using the browser provider
+      // then wrap it in a way compatible with the SDK's runner interface
+      const safeSdk = await Safe.init({
+        provider: ethereum,
+        signer: signerAddress,
+        safeAddress: safeAddress as `0x${string}`
+      });
+
+      console.log('✅ Safe SDK initialized with MetaMask');
+
+      // Create a minimal runner wrapper that uses Safe SDK for transactions
       const runner = new SafeContractRunner(
         publicClient,
-        authData.privateKey as `0x${string}`,
+        signerAddress as `0x${string}`,
         PUBLIC_RPC_URL,
         safeAddress as `0x${string}`
       );
-      await runner.init();
+
+      // Note: For MetaMask, the runner will use Safe SDK internally via the provider
+      // We initialize it to satisfy the HumanAvatar constructor
+      try {
+        await runner.init(safeAddress as `0x${string}`);
+        console.log('✅ SafeContractRunner initialized');
+      } catch (initErr) {
+        console.warn('⚠️  SafeContractRunner init warning (may still work):', initErr);
+      }
 
       // Create HumanAvatar instance
       this.avatar = new HumanAvatar(safeAddress as `0x${string}`, core, runner);

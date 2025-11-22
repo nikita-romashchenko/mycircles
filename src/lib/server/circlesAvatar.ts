@@ -27,9 +27,9 @@
  * ```
  */
 
-import { Core } from '@circles-sdk/core';
-import { HumanAvatar } from '@circles-sdk/sdk';
-import { SafeContractRunner } from '@circles-sdk/runner';
+import { HumanAvatar } from '@aboutcircles/sdk';
+import { SafeContractRunner } from '@aboutcircles/sdk-runner';
+import { Core } from '@aboutcircles/sdk-core';
 import { createPublicClient, http } from 'viem';
 import { gnosis } from 'viem/chains';
 import { RPC_URL } from '$env/static/private';

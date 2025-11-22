@@ -13,7 +13,6 @@
   import * as Avatar from "$lib/components/ui/avatar/index"
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
-  import VoteMediaDialog from "$lib/components/blocks/dialogs/VoteMediaDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
   import { Item } from "$lib/components/ui/breadcrumb"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
@@ -32,7 +31,6 @@
 
   let relationsModalOpen = $state(false)
   let uploadModalOpen = $state(false)
-  let voteModalOpen = $state(false)
   let contents = $state<
     {
       relation: Relation
@@ -46,9 +44,6 @@
   let loadingMoreProfiles = $state(false)
   let allLoaded = $state(false)
   let sentinel = $state<HTMLDivElement>()
-  let votePostId = $state<any>(undefined)
-  let voteType = $state<any>(undefined)
-  let voteTargetAddress = $state<any>(undefined)
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
 
@@ -121,109 +116,6 @@
     return () => observer.disconnect()
   })
 
-  const handleVote = async (postId: string, type: "upVote" | "downVote") => {
-    console.log("Voting on post:", postId, "Type:", type)
-
-    // Find the post to get target address (profile owner where post was posted)
-    const post = posts.find((p) => p._id === postId)
-    voteTargetAddress = post?.postedToAddress || post?.creatorAddress
-    voteProfileOwnerAddress = post?.postedToAddress || post?.creatorAddress
-
-    // Open the vote dialog
-    voteModalOpen = true
-    // Set the form values
-    votePostId = postId
-    voteType = type
-  }
-
-  const handleVoteSubmit = async (
-    postId: string,
-    type: "upVote" | "downVote",
-    balanceChange: number,
-  ) => {
-    // Optimistically update the post balance
-    const postIndex = posts.findIndex((p) => p._id === postId)
-    if (postIndex !== -1) {
-      const oldBalance = posts[postIndex].balance
-      posts[postIndex].balance =
-        type === "upVote"
-          ? oldBalance + balanceChange
-          : oldBalance - balanceChange
-    }
-
-    try {
-      // Only send tokens for upvotes (not downvotes)
-      if (type === "upVote") {
-        // Get avatar for token transfer
-        const avatar = avatarStore.getAvatar()
-        if (!avatar) {
-          alert("Please wait for avatar to initialize")
-          throw new Error("Avatar not initialized")
-        }
-
-        // Get the target address (profile owner where post was posted)
-        const post = posts[postIndex]
-        const targetAddress = post.postedToAddress || post.creatorAddress
-
-        if (!targetAddress) {
-          throw new Error("No target address found for vote")
-        }
-
-        console.log(`💰 Sending ${balanceChange} CRC to ${targetAddress} for ${type}...`)
-
-        // Convert CRC amount to atto-circles (18 decimals)
-        const amountInAttoCircles = BigInt(balanceChange) * BigInt(10 ** 18)
-
-        // Transfer tokens using the SDK with wrapped balances
-        // Only use tokens from the profile owner (where the post was posted)
-        const options = {
-          useWrappedBalances: true, // Use wrapped tokens (ERC20)
-          fromTokens: [targetAddress as `0x${string}`] // Only use tokens from the profile owner
-        }
-
-        const receipt = await avatar.transfer.advanced(
-          targetAddress as `0x${string}`,
-          amountInAttoCircles.toString(),
-          options
-        )
-
-        console.log(`✅ Token transfer successful. Hash: ${receipt.transactionHash}`)
-      }
-
-      // Update the database after successful token transfer (or for downvotes)
-      const response = await fetch("/api/posts/vote", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          postId,
-          type,
-          balanceChange,
-        }),
-      })
-
-      if (!response.ok) {
-        if (type === "upVote") {
-          console.warn("Database update failed, but tokens were transferred")
-        } else {
-          throw new Error("Vote update failed")
-        }
-      }
-    } catch (err: any) {
-      console.error("Error submitting vote:", err)
-
-      // Revert on error
-      if (postIndex !== -1) {
-        posts[postIndex].balance =
-          type === "upVote"
-            ? posts[postIndex].balance - balanceChange
-            : posts[postIndex].balance + balanceChange
-      }
-
-      alert(`Failed to vote: ${err.message || 'Please try again.'}`)
-    }
-  }
 
   // RelationsModal state
   const openRelationsModal = () => {
@@ -425,6 +317,12 @@
       isTrusted = true
 
       // Refresh relations to update counts (skip trust check to avoid race condition)
+      await fetchRelations(targetAddress, true)
+    } catch (err: any) {
+      console.error("Error trusting user:", err)
+      alert(`Failed to trust: ${err.message || 'Please try again.'}`)
+    }
+  }
 
   async function handleUntrust() {
     if (!profile) return
@@ -612,7 +510,7 @@
 
       <div class="space-y-8">
         {#each posts as post (post._id)}
-          <PostCard onVote={handleVote} {post} />
+          <PostCard {post} />
         {/each}
       </div>
       <div bind:this={sentinel} class="h-8"></div>
@@ -641,13 +539,5 @@
       {loadingMoreProfiles}
     />
     <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} />
-    <VoteMediaDialog
-      postId={votePostId}
-      type={voteType}
-      targetAddress={voteTargetAddress}
-      profileOwnerAddress={voteProfileOwnerAddress}
-      onSubmit={handleVoteSubmit}
-      bind:open={voteModalOpen}
-    />
   {/if}
 {/if}
