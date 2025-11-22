@@ -2,7 +2,6 @@
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
   import type { Post as PostType, CirclesRpcProfile } from "$lib/types"
-  import { derived } from "svelte"
 
   let basePost = $derived($page.data.post as PostType)
   let profile = $derived($page.data.profile as CirclesRpcProfile)

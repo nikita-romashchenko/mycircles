@@ -5,6 +5,8 @@
   import { onMount } from "svelte"
   import { globalState } from "$lib/stores/state.svelte"
 
+  const DEFAULT_LIMIT = 10
+
   let posts: PostType[] = []
   let loading = false
   let allLoaded = false
