@@ -35,7 +35,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
     }
 
     // Use direct RPC call to find path and get max flow
-    const rpcUrl = "https://rpc.circlesubi.network/"
+    const rpcUrl = "https://rpc.aboutcircles.com/"
     const rpcResponse = await fetch(rpcUrl, {
       method: "POST",
       headers: {

@@ -30,7 +30,6 @@ const PostSchema = new mongoose.Schema({
     required: false,
   },
 
-  balance: { type: Number, default: 0, required: true },
   type: {
     type: String,
     enum: ["image", "video", "album", "text"],

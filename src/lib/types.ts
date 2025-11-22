@@ -1,4 +1,4 @@
-import type { TrustRelationRow } from "@circles-sdk/sdk"
+import type { AggregatedTrustRelation } from "@aboutcircles/sdk"
 
 export interface ProfileLink {
   name: string
@@ -68,7 +68,6 @@ export interface Post {
   likesCount: number
   repostsCount: number
   isLiked: boolean
-  balance: number
 }
 
 export interface RelationProfile {
@@ -88,6 +87,6 @@ export interface RelationItem {
 
 // add profile picture link later
 export interface Relation {
-  relationItem: TrustRelationRow
+  relationItem: AggregatedTrustRelation
   profile?: RelationProfile
 }

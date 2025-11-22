@@ -8,26 +8,25 @@
   import AppSidebar from "$lib/components/app-sidebar.svelte"
   import { Separator } from "$lib/components/ui/separator"
   import * as Breadcrumb from "$lib/components/ui/breadcrumb/index"
-  import Bell from "@lucide/svelte/icons/bell"
-  import { onMount } from "svelte"
-  import { goto } from "$app/navigation"
-  import { Badge } from "$lib/components/ui/badge/index"
-  import {
-    unreadNotificationsCount,
-    fetchUnreadCount,
-  } from "$lib/stores/notifications.svelte"
+  import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { page } from "$app/stores"
+  import { browser } from "$app/environment"
 
-  export let data: any
+  let { data }: { data: any } = $props()
 
-  function handleBellClick() {
-    goto("/notifications")
-  }
+  // Initialize avatar when user is logged in
+  // Track only the safeAddress to avoid unnecessary re-initializations
+  $effect(() => {
+    if (!browser) return
 
-  onMount(() => {
-    fetchUnreadCount()
-    // Poll for updates every 30 seconds
-    const interval = setInterval(fetchUnreadCount, 30000)
-    return () => clearInterval(interval)
+    const safeAddress = $page.data.session?.user?.safeAddress
+    if (safeAddress) {
+      console.log('🔄 Initializing avatar for user:', safeAddress)
+      avatarStore.initialize(safeAddress)
+    } else {
+      console.log('🔄 No session, resetting avatar')
+      avatarStore.reset()
+    }
   })
 </script>
 

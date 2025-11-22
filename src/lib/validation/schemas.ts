@@ -61,11 +61,3 @@ export const uploadMediaSchema = z.object({
 })
 
 export type UploadMediaSchema = typeof uploadMediaSchema
-
-export const voteSchema = z.object({
-  postId: z.string().min(1, "Post ID is required"),
-  type: z.enum(["upVote", "downVote"]),
-  balanceChange: z.number(),
-})
-
-export type voteSchema = typeof voteSchema

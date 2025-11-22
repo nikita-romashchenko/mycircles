@@ -1,52 +1,28 @@
 <script lang="ts">
-  import { SignIn } from "@auth/sveltekit/components"
-  import { signIn } from "@auth/sveltekit/client"
-  import Safe from "@safe-global/protocol-kit"
-  import { browser } from "$app/environment"
-  import { ethers } from "ethers"
-  import { PUBLIC_RPC_URL } from "$env/static/public"
-  import { storeAuthData } from "$lib/utils/authStorage"
+  import { signIn } from '@auth/sveltekit/client';
+  import Safe from '@safe-global/protocol-kit';
+  import { browser } from '$app/environment';
+  import { ethers } from 'ethers';
+  import { storeAuthData } from '$lib/utils/authStorage';
 
   const API_ENDPOINTS = {
     CHALLENGE: "/api/auth/challenge",
     SAFES: "/api/safes",
   }
 
-  export let data: any
 
-  type AuthMethod = "private-key" | "metamask"
-
-  let showSafeForm = false
-  let authMethod: AuthMethod = "private-key"
-  let privateKey = ""
-  let walletAddress = ""
-  let safes: string[] = []
-  let selectedSafe = ""
-  let loading = false
-  let error = ""
-  let challenge: any = null
+  let showSafeForm = false;
+  let walletAddress = '';
+  let safes: string[] = [];
+  let selectedSafe = '';
+  let loading = false;
+  let error = '';
+  let challenge: any = null;
 
   async function loadSafes() {
-    let targetWalletAddress = ""
-
-    if (authMethod === "private-key") {
-      if (!privateKey.trim()) {
-        error = "Please enter a private key"
-        return
-      }
-      try {
-        const wallet = new ethers.Wallet(privateKey.trim())
-        targetWalletAddress = wallet.address
-      } catch (err) {
-        error = "Invalid private key format"
-        return
-      }
-    } else if (authMethod === "metamask") {
-      if (!walletAddress) {
-        error = "Please connect MetaMask first"
-        return
-      }
-      targetWalletAddress = walletAddress
+    if (!walletAddress) {
+      error = 'Please connect MetaMask first';
+      return;
     }
 
     loading = true
@@ -59,10 +35,10 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: "getSafesForOwner",
-          ownerAddress: targetWalletAddress,
-        }),
-      })
+          action: 'getSafesForOwner',
+          ownerAddress: walletAddress
+        })
+      });
 
       const data = await response.json()
 
@@ -96,9 +72,8 @@
       const ethereum = (window as any).ethereum
       const accounts = await ethereum.request({ method: "eth_requestAccounts" })
       if (accounts.length > 0) {
-        walletAddress = accounts[0]
-        authMethod = "metamask"
-        await loadSafes()
+        walletAddress = accounts[0];
+        await loadSafes();
       } else {
         error = "No accounts found in MetaMask"
       }
@@ -108,11 +83,6 @@
     } finally {
       loading = false
     }
-  }
-
-  function handleSafeLogin() {
-    showSafeForm = true
-    authMethod = "private-key"
   }
 
   function handleMetaMaskLogin() {
@@ -149,14 +119,9 @@
       return
     }
 
-    if (authMethod === "private-key" && !privateKey) {
-      error = "Please enter your private key"
-      return
-    }
-
-    if (authMethod === "metamask" && !walletAddress) {
-      error = "Please connect MetaMask"
-      return
+    if (!walletAddress) {
+      error = 'Please connect MetaMask';
+      return;
     }
 
     loading = true
@@ -173,40 +138,26 @@
       let walletOwner: string
       let protocolKit
 
-      if (authMethod === "private-key") {
-        const wallet = new ethers.Wallet(privateKey)
-        walletOwner = wallet.address
-
-        // For private key method, create Safe instance and sign with Safe SDK
-        protocolKit = await Safe.init({
-          provider: PUBLIC_RPC_URL,
-          signer: privateKey,
-          safeAddress: selectedSafe,
-        })
-      } else if (authMethod === "metamask") {
-        // For MetaMask, create Safe instance with MetaMask provider
-        if (!browser || !(window as any).ethereum) {
-          throw new Error("MetaMask not available")
-        }
-
-        const eip1193Provider = (window as any).ethereum
-        const provider = new ethers.BrowserProvider(eip1193Provider)
-        const signer = await provider.getSigner()
-
-        walletOwner = signer.address
-
-        protocolKit = await Safe.init({
-          provider: eip1193Provider,
-          signer: walletOwner,
-          safeAddress: selectedSafe,
-        })
-      } else {
-        throw new Error("Invalid auth method")
+      // For MetaMask, create Safe instance with MetaMask provider
+      if (!browser || !(window as any).ethereum) {
+        throw new Error('MetaMask not available');
       }
 
-      const safeMessage = await protocolKit.createMessage(challenge.message)
-      const signedSafeMessage = await protocolKit.signMessage(safeMessage)
-      signature = signedSafeMessage.encodedSignatures()
+      const eip1193Provider = (window as any).ethereum;
+      const provider = new ethers.BrowserProvider(eip1193Provider);
+      const signer = await provider.getSigner();
+
+      walletOwner = signer.address;
+
+      protocolKit = await Safe.init({
+        provider: eip1193Provider,
+        signer: walletOwner,
+        safeAddress: selectedSafe
+      });
+
+      const safeMessage = await protocolKit.createMessage(challenge.message);
+      const signedSafeMessage = await protocolKit.signMessage(safeMessage);
+      signature = signedSafeMessage.encodedSignatures();
 
       // Step 2: Authenticate with the signed challenge
       const result = await signIn("credentials", {
@@ -214,27 +165,19 @@
         signature: signature,
         walletOwner: walletOwner,
         safeAddress: selectedSafe.toLowerCase(),
-        authMethod: authMethod,
+        authMethod: 'metamask',
         redirect: false,
       })
 
       if (result?.error) {
         error = "Authentication failed: " + result.error
       } else if (result?.ok) {
-        // Store auth data based on auth method
-        if (authMethod === "private-key") {
-          storeAuthData({
-            sessionType: "privatekey",
-            privateKey: privateKey.trim(),
-            safeAddress: selectedSafe,
-          })
-        } else if (authMethod === "metamask") {
-          storeAuthData({
-            sessionType: "metamask",
-            safeAddress: selectedSafe,
-          })
-        }
-        window.location.href = "/"
+        // Store auth data
+        storeAuthData({
+          sessionType: 'metamask',
+          safeAddress: selectedSafe
+        });
+        window.location.href = '/protected';
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Sign in failed"
@@ -244,27 +187,13 @@
   }
 
   function resetForm() {
-    showSafeForm = false
-    authMethod = "private-key"
-    privateKey = ""
-    walletAddress = ""
-    safes = []
-    selectedSafe = ""
-    error = ""
-    loading = false
-    challenge = null
-  }
-
-  function switchAuthMethod(method: "private-key" | "metamask") {
-    authMethod = method
-    error = ""
-    safes = []
-    selectedSafe = ""
-    if (method === "private-key") {
-      walletAddress = ""
-    } else {
-      privateKey = ""
-    }
+    showSafeForm = false;
+    walletAddress = '';
+    safes = [];
+    selectedSafe = '';
+    error = '';
+    loading = false;
+    challenge = null;
   }
 </script>
 
@@ -277,33 +206,6 @@
 
     {#if !showSafeForm}
       <div class="auth-methods">
-        <!-- OAuth buttons -->
-        <SignIn provider="google">
-          {#snippet submitButton()}
-            <div class="buttonPrimary">Continue with Google</div>
-          {/snippet}
-        </SignIn>
-
-        <div class="divider">
-          <span>or</span>
-        </div>
-
-        <button class="safe-key-button" onclick={handleSafeLogin}>
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-          >
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-            <circle cx="12" cy="16" r="1" />
-            <path d="m7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          Sign in with Safe Private Key
-        </button>
-
         <button class="metamask-button" onclick={handleMetaMaskLogin}>
           Sign in with MetaMask
         </button>
@@ -325,48 +227,12 @@
           Back to login options
         </button>
 
-        {#if authMethod === "metamask"}
-          <div class="form-section">
-            <div class="connected-wallet">
-              <label class="form-label">Connected Wallet</label>
-              <div class="wallet-address">{walletAddress}</div>
-              <div class="method-switcher">
-                <button
-                  class="switch-method-button"
-                  onclick={() => switchAuthMethod("private-key")}
-                >
-                  Use Private Key Instead
-                </button>
-              </div>
-            </div>
+        <div class="form-section">
+          <div class="connected-wallet">
+            <div class="form-label">Connected Wallet</div>
+            <div class="wallet-address">{walletAddress}</div>
           </div>
-        {:else}
-          <div class="form-section">
-            <label for="privateKey" class="form-label">Private Key</label>
-            <input
-              id="privateKey"
-              type="password"
-              placeholder="Enter your private key (0x...)"
-              bind:value={privateKey}
-              class="form-input"
-            />
-            <div class="method-switcher">
-              <button
-                class="switch-method-button"
-                onclick={() => switchAuthMethod("metamask")}
-              >
-                Use MetaMask Instead
-              </button>
-            </div>
-            <button
-              class="load-safes-button"
-              onclick={loadSafes}
-              disabled={loading || !privateKey.trim()}
-            >
-              {loading ? "Loading..." : "Load Available Safes"}
-            </button>
-          </div>
-        {/if}
+        </div>
 
         {#if error}
           <div class="error-message">{error}</div>
@@ -392,10 +258,7 @@
               <button
                 class="signin-button"
                 onclick={signChallengeAndAuthenticate}
-                disabled={loading ||
-                  !selectedSafe ||
-                  (authMethod === "private-key" && !privateKey) ||
-                  (authMethod === "metamask" && !walletAddress)}
+                disabled={loading || !selectedSafe || !walletAddress}
               >
                 {loading ? "Authenticating..." : "Sign in with Safe"}
               </button>
@@ -450,79 +313,6 @@
     gap: 0.75rem;
   }
 
-  :global(.google-signin) {
-    width: 100% !important;
-  }
-
-  :global(.buttonPrimary) {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 0.75rem !important;
-    width: 100% !important;
-    padding: 0.875rem 1rem !important;
-    background: white !important;
-    border: 1px solid #d1d5db !important;
-    border-radius: 8px !important;
-    color: #374151 !important;
-    font-size: 0.95rem !important;
-    font-weight: 500 !important;
-    cursor: pointer !important;
-    transition: all 0.15s ease !important;
-  }
-
-  :global(.buttonPrimary:hover) {
-    background: #f9fafb !important;
-    border-color: #9ca3af !important;
-  }
-
-  .divider {
-    position: relative;
-    text-align: center;
-    margin: 0.5rem 0;
-  }
-
-  .divider::before {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 1px;
-    background: #e5e7eb;
-    z-index: 1;
-  }
-
-  .divider span {
-    background: white;
-    padding: 0 1rem;
-    color: #9ca3af;
-    font-size: 0.875rem;
-    position: relative;
-    z-index: 2;
-  }
-
-  .safe-key-button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.75rem;
-    width: 100%;
-    padding: 0.875rem 1rem;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    color: #374151;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .safe-key-button:hover {
-    background: #f9fafb;
-    border-color: #9ca3af;
-  }
 
   .safe-form {
     display: flex;
@@ -559,7 +349,6 @@
     color: #374151;
   }
 
-  .form-input,
   .form-select {
     padding: 0.75rem 0.875rem;
     border: 1px solid #d1d5db;
@@ -569,37 +358,10 @@
     transition: all 0.15s ease;
   }
 
-  .form-input:focus,
   .form-select:focus {
     outline: none;
     border-color: #6b7280;
     box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
-  }
-
-  .form-input::placeholder {
-    color: #9ca3af;
-  }
-
-  .load-safes-button {
-    padding: 0.75rem 1rem;
-    background: #1f2937;
-    border: none;
-    border-radius: 8px;
-    color: white;
-    font-size: 0.95rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    margin-top: 0.5rem;
-  }
-
-  .load-safes-button:hover:not(:disabled) {
-    background: #111827;
-  }
-
-  .load-safes-button:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
   }
 
   .signin-button {
@@ -673,25 +435,6 @@
     margin-top: 0.5rem;
     word-break: break-all;
     overflow-wrap: break-word;
-  }
-
-  .method-switcher {
-    margin-top: 0.75rem;
-    text-align: center;
-  }
-
-  .switch-method-button {
-    background: none;
-    border: none;
-    color: #6b7280;
-    font-size: 0.875rem;
-    cursor: pointer;
-    text-decoration: underline;
-    transition: color 0.15s ease;
-  }
-
-  .switch-method-button:hover {
-    color: #374151;
   }
 
   @media (max-width: 480px) {
