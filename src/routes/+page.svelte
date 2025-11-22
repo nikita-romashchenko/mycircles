@@ -2,28 +2,58 @@
   import type { Post as PostType } from "$lib/types"
   import { page } from "$app/stores"
   import PostCard from "$components/Post/PostCard.svelte"
-  import { onMount } from "svelte"
+  import { browser } from "$app/environment"
   import { globalState } from "$lib/stores/state.svelte"
 
   const DEFAULT_LIMIT = 10
 
-  let posts: PostType[] = []
-  let loading = false
-  let allLoaded = false
+  let posts = $state<PostType[]>([])
+  let loading = $state(false)
+  let allLoaded = $state(false)
+  let isLoggedIn = $state(false)
+  let initialPostsLoaded = $state(false)
 
-  $: posts = $page.data.posts
-  $: relations = $page.data.relationsWithProfiles
+  let skip = $derived(posts.length)
 
-  $: skip = posts.length
-
-  $: console.log("Posts updated:", posts)
-
-  onMount(() => {
-    // set data
-    console.log("Setting relation data in global state:", globalState.relations)
-    globalState.relations = relations
-    console.log("Current relation data in global state:", globalState.relations)
+  // Sync with page data
+  $effect(() => {
+    posts = $page.data.posts
+    isLoggedIn = $page.data.isLoggedIn
+    globalState.relations = $page.data.relationsWithProfiles
   })
+
+  // Load initial posts after page renders (non-blocking)
+  $effect(() => {
+    if (browser && !initialPostsLoaded) {
+      initialPostsLoaded = true
+      loadInitialPosts()
+    }
+  })
+
+  async function loadInitialPosts() {
+    if (loading) return
+    loading = true
+
+    try {
+      const str = `/api/posts?skip=0&limit=${DEFAULT_LIMIT}`
+      console.log("Loading initial posts from:", str)
+      const res = await fetch(str)
+      const data = await res.json()
+
+      console.log("Initial posts loaded:", data)
+
+      if (res.ok && data.posts && data.posts.length > 0) {
+        posts = data.posts
+        allLoaded = data.posts.length < DEFAULT_LIMIT
+      } else {
+        allLoaded = true
+      }
+    } catch (err) {
+      console.error("Error loading initial posts:", err)
+    } finally {
+      loading = false
+    }
+  }
 
   async function loadMore() {
     if (loading) return
@@ -36,8 +66,6 @@
       const data = await res.json()
 
       console.log("SERVER Fetched posts:", data)
-      console.log("SERVER data.success:", data.success)
-      console.log("SERVER data.posts.length:", data.posts.length)
 
       if (!res.ok || !data.posts.length) {
         allLoaded = true
@@ -53,9 +81,11 @@
     }
   }
 
-  let sentinel: HTMLDivElement
+  let sentinel = $state<HTMLDivElement>()
 
-  onMount(() => {
+  $effect(() => {
+    if (!sentinel) return
+
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) loadMore()
@@ -63,7 +93,7 @@
       { rootMargin: "200px" }, // trigger slightly before reaching bottom
     )
 
-    if (sentinel) observer.observe(sentinel)
+    observer.observe(sentinel)
 
     return () => observer.disconnect()
   })

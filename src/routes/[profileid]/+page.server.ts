@@ -39,11 +39,10 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
   const parentData = await parent()
   const session = parentData.session
   const form = await superValidate(zod(uploadMediaSchema))
-  const limit = DEFAULT_LIMIT
-  const skip = DEFAULT_SKIP
 
   try {
     // Fetch profile data ONLY from Circles RPC (don't use local DB for profile data)
+    // This is fast and should not block the page render
     console.log(
       `Fetching profile data from Circles RPC for address: ${normalizedAddress}`,
     )
@@ -63,11 +62,6 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
       }
     }
 
-    const result = await getProfileFeed(profileid, session, limit, skip)
-    if (result.error) {
-      throw new Error(result.error)
-    }
-
     // Create profile object from RPC data only
     const circlesProfile: CirclesRpcProfile = {
       ...rpcProfile,
@@ -78,15 +72,17 @@ export const load: PageServerLoad = async ({ params, parent, depends }) => {
     const isOwnProfile =
       session?.user?.safeAddress?.toLowerCase() === normalizedAddress
 
+    // Return profile immediately without waiting for posts
+    // Posts will be loaded on the client side after page renders
     return {
-      posts: result.posts as PostType[],
+      posts: [],
       profile: circlesProfile as any,
       isOwnProfile,
       isRpcProfile: true,
       form,
     }
   } catch (err: any) {
-    console.error("Error loading posts:", err)
+    console.error("Error loading profile:", err)
     return { posts: [], error: err.message, isRpcProfile: false }
   }
 }

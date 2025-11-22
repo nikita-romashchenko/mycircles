@@ -19,27 +19,23 @@ export const load: PageServerLoad = async ({ parent }) => {
     const limit = Number(5)
     const skip = Number(0)
 
-    if (session && session.user && session.user.safeAddress) {
-      console.log("SESSION: User is fully authorized.")
-      const result = await getPersonalizedFeed(limit, skip, session)
-      return {
-        posts: result.posts as PostType[],
-        skip,
-        limit,
-        relationsWithProfiles: result.relationsWithProfiles,
-      }
-    }
+    // Return immediately without loading posts - they will be loaded client-side
+    console.log(
+      "SESSION:",
+      session && session.user && session.user.safeAddress
+        ? "User is fully authorized."
+        : "No valid session / user / userSafeAddress",
+    )
 
-    console.log("SESSION: No valid session / user / userSafeAddress")
-    const result = await getPublicFeed(limit, skip)
     return {
-      posts: result.posts as PostType[],
-      relationsWithProfiles: [],
+      posts: [],
+      isLoggedIn: !!(session && session.user && session.user.safeAddress),
       skip,
       limit,
+      relationsWithProfiles: [],
     }
   } catch (err: any) {
-    console.error("Error loading posts:", err)
-    return { posts: [], error: err.message }
+    console.error("Error loading page:", err)
+    return { posts: [], error: err.message, isLoggedIn: false }
   }
 }

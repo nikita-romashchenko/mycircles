@@ -5,18 +5,16 @@
     Relation,
   } from "$lib/types"
   import { page } from "$app/stores"
-  import { onMount } from "svelte"
   import { browser } from "$app/environment"
-  import { invalidate } from "$app/navigation"
   import PostCard from "$components/Post/PostCard.svelte"
   import { Button } from "$lib/components/ui/button"
   import * as Avatar from "$lib/components/ui/avatar/index"
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
-  import { Item } from "$lib/components/ui/breadcrumb"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
   import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { DEFAULT_LIMIT } from "$lib/constants"
 
   const ITEMS_PER_LOAD = 20
 
@@ -49,6 +47,7 @@
   const MAX_DESCRIPTION_LENGTH = 150
 
   let skip = $derived(posts.length)
+  let initialPostsLoaded = $state(false)
 
   // Sync with page data
   $effect(() => {
@@ -59,6 +58,40 @@
     error = $page.data.error as string | null
     form = $page.data.form
   })
+
+  // Load initial posts after page renders (non-blocking)
+  $effect(() => {
+    if (browser && profile && !initialPostsLoaded && isRpcProfile) {
+      initialPostsLoaded = true
+      loadInitialPosts()
+    }
+  })
+
+  async function loadInitialPosts() {
+    if (!profile || loading) return
+    loading = true
+
+    try {
+      const address = (profile as CirclesRpcProfile).address
+      const str = `/api/posts/user?address=${address}&skip=0&limit=${ITEMS_PER_LOAD}`
+      console.log("Loading initial posts from:", str)
+      const res = await fetch(str)
+      const data = await res.json()
+
+      console.log("Initial posts loaded:", data)
+
+      if (res.ok && data.posts && data.posts.length > 0) {
+        posts = data.posts
+        allLoaded = data.posts.length < ITEMS_PER_LOAD
+      } else {
+        allLoaded = true
+      }
+    } catch (err) {
+      console.error("Error loading initial posts:", err)
+    } finally {
+      loading = false
+    }
+  }
 
   // Debug logging
   $effect(() => {
@@ -131,24 +164,6 @@
   const openUploadMediaModal = () => {
     console.log("Opening upload modal")
     uploadModalOpen = true
-  }
-
-  function sortRelations(
-    items: { relation: Relation; profile: CirclesRpcProfile | null }[],
-  ) {
-    return [...items].sort((a, b) => {
-      // Example 1: prioritize items that actually have profiles
-      if (a.profile && !b.profile) return -1
-      if (!a.profile && b.profile) return 1
-
-      // Example 2: sort alphabetically by displayName if both have profiles
-      if (a.profile && b.profile) {
-        return a.profile.address.localeCompare(b.profile.address)
-      }
-
-      // Example 3: fallback (keep original order)
-      return 0
-    })
   }
 
   async function fetchRelations(address: string, skipTrustCheck = false) {
@@ -289,25 +304,15 @@
     if (!profile) return
 
     try {
-      const response = await fetch("/api/circles/trust", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          targetAddress: (profile as CirclesRpcProfile).address,
-        }),
-      })
+      const targetAddress = (profile as CirclesRpcProfile).address
 
-      console.log("handleTrust: ", response.ok)
-
-      if (response.ok) {
-        // Refresh relations to update counts
-        await fetchRelations((profile as CirclesRpcProfile).address)
-        isTrusted = true
+      // Get avatar from store
+      const avatar = avatarStore.getAvatar()
+      if (!avatar) {
+        alert("Avatar not ready. Please wait a moment and try again.")
+        return
       }
 
-      const targetAddress = (profile as CirclesRpcProfile).address
       console.log(`🔵 Trusting ${targetAddress}...`)
 
       // Add trust using the SDK
@@ -329,24 +334,15 @@
     if (!profile) return
 
     try {
-      const response = await fetch("/api/circles/untrust", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          targetAddress: (profile as CirclesRpcProfile).address,
-        }),
-      })
-      console.log("handleUntrust: ", response.ok)
+      const targetAddress = (profile as CirclesRpcProfile).address
 
-      if (response.ok) {
-        // Refresh relations to update counts
-        await fetchRelations((profile as CirclesRpcProfile).address)
-        isTrusted = false
+      // Get avatar from store
+      const avatar = avatarStore.getAvatar()
+      if (!avatar) {
+        alert("Avatar not ready. Please wait a moment and try again.")
+        return
       }
 
-      const targetAddress = (profile as CirclesRpcProfile).address
       console.log(`🔴 Untrusting ${targetAddress}...`)
 
       // Remove trust using the SDK
