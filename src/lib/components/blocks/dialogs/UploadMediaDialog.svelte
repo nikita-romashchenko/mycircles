@@ -23,18 +23,20 @@
   let { open = $bindable(true), pageForm, profileAddress }: Props = $props()
   let isSubmitting = $state(false)
   let submitError = $state<string | null>(null)
-  let showBatchTransaction = $state(false)
   let batchTransactions = $state<any[]>([])
   let batchSummary = $state<any>(null)
   let isExecutingBatch = $state(false)
   let batchError = $state<string | null>(null)
+  let uploadPromise = $state<Promise<any> | null>(null)
 
-  async function buildBatchTransaction() {
+  async function buildAndExecuteBatchTransaction(formData: FormData) {
     if (!profileAddress) return
 
     try {
       batchError = null
       isExecutingBatch = true
+
+      // Build the transaction
       const res = await fetch("/api/circles/build-post-batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -47,27 +49,15 @@
       }
 
       const data = await res.json()
-      if (data.success) {
-        batchTransactions = data.transactions
-        batchSummary = data.summary
-        showBatchTransaction = true
-        console.log("✅ Batch transaction built:", data)
-      } else {
+      if (!data.success) {
         throw new Error(data.error || "Failed to build batch transaction")
       }
-    } catch (err: any) {
-      console.error("Error building batch transaction:", err)
-      batchError = err.message || "Failed to build batch transaction"
-    } finally {
-      isExecutingBatch = false
-    }
-  }
 
-  async function executeBatchTransaction() {
-    try {
-      batchError = null
-      isExecutingBatch = true
+      batchTransactions = data.transactions
+      batchSummary = data.summary
+      console.log("✅ Batch transaction built:", data)
 
+      // Immediately execute the transaction
       const { getRunner } = await import("$lib/stores/safeBrowserRunner.svelte")
 
       const runner = getRunner()
@@ -81,13 +71,22 @@
       const receipt = await runner.sendTransaction(batchTransactions as any)
 
       console.log("✅ Batch transaction executed:", receipt.transactionHash)
-      showBatchTransaction = false
+
+      // Wait for upload to complete in the background
+      if (uploadPromise) {
+        await uploadPromise
+      }
+
+      // Close dialog and refresh
       triggerPostReload()
       invalidate("posts")
       open = false
+
     } catch (err: any) {
       console.error("Error executing batch transaction:", err)
       batchError = err.message || "Failed to execute batch transaction"
+      submitError = err.message
+      isSubmitting = false
     } finally {
       isExecutingBatch = false
     }
@@ -95,16 +94,14 @@
 
   const { form, errors, enhance, reset } = superForm(pageForm, {
     onResult: ({ result }) => {
-      isSubmitting = false
       console.log("Form submission result:", result)
       if (result.type === "success") {
         console.log("✅ Post created successfully!")
         submitError = null
-        // Build batch transaction if posting to a profile
-        if (profileAddress) {
-          buildBatchTransaction()
-        } else {
-          // If no profile address, just close the dialog
+        // Upload completed, transaction should already be processed
+        // If no profileAddress, close the dialog here
+        if (!profileAddress) {
+          isSubmitting = false
           triggerPostReload()
           invalidate("posts")
           open = false
@@ -112,6 +109,8 @@
       } else if (result.type === "failure") {
         console.error("❌ Post creation failed:", result)
         submitError = result.data?.error || "Failed to create post"
+        isSubmitting = false
+        isExecutingBatch = false
       } else if (result.type === "redirect") {
         console.log("Redirecting to:", result.location)
       }
@@ -120,8 +119,47 @@
       console.error("❌ Form error:", result)
       submitError = "An unexpected error occurred"
       isSubmitting = false
+      isExecutingBatch = false
     },
   })
+
+  async function handleSubmit(event: SubmitEvent) {
+    event.preventDefault()
+
+    const formElement = event.target as HTMLFormElement
+    const formData = new FormData(formElement)
+
+    isSubmitting = true
+    submitError = null
+
+    // If posting to a profile, build and execute transaction immediately
+    if (profileAddress) {
+      // Start the upload in the background
+      uploadPromise = fetch(formElement.action, {
+        method: 'POST',
+        body: formData
+      }).then(async (res) => {
+        const contentType = res.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          const data = await res.json()
+          if (data.type === 'success') {
+            console.log("✅ Post created successfully!")
+          } else if (data.type === 'failure') {
+            throw new Error(data.data?.error || "Failed to create post")
+          }
+        }
+      }).catch((err) => {
+        console.error("Upload error:", err)
+        throw err
+      })
+
+      // Build and execute transaction immediately (don't wait for upload)
+      await buildAndExecuteBatchTransaction(formData)
+    } else {
+      // If no profile address, use normal form submission
+      formElement.requestSubmit()
+    }
+  }
   console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
   const caption = fieldProxy(form, "caption")
@@ -195,6 +233,7 @@
           isSubmitting = true
         },
       }}
+      onsubmit={handleSubmit}
       action="?/upload"
       enctype="multipart/form-data"
       method="POST"
@@ -254,63 +293,37 @@
       <!-- Upload button -->
       <div class="flex flex-col items-center justify-center mt-4">
         <Button
-          disabled={(!$form.caption && $form.media.length === 0) || isSubmitting}
-          type="submit">{isSubmitting ? "Creating..." : "Upload"}</Button
-        >
-      </div>
-    </form>
-
-    <!-- Batch Transaction Modal -->
-    {#if showBatchTransaction && batchSummary}
-      <div class="border-t pt-4 mt-4">
-        <div class="mb-4 p-3 bg-blue-50 border border-blue-300 rounded">
-          <h3 class="font-semibold text-blue-900 mb-2">Complete Your Post</h3>
-          <p class="text-sm text-blue-800 mb-3">
-            Sign the transaction to finalize your post and transfer CRC tokens.
-          </p>
-
-          <!-- Transaction Summary -->
-          <div class="bg-white rounded p-3 mb-3 text-sm">
-            <p class="font-semibold mb-2">Transaction Summary:</p>
-            <div class="space-y-1 text-gray-700">
-              <p>• Total Amount: <span class="font-mono">{batchSummary.totalAmount} CRC</span></p>
-              <p>• To Address: <span class="font-mono text-xs">{batchSummary.toAddress.slice(0, 6)}...{batchSummary.toAddress.slice(-4)}</span></p>
-              <p>• Wrapped (30%): <span class="font-mono">{batchSummary.wrappedAmount} CRC</span></p>
-              <p>• Unwrapped (70%): <span class="font-mono">{batchSummary.unwrappedAmount} CRC</span></p>
-              <p>• Steps: <span class="font-mono">{batchSummary.transactionCount}</span></p>
-            </div>
-          </div>
-
-          {#if batchError}
-            <div class="mb-3 p-2 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-              <p class="font-semibold">Error:</p>
-              <p>{batchError}</p>
-            </div>
+          disabled={(!$form.caption && $form.media.length === 0) || isSubmitting || isExecutingBatch}
+          type="submit">
+          {#if isExecutingBatch}
+            Signing Transaction...
+          {:else if isSubmitting}
+            Processing...
+          {:else}
+            Post
           {/if}
+        </Button>
+      </div>
 
-          <div class="flex gap-2">
-            <Button
-              onclick={executeBatchTransaction}
-              disabled={isExecutingBatch}
-              class="bg-blue-600 hover:bg-blue-700"
-            >
-              {isExecutingBatch ? "Processing..." : "Sign & Execute"}
-            </Button>
-            <Button
-              onclick={() => {
-                showBatchTransaction = false
-                triggerPostReload()
-                invalidate("posts")
-                open = false
-              }}
-              disabled={isExecutingBatch}
-              variant="outline"
-            >
-              Skip for Now
-            </Button>
+      {#if isExecutingBatch && batchSummary}
+        <div class="mt-4 p-3 bg-blue-50 border border-blue-300 rounded text-sm">
+          <p class="text-blue-800 mb-2">
+            Please sign the transaction in your wallet to complete the post.
+          </p>
+          <div class="space-y-1 text-gray-700 text-xs">
+            <p>• Amount: <span class="font-mono">{batchSummary.totalAmount} CRC</span></p>
+            <p>• Wrapped (30%): <span class="font-mono">{batchSummary.wrappedAmount} CRC</span></p>
+            <p>• Unwrapped (70%): <span class="font-mono">{batchSummary.unwrappedAmount} CRC</span></p>
           </div>
         </div>
-      </div>
-    {/if}
+      {/if}
+
+      {#if batchError}
+        <div class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
+          <p class="font-semibold">Transaction Error:</p>
+          <p>{batchError}</p>
+        </div>
+      {/if}
+    </form>
   </Dialog.Content>
 </Dialog.Root>
