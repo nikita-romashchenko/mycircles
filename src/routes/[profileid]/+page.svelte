@@ -72,6 +72,8 @@
     if (newAddress && newAddress !== lastProfileAddress) {
       lastProfileAddress = newAddress
       initialPostsLoaded = false
+      posts = [] // Clear old posts when switching profiles
+      allLoaded = false // Reset load state
     }
   })
 
@@ -491,7 +493,7 @@
     <!-- User info section -->
     <div class="flex flex-col">
       <div
-        class="flex flex-col items-center justify-center md:flex-row md:items-start md:justify-start mx-auto gap-6"
+        class="flex flex-col items-center justify-center mx-auto gap-6"
       >
         <div class="flex flex-col items-center">
           <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
@@ -514,7 +516,7 @@
           {/if}
         </div>
 
-        <div class="flex flex-col text-center md:text-left gap-1 md:w-[320px]">
+        <div class="flex flex-col text-center gap-1">
           <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
           {#if isOwnProfile}
             <span class="text-xs text-blue-500">(Your Profile)</span>
@@ -575,7 +577,7 @@
           {/if}
         </button>
       </div>
-      <hr class="mt-4 hidden md:block" />
+      <hr class="mt-4" />
     </div>
 
     <!-- Max Flow and Max Replenishable Amount section -->
@@ -638,7 +640,7 @@
 
     <!-- User posts section -->
     <div class="flex-1 mx-auto p-4 w-full">
-      {#if posts.length === 0}
+      {#if posts.length === 0 && !loading && initialPostsLoaded}
         <p class="text-center mt-4 text-gray-500">No posts available</p>
       {/if}
 

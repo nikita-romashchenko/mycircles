@@ -1,13 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="overflow-hidden h-full">
   <head>
     <meta charset="utf-8" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" href="%sveltekit.assets%/favicon.ico" />
-    <meta name="viewport" content="width=device-width" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+
+    <!-- PWA / Mobile App Settings -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
     %sveltekit.head%
   </head>
 
-  <body>
-    <div>%sveltekit.body%</div>
+  <body
+    style="container: body / inline-size"
+    class="no-scrollbar DESKTOP_VIEWPORT relative h-[100dvh] overscroll-none bg-background text-foreground"
+  >
+    <div class="h-full">%sveltekit.body%</div>
   </body>
 </html>

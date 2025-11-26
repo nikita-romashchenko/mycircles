@@ -174,7 +174,7 @@
 
 <Dialog.Root onOpenChange={handleOpenChange} bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="max-h-[90vh] overflow-auto">
+  <Dialog.Content class="DESKTOP_VIEWPORT max-h-[90vh] overflow-auto">
     <Dialog.Header>
       <Dialog.Title>Create Post</Dialog.Title>
       <!-- <Dialog.Description>

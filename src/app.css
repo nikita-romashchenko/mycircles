@@ -6,6 +6,8 @@
 
 :root {
   --radius: 0.625rem;
+  --color-beige-10: #faf5f1;
+  --color-bg-subtle: var(--color-beige-10);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -111,9 +113,28 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Desktop viewport constraint - makes desktop look like mobile app */
+.DESKTOP_VIEWPORT {
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Hide scrollbar while keeping functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
+  }
+  html {
+    background-color: var(--color-bg-subtle);
   }
   body {
     @apply bg-background text-foreground;
