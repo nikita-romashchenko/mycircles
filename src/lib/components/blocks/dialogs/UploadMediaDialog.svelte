@@ -9,6 +9,8 @@
   import { invalidate } from "$app/navigation"
   import { triggerPostReload } from "$lib/stores/postReload.svelte"
   import { page } from "$app/stores"
+  import ImageIcon from "@lucide/svelte/icons/image"
+  import XIcon from "@lucide/svelte/icons/x"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
@@ -28,6 +30,67 @@
   let isExecutingBatch = $state(false)
   let batchError = $state<string | null>(null)
   let uploadPromise = $state<Promise<any> | null>(null)
+  let wasOpen = $state(false)
+
+  // Balance and cost information
+  let maxReplenishableAmount = $state<string | null>(null)
+  let loadingBalance = $state(false)
+  let showBalanceDetails = $state(false)
+  const POST_COST_CRC = 5 // Cost per post in CRC
+  let availablePosts = $derived(
+    maxReplenishableAmount
+      ? Math.floor(Number(maxReplenishableAmount) / 1e18 / POST_COST_CRC)
+      : 0
+  )
+
+  // Fetch balance information
+  async function fetchBalanceInfo() {
+    if (!profileAddress) return
+
+    loadingBalance = true
+    try {
+      const res = await fetch(`/api/circles/max-replenishable-amount?to=${encodeURIComponent(profileAddress)}`)
+      if (res.ok) {
+        const data = await res.json()
+        if (data.success) {
+          maxReplenishableAmount = data.maxReplenishableAmount
+          console.log(`Available balance: ${Number(maxReplenishableAmount) / 1e18} CRC, Can make ${availablePosts} posts`)
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching balance:", err)
+    } finally {
+      loadingBalance = false
+    }
+  }
+
+  // Reset all states when dialog transitions from closed to open
+  $effect(() => {
+    if (open && !wasOpen) {
+      console.log("Dialog opened, resetting states. Current state:", { isSubmitting, isExecutingBatch })
+      isSubmitting = false
+      isExecutingBatch = false
+      submitError = null
+      batchError = null
+      uploadPromise = null
+      console.log("States after reset:", { isSubmitting, isExecutingBatch })
+
+      // Fetch balance info when posting to a profile
+      if (profileAddress) {
+        fetchBalanceInfo()
+      }
+    }
+    wasOpen = open
+  })
+
+  // Debug logging for state changes
+  $effect(() => {
+    console.log("isSubmitting changed to:", isSubmitting)
+  })
+
+  $effect(() => {
+    console.log("isExecutingBatch changed to:", isExecutingBatch)
+  })
 
   async function buildAndExecuteBatchTransaction(formData: FormData) {
     if (!profileAddress) return
@@ -77,6 +140,10 @@
         await uploadPromise
       }
 
+      // Reset states before closing
+      isSubmitting = false
+      isExecutingBatch = false
+
       // Close dialog and refresh
       triggerPostReload()
       invalidate("posts")
@@ -87,7 +154,6 @@
       batchError = err.message || "Failed to execute batch transaction"
       submitError = err.message
       isSubmitting = false
-    } finally {
       isExecutingBatch = false
     }
   }
@@ -124,12 +190,15 @@
   })
 
   async function handleSubmit(event: SubmitEvent) {
+    console.log("handleSubmit called, profileAddress:", profileAddress)
     // Only intercept if posting to a profile
     if (!profileAddress) {
+      console.log("No profileAddress, letting superform handle it")
       return // Let superform handle it
     }
 
     event.preventDefault()
+    console.log("Setting isSubmitting to true")
 
     const formElement = event.target as HTMLFormElement
     const formData = new FormData(formElement)
@@ -203,18 +272,25 @@
       // Reset the form when the dialog is closed
       reset()
       submitError = null
+      isSubmitting = false
+      isExecutingBatch = false
+      batchError = null
+      uploadPromise = null
       console.log("form reset in UploadMediaDialog:", $form)
     } else {
       // Clear error when opening dialog
       submitError = null
+      isSubmitting = false
+      isExecutingBatch = false
+      batchError = null
     }
   }
 </script>
 
 <Dialog.Root onOpenChange={handleOpenChange} bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="DESKTOP_VIEWPORT !top-0 !translate-y-0 h-[100dvh] w-full !rounded-none z-[60] overflow-auto">
-    <Dialog.Header>
+  <Dialog.Content class="DESKTOP_VIEWPORT !fixed !top-0 !translate-y-0 !left-[50%] !-translate-x-[50%] h-[100dvh] w-full !rounded-none z-[60] overflow-auto flex flex-col">
+    <Dialog.Header class="w-full">
       <Dialog.Title>Create Post</Dialog.Title>
       <!-- <Dialog.Description>
         Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ratione
@@ -229,19 +305,14 @@
       </div>
     {/if}
     <form
-      use:enhance={{
-        onSubmit: () => {
-          isSubmitting = true
-        },
-      }}
+      use:enhance
       onsubmit={handleSubmit}
       action="?/upload"
       enctype="multipart/form-data"
       method="POST"
-      class="flex flex-col gap-4 p-4"
+      class="flex flex-col gap-4 p-4 pt-2 w-full"
     >
       <!-- Text editor -->
-      <Label for="caption">Text</Label>
       <CaptionEditor
         bind:this={captionEditorRef}
         {theme}
@@ -252,47 +323,32 @@
         <p class="error">{$errors.caption[0]}</p>
       {/if}
 
-      <!-- Media upload -->
-      <Label for="media">Media</Label>
-      <div
-        class="relative w-full h-40 border-2 border-dashed border-gray-300 rounded overflow-hidden cursor-pointer flex items-center justify-center"
-      >
-        <Input
-          type="file"
-          multiple
-          name="media"
-          accept="image/*,video/*"
-          bind:files={$files}
-          class="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-        />
-        {#if $files.length > 0}
-          <div class="absolute inset-0 p-2 grid grid-cols-3 gap-2 overflow-auto">
-            {#each previews as src, i}
-              <!-- TODO: this is not good for accessibility -->
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-              <img
-                {src}
-                alt="Uploaded media"
-                class="w-full aspect-square object-cover rounded border hover:grayscale-50 transition-all"
-                loading="lazy"
-                onclick={() => removeFile(i)}
-                title="Click to remove"
-              />
-            {/each}
-          </div>
-        {:else}
-          <span class="text-gray-400 z-10 pointer-events-none"
-            >Click to select photos</span
+      <!-- Media upload and Post button on same line -->
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <label
+            for="media-upload"
+            class="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg cursor-pointer transition-colors"
+            title="Add media"
           >
-        {/if}
-      </div>
-      {#if $errors.media}
-        <p class="error">{$errors.media[0]}</p>
-      {/if}
+            <ImageIcon class="w-5 h-5 text-gray-600" />
+            <span class="text-sm text-gray-600">Add Media</span>
+          </label>
+          <Input
+            id="media-upload"
+            type="file"
+            multiple
+            name="media"
+            accept="image/*,video/*"
+            bind:files={$files}
+            class="hidden"
+          />
+          {#if $files.length > 0}
+            <span class="text-sm text-gray-600">{$files.length} file{$files.length === 1 ? '' : 's'} selected</span>
+          {/if}
+        </div>
 
-      <!-- Upload button -->
-      <div class="flex flex-col items-center justify-center mt-4">
+        <!-- Post button -->
         <Button
           disabled={(!$form.caption && $form.media.length === 0) || isSubmitting || isExecutingBatch}
           type="submit">
@@ -306,23 +362,71 @@
         </Button>
       </div>
 
-      {#if isExecutingBatch && batchSummary}
-        <div class="mt-4 p-3 bg-blue-50 border border-blue-300 rounded text-sm">
-          <p class="text-blue-800 mb-2">
-            Please sign the transaction in your wallet to complete the post.
-          </p>
-          <div class="space-y-1 text-gray-700 text-xs">
-            <p>• Amount: <span class="font-mono">{batchSummary.totalAmount} CRC</span></p>
-            <p>• Wrapped (30%): <span class="font-mono">{batchSummary.wrappedAmount} CRC</span></p>
-            <p>• Unwrapped (70%): <span class="font-mono">{batchSummary.unwrappedAmount} CRC</span></p>
-          </div>
+      <!-- Media previews (if any files selected) -->
+      {#if $files.length > 0}
+        <div class="grid grid-cols-4 gap-2">
+          {#each previews as src, i}
+            <div class="relative group">
+              <img
+                {src}
+                alt="Uploaded media"
+                class="w-full aspect-square object-cover rounded border"
+                loading="lazy"
+              />
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div
+                class="absolute top-1 right-1 bg-red-500 hover:bg-red-600 rounded-full p-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                onclick={() => removeFile(i)}
+                title="Remove"
+              >
+                <XIcon class="w-3 h-3 text-white" />
+              </div>
+            </div>
+          {/each}
         </div>
+      {/if}
+
+      {#if $errors.media}
+        <p class="error">{$errors.media[0]}</p>
       {/if}
 
       {#if batchError}
         <div class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
           <p class="font-semibold">Transaction Error:</p>
           <p>{batchError}</p>
+        </div>
+      {/if}
+
+      <!-- Balance and cost information (only shown when posting to a profile) -->
+      {#if profileAddress}
+        <div class="mt-4">
+          {#if loadingBalance}
+            <p class="text-xs text-gray-500">Loading balance...</p>
+          {:else if maxReplenishableAmount}
+            <div class="text-xs text-gray-500">
+              <p>
+                You can publish {availablePosts} {availablePosts === 1 ? 'post' : 'posts'} on this page.
+                <button
+                  type="button"
+                  onclick={() => showBalanceDetails = !showBalanceDetails}
+                  class="text-gray-500 hover:text-gray-700 underline ml-1"
+                >
+                  {showBalanceDetails ? 'show less' : 'read more'}
+                </button>
+              </p>
+              {#if showBalanceDetails}
+                <p class="mt-2">
+                  There are {(Number(maxReplenishableAmount) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })} personal CRC of this user available to you, the post costs {POST_COST_CRC} CRC which results in {availablePosts} {availablePosts === 1 ? 'post' : 'posts'} possible to make on this user page.
+                </p>
+              {/if}
+              {#if availablePosts === 0}
+                <p class="mt-2 text-yellow-700">
+                  ⚠️ Insufficient balance to make a post. You need at least {POST_COST_CRC} CRC.
+                </p>
+              {/if}
+            </div>
+          {/if}
         </div>
       {/if}
     </form>
