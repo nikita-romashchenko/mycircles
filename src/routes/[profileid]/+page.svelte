@@ -54,10 +54,6 @@
   let sentinel = $state<HTMLDivElement>()
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
-  let maxReplenishableAmount = $state<string | null>(null)
-  let maxReplenishableLoading = $state(false)
-  let maxFlow = $state<string | null>(null)
-  let maxFlowLoading = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 150
 
@@ -314,70 +310,6 @@
       loadingMoreProfiles = false
     }
   }
-  async function fetchMaxReplenishableAmount(toAddress: string) {
-    if (!toAddress) return
-
-    try {
-      maxReplenishableLoading = true
-      const url = `/api/circles/max-replenishable-amount?to=${encodeURIComponent(toAddress)}`
-      console.log(`Fetching max replenishable amount to: ${toAddress}`)
-      const res = await fetch(url)
-
-      if (!res.ok) {
-        console.error(
-          "Failed to fetch max replenishable amount:",
-          res.statusText,
-        )
-        return
-      }
-
-      const data = await res.json()
-      if (data.success) {
-        maxReplenishableAmount = data.maxReplenishableAmount
-        console.log(
-          `✅ Max replenishable amount: ${data.maxReplenishableAmount}`,
-        )
-        console.log(
-          `  - Max flow: ${data.maxFlow}, Current balance: ${data.currentBalance}`,
-        )
-      } else {
-        console.error("Max replenishable amount error:", data.error)
-      }
-    } catch (err) {
-      console.error("Error fetching max replenishable amount:", err)
-    } finally {
-      maxReplenishableLoading = false
-    }
-  }
-
-  async function fetchMaxFlowToAvatar(toAddress: string) {
-    if (!toAddress) return
-
-    try {
-      maxFlowLoading = true
-      const url = `/api/circles/max-flow?to=${encodeURIComponent(toAddress)}`
-      console.log(`Fetching max flow to avatar: ${toAddress}`)
-      const res = await fetch(url)
-
-      if (!res.ok) {
-        console.error("Failed to fetch max flow:", res.statusText)
-        return
-      }
-
-      const data = await res.json()
-      if (data.success) {
-        maxFlow = data.maxFlow
-        console.log(`✅ Max flow to avatar: ${data.maxFlow}`)
-      } else {
-        console.error("Max flow error:", data.error)
-      }
-    } catch (err) {
-      console.error("Error fetching max flow:", err)
-    } finally {
-      maxFlowLoading = false
-    }
-  }
-
   async function checkTrustStatusFromAvatar(targetAddress: string) {
     try {
       // Wait for avatar to be ready with retry logic
@@ -500,10 +432,6 @@
       const address = (profile as CirclesRpcProfile).address
       if (address) {
         fetchRelations(address)
-        // Fetch max replenishable amount for this token
-        fetchMaxReplenishableAmount(address)
-        // Fetch max flow from current user to this profile
-        fetchMaxFlowToAvatar(address)
       }
     }
   })
@@ -624,48 +552,6 @@
       </div>
       <hr class="mt-4" />
     </div>
-
-    <!-- Max Flow and Max Replenishable Amount section -->
-    {#if $pageStore.data.session?.user?.safeAddress && !isOwnProfile && (maxFlow || maxFlowLoading || maxReplenishableAmount || maxReplenishableLoading)}
-      <div class="mt-6 flex flex-col items-center justify-center gap-4 px-4">
-        <!-- Max Flow to Avatar -->
-        {#if maxFlow || maxFlowLoading}
-          <div class="flex flex-col items-center justify-center gap-2">
-            <p class="text-sm text-gray-600">Max flow to this avatar:</p>
-            {#if maxFlowLoading}
-              <p class="text-gray-500">Loading...</p>
-            {:else if maxFlow}
-              <p class="text-lg font-semibold text-blue-600">
-                {Number(maxFlow) / 1e18 > 1e15
-                  ? "∞"
-                  : (Number(maxFlow) / 1e18).toLocaleString("en-US", {
-                      maximumFractionDigits: 2,
-                    })}
-              </p>
-            {/if}
-          </div>
-        {/if}
-
-        <!-- Max Replenishable Amount -->
-        {#if maxReplenishableAmount || maxReplenishableLoading}
-          <div class="flex flex-col items-center justify-center gap-2">
-            <p class="text-sm text-gray-600">Max replenishable amount:</p>
-            {#if maxReplenishableLoading}
-              <p class="text-gray-500">Loading...</p>
-            {:else if maxReplenishableAmount}
-              <p class="text-lg font-semibold text-green-600">
-                {Number(maxReplenishableAmount) / 1e18 > 1e15
-                  ? "∞"
-                  : (Number(maxReplenishableAmount) / 1e18).toLocaleString(
-                      "en-US",
-                      { maximumFractionDigits: 2 },
-                    )}
-              </p>
-            {/if}
-          </div>
-        {/if}
-      </div>
-    {/if}
 
     <!-- User posts section -->
     <div class="flex-1 mx-auto p-4 w-full">

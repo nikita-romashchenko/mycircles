@@ -108,8 +108,9 @@ export const actions = {
       const session = await locals.auth()
       const media = formData.getAll("media") as File[]
       const caption = formData.get("caption") as string
+      const transactionHash = formData.get("transactionHash") as string | null
 
-      console.log(`Upload attempt - caption: ${caption ? "yes" : "no"}, media files: ${media.length}`)
+      console.log(`Upload attempt - caption: ${caption ? "yes" : "no"}, media files: ${media.length}, txHash: ${transactionHash || "none"}`)
 
       // Filter empty files
       const validMedia = media.filter((file) => file.size > 0)
@@ -178,6 +179,14 @@ export const actions = {
           ? normalizedTargetAddress
           : undefined
 
+      // Require transaction hash for ALL posts (costs 5 CRC)
+      if (!transactionHash) {
+        return fail(400, {
+          form,
+          error: "Transaction required to create a post. Please try again."
+        })
+      }
+
       let circlesProfile: CirclesRpcProfile | null = null
       if (postToAddress) {
         const rpcProfile = await fetchCirclesProfile(postToAddress)
@@ -203,6 +212,7 @@ export const actions = {
         creatorAddress: creatorAddress,
         postedToAddress: postToAddress,
         ...(circlesProfile ? { postedToProfile: circlesProfile } : {}),
+        ...(transactionHash ? { transactionHash } : {}),
         // Old fields - kept for backward compatibility
         userId: session?.user?.profileId,
         postedTo: undefined, // Will be deprecated

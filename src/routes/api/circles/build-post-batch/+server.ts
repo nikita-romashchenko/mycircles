@@ -6,8 +6,6 @@ import { Profile } from "$lib/models/Profile"
 import { Sdk } from "@aboutcircles/sdk"
 import { TransferBuilder } from "@aboutcircles/sdk-transfers"
 import { CirclesConverter } from "@aboutcircles/sdk-utils"
-import type { CirclesType } from "@aboutcircles/sdk-types"
-import { Interface } from "ethers"
 
 // Connect to MongoDB
 await mongoose
@@ -30,12 +28,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       return json({ error: "Missing 'toAddress' parameter" }, { status: 400 })
     }
 
-    const burnerAddress = env.BURNER_ADDRESS
-    
-    if (!burnerAddress) {
-      return json({ error: "Burner address not configured" }, { status: 500 })
-    }
-
     // Get the current user's profile to get their safe address
     const userProfile = await Profile.findById(session.user.profileId)
 
@@ -48,41 +40,25 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 
     const fromAddress = userProfile.safeAddress.toLowerCase() as `0x${string}`
     const toAddr = toAddress.toLowerCase() as `0x${string}`
-    const burner = burnerAddress.toLowerCase() as `0x${string}`
 
     // Initialize SDK
     const sdk = new Sdk()
     const transferBuilder = new TransferBuilder(sdk.core)
 
-    // Amount to transfer: 10 CRC
-    const crcAmount = 10
+    // Amount to burn: 1 CRC per post
+    const crcAmount = 1
     const attoAmount = CirclesConverter.circlesToAttoCircles(crcAmount)
 
-    // Calculate wrapped (30%) and unwrapped (70%) amounts
-    const wrappedAmount = attoAmount * 10n / 30n;
-    const unwrappedAmount = attoAmount - wrappedAmount
-
-    // Convert wrapped amount from demurrage to inflationary (actual token amount)
-    // This is the actual amount of wrapped tokens that will be transferred
-    const wrappedAmountInflationary = CirclesConverter.attoCirclesToAttoStaticCircles(
-      wrappedAmount
-    )
-
-    console.log(`Building batch transaction for post:`)
+    console.log(`Building burn transaction for post:`)
     console.log(`- From: ${fromAddress}`)
-    console.log(`- To: ${toAddr}`)
-    console.log(`- Burner: ${burner}`)
-    console.log(`- Total CRC: ${crcAmount}`)
-    console.log(`- Wrapped (30% demurrage): ${CirclesConverter.attoCirclesToCircles(wrappedAmount)} CRC`)
-    console.log(`- Wrapped (30% inflationary): ${CirclesConverter.attoCirclesToCircles(wrappedAmountInflationary)} CRC`)
-    console.log(`- Unwrapped (70%): ${CirclesConverter.attoCirclesToCircles(unwrappedAmount)} CRC`)
+    console.log(`- Token: ${toAddr}`)
+    console.log(`- Amount to burn: ${crcAmount} CRC`)
 
     // Build transactions
-    // User pays to post: transfer 10 CRC total from user account
-    // Split: 3 CRC wrapped (ERC20 direct transfer) to burner, 7 CRC unwrapped to profile
+    // User pays to post: burn 1 CRC total from user account
+    // This transaction is required for ALL posts (own profile or others)
 
-    // 0. Get enough tokens on the account first
-    console.log("wrap", attoAmount)
+    // 0. Get enough tokens on the account first (replenish/convert if needed)
     const replenishTokensForTransferTxs = await transferBuilder.constructAdvancedTransfer(
       fromAddress,
       fromAddress,
@@ -93,64 +69,23 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       }
     )
 
-    // 1. Wrap the 30% amount using SDK core
-    // The wrap transaction converts demurrage tokens to wrapped (inflationary) tokens
-    // CirclesType: 0 = Demurrage, 1 = Inflation
-    const CirclesType_Inflationary = 1 // CirclesType.Demurrage
+    // 1. Burn the tokens using SDK core burn function
+    // Burns the specified amount of the profile's personal tokens
+    // Convert address to token ID (uint256)
+    const tokenId = BigInt(toAddr)
 
-    // Get the wrapper address for the target profile's demurrage wrapper
-    const wrappedTokenAddress = await sdk.core.liftERC20.erc20Circles(
-      CirclesType_Inflationary,
-      toAddr // Get wrapper address for the profile we're posting to
-    )
-    // @todo throw error if there wrapped token address is zero
-    // Wrap the 30% amount - wrapping the target profile's tokens
-    const wrapTokensTx = sdk.core.hubV2.wrap(
-      toAddr, // Avatar to wrap (the profile's tokens)
-      wrappedAmount, // Amount to wrap (demurrage amount)
-      CirclesType_Inflationary // Wrap as demurrage (will become inflationary ERC20)
+    const burnTx = sdk.core.hubV2.burn(
+      tokenId,       // Token ID (profile address as uint256)
+      attoAmount,    // Amount to burn
+      "0x"          // Empty data
     )
 
-    const erc20Interface = new Interface([
-      "function transfer(address to, uint256 amount) public returns (bool)",
-    ])
-
-    const wrappedTransferTx = {
-      to: wrappedTokenAddress,
-      data: erc20Interface.encodeFunctionData("transfer", [
-        burner,
-        wrappedAmountInflationary.toString(), // Use inflationary amount for actual transfer
-      ]),
-      value: BigInt(0),
-    }
-
-    // 3. Direct ERC1155 safeTransferFrom for unwrapped amount (70%)
-    // Transfer the profile's personal token (ERC1155) through HubV2
-    const erc1155Interface = new Interface([
-      "function safeTransferFrom(address from, address to, uint256 id, uint256 amount, bytes data) external",
-    ])
-
-    // The token ID is the profile's address converted to uint256(uint160(toAddress))
-    const tokenId = BigInt(toAddr) // Converts address to uint256
-    //@todo the calculations of the wrapped token are worong but thats fine
-    const unwrappedTransferTx = {
-      to: sdk.core.hubV2.address, // HubV2 contract address - handles ERC1155 transfers
-      data: erc1155Interface.encodeFunctionData("safeTransferFrom", [
-        fromAddress,
-        toAddr,
-        tokenId, // Token ID is the profile address
-        unwrappedAmount.toString(),
-        "0x", // Empty data
-      ]),
-      value: BigInt(0),
-    }
+    console.log(`Built burn transaction for ${CirclesConverter.attoCirclesToCircles(attoAmount)} CRC of token ${toAddr}`)
 
     // Combine all transactions in order
     const allTransactions = [
       ...replenishTokensForTransferTxs,
-      wrapTokensTx,
-      wrappedTransferTx,
-      unwrappedTransferTx
+      burnTx
     ]
 
     console.log(`Built batch transaction with ${allTransactions.length} transaction steps`)
@@ -166,11 +101,8 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       summary: {
         fromAddress,
         toAddress: toAddr,
-        burnerAddress: burner,
         totalAmount: CirclesConverter.attoCirclesToCircles(attoAmount),
-        wrappedAmountDemurrage: CirclesConverter.attoCirclesToCircles(wrappedAmount),
-        wrappedAmountInflationary: CirclesConverter.attoCirclesToCircles(wrappedAmountInflationary),
-        unwrappedAmount: CirclesConverter.attoCirclesToCircles(unwrappedAmount),
+        burnedAmount: CirclesConverter.attoCirclesToCircles(attoAmount),
         transactionCount: allTransactions.length,
       },
     })

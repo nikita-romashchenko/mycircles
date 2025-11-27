@@ -29,14 +29,13 @@
   let batchSummary = $state<any>(null)
   let isExecutingBatch = $state(false)
   let batchError = $state<string | null>(null)
-  let uploadPromise = $state<Promise<any> | null>(null)
   let wasOpen = $state(false)
 
   // Balance and cost information
   let maxReplenishableAmount = $state<string | null>(null)
   let loadingBalance = $state(false)
   let showBalanceDetails = $state(false)
-  const POST_COST_CRC = 5 // Cost per post in CRC
+  const POST_COST_CRC = 1 // Cost per post in CRC
   let availablePosts = $derived(
     maxReplenishableAmount
       ? Math.floor(Number(maxReplenishableAmount) / 1e18 / POST_COST_CRC)
@@ -72,7 +71,6 @@
       isExecutingBatch = false
       submitError = null
       batchError = null
-      uploadPromise = null
       console.log("States after reset:", { isSubmitting, isExecutingBatch })
 
       // Fetch balance info when posting to a profile
@@ -92,13 +90,12 @@
     console.log("isExecutingBatch changed to:", isExecutingBatch)
   })
 
-  async function buildAndExecuteBatchTransaction(formData: FormData) {
-    if (!profileAddress) return
+  async function buildAndExecuteBatchTransaction(formData: FormData): Promise<string> {
+    if (!profileAddress) throw new Error("No profile address provided")
+
+    isExecutingBatch = true
 
     try {
-      batchError = null
-      isExecutingBatch = true
-
       // Build the transaction
       const res = await fetch("/api/circles/build-post-batch", {
         method: "POST",
@@ -120,7 +117,7 @@
       batchSummary = data.summary
       console.log("✅ Batch transaction built:", data)
 
-      // Immediately execute the transaction
+      // Execute the transaction
       const { getRunner } = await import("$lib/stores/safeBrowserRunner.svelte")
 
       const runner = getRunner()
@@ -134,52 +131,22 @@
       const receipt = await runner.sendTransaction(batchTransactions as any)
 
       console.log("✅ Batch transaction executed:", receipt.transactionHash)
-
-      // Wait for upload to complete in the background
-      if (uploadPromise) {
-        await uploadPromise
-      }
-
-      // Reset states before closing
-      isSubmitting = false
       isExecutingBatch = false
 
-      // Close dialog and refresh
-      triggerPostReload()
-      invalidate("posts")
-      open = false
+      return receipt.transactionHash
 
     } catch (err: any) {
       console.error("Error executing batch transaction:", err)
-      batchError = err.message || "Failed to execute batch transaction"
-      submitError = err.message
-      isSubmitting = false
       isExecutingBatch = false
+      throw err // Re-throw to be handled by caller
     }
   }
 
   const { form, errors, enhance, reset } = superForm(pageForm, {
-    onResult: ({ result }) => {
-      console.log("Form submission result:", result)
-      if (result.type === "success") {
-        console.log("✅ Post created successfully!")
-        submitError = null
-        // Upload completed, transaction should already be processed
-        // If no profileAddress, close the dialog here
-        if (!profileAddress) {
-          isSubmitting = false
-          triggerPostReload()
-          invalidate("posts")
-          open = false
-        }
-      } else if (result.type === "failure") {
-        console.error("❌ Post creation failed:", result)
-        submitError = result.data?.error || "Failed to create post"
-        isSubmitting = false
-        isExecutingBatch = false
-      } else if (result.type === "redirect") {
-        console.log("Redirecting to:", result.location)
-      }
+    onSubmit: ({ cancel }) => {
+      // Always cancel superform submission - we handle all submissions manually
+      console.log("Cancelling superform submission - will handle manually")
+      cancel()
     },
     onError: ({ result }) => {
       console.error("❌ Form error:", result)
@@ -190,45 +157,57 @@
   })
 
   async function handleSubmit(event: SubmitEvent) {
-    console.log("handleSubmit called, profileAddress:", profileAddress)
-    // Only intercept if posting to a profile
-    if (!profileAddress) {
-      console.log("No profileAddress, letting superform handle it")
-      return // Let superform handle it
-    }
-
     event.preventDefault()
-    console.log("Setting isSubmitting to true")
+    console.log("handleSubmit called, profileAddress:", profileAddress)
 
     const formElement = event.target as HTMLFormElement
     const formData = new FormData(formElement)
 
     isSubmitting = true
     submitError = null
+    batchError = null  // Clear previous batch errors
 
-    // Start the upload in the background
-    uploadPromise = fetch(formElement.action, {
-      method: 'POST',
-      body: formData
-    }).then(async (res) => {
+    try {
+      // All posts require a transaction (costs 5 CRC)
+      if (!profileAddress) {
+        throw new Error("No profile address found")
+      }
+
+      console.log("Executing transaction for post (costs 5 CRC)")
+      const txHash = await buildAndExecuteBatchTransaction(formData)
+      console.log("Transaction successful, now uploading post with tx hash:", txHash)
+      formData.append('transactionHash', txHash)
+
+      // Upload the post
+      const res = await fetch(formElement.action, {
+        method: 'POST',
+        body: formData
+      })
+
       const contentType = res.headers.get('content-type')
       if (contentType?.includes('application/json')) {
         const data = await res.json()
         if (data.type === 'success') {
           console.log("✅ Post created successfully!")
+
+          // Reset states and close dialog
+          isSubmitting = false
+          isExecutingBatch = false
+
+          // Refresh and close
+          triggerPostReload()
+          invalidate("posts")
+          open = false
         } else if (data.type === 'failure') {
           throw new Error(data.data?.error || "Failed to create post")
         }
       }
-    }).catch((err) => {
-      console.error("Upload error:", err)
-      submitError = err.message
+    } catch (err: any) {
+      console.error("Error during post creation:", err)
+      submitError = err.message || "Failed to create post"
       isSubmitting = false
-      throw err
-    })
-
-    // Build and execute transaction immediately (don't wait for upload)
-    await buildAndExecuteBatchTransaction(formData)
+      isExecutingBatch = false
+    }
   }
   console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
@@ -275,7 +254,6 @@
       isSubmitting = false
       isExecutingBatch = false
       batchError = null
-      uploadPromise = null
       console.log("form reset in UploadMediaDialog:", $form)
     } else {
       // Clear error when opening dialog
@@ -298,12 +276,6 @@
         nesciunt nemo earum repellat atque maiores quas obcaecati tenetur.
       </Dialog.Description> -->
     </Dialog.Header>
-    {#if submitError}
-      <div class="mx-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-        <p class="font-semibold">Error:</p>
-        <p>{submitError}</p>
-      </div>
-    {/if}
     <form
       use:enhance
       onsubmit={handleSubmit}
@@ -391,10 +363,10 @@
         <p class="error">{$errors.media[0]}</p>
       {/if}
 
-      {#if batchError}
+      {#if batchError || submitError}
         <div class="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded text-sm">
-          <p class="font-semibold">Transaction Error:</p>
-          <p>{batchError}</p>
+          <p class="font-semibold">Error:</p>
+          <p>{batchError || submitError}</p>
         </div>
       {/if}
 
