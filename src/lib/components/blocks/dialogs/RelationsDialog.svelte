@@ -88,7 +88,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="h-[70vh] md:h-[40vh] max-h-[90vh] w-full max-w-full flex flex-col overflow-hidden">
+  <Dialog.Content class="DESKTOP_VIEWPORT !top-0 !translate-y-0 h-[100dvh] w-full !rounded-none z-[60] flex flex-col overflow-hidden">
     <Dialog.Header class="flex-shrink-0">
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
@@ -107,7 +107,7 @@
         {#each tabs as tab, i}
           <button
             type="button"
-            class="px-2 md:px-4 py-2 -mb-px border-b-2 text-xs md:text-sm font-medium whitespace-nowrap
+            class="px-2 py-2 -mb-px border-b-2 text-xs font-medium whitespace-nowrap
                    {i === activeTab
               ? 'border-blue-500 text-blue-600'
               : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}"
@@ -121,7 +121,7 @@
       <!-- Tab content -->
       <div
         bind:this={scrollContainer}
-        class="p-2 md:p-4 flex-1 overflow-auto w-full min-w-0"
+        class="p-2 flex-1 overflow-auto w-full min-w-0"
       >
         {#if contents[activeTab]}
           {#if contents[activeTab].length === 0}
@@ -131,11 +131,11 @@
               {#if !relation.profile}{:else}
                 <a
                   href={`/${relation.profile.address}`}
-                  class="my-2 flex flex-row gap-2 md:gap-4 items-center border border-gray-300 rounded-md p-2 w-full overflow-hidden"
+                  class="my-2 flex flex-row gap-2 items-center border border-gray-300 rounded-md p-2 w-full overflow-hidden"
                   onclick={() => onLinkClick?.()}
                 >
                   <Avatar.Root
-                    class="rounded-full object-cover flex-shrink-0 w-10 h-10 md:w-12 md:h-12"
+                    class="rounded-full object-cover flex-shrink-0 w-10 h-10"
                   >
                     <Avatar.Fallback class="rounded-full object-cover"
                       ><ImageIcon /></Avatar.Fallback
@@ -147,14 +147,14 @@
                     />
                   </Avatar.Root>
                   <div
-                    class="flex flex-col gap-1 md:gap-2 min-w-0 flex-1 overflow-hidden"
+                    class="flex flex-col gap-1 min-w-0 flex-1 overflow-hidden"
                   >
-                    <span class="truncate text-sm md:text-base"
+                    <span class="truncate text-sm"
                       >{relation.profile.name}</span
                     >
                     <hr class="w-full" />
                     <span
-                      class="text-gray-500 text-xs md:text-sm truncate block"
+                      class="text-gray-500 text-xs truncate block"
                       >{relation.profile.address}</span
                     >
                   </div>

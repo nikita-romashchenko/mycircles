@@ -1,28 +1,27 @@
 <script lang="ts">
-  import { signIn } from '@auth/sveltekit/client';
-  import Safe from '@safe-global/protocol-kit';
-  import { browser } from '$app/environment';
-  import { ethers } from 'ethers';
-  import { storeAuthData } from '$lib/utils/authStorage';
+  import { signIn } from "@auth/sveltekit/client"
+  import Safe from "@safe-global/protocol-kit"
+  import { browser } from "$app/environment"
+  import { ethers } from "ethers"
+  import { storeAuthData } from "$lib/utils/authStorage"
 
   const API_ENDPOINTS = {
     CHALLENGE: "/api/auth/challenge",
     SAFES: "/api/safes",
   }
 
-
-  let showSafeForm = false;
-  let walletAddress = '';
-  let safes: string[] = [];
-  let selectedSafe = '';
-  let loading = false;
-  let error = '';
-  let challenge: any = null;
+  let showSafeForm = false
+  let walletAddress = ""
+  let safes: string[] = []
+  let selectedSafe = ""
+  let loading = false
+  let error = ""
+  let challenge: any = null
 
   async function loadSafes() {
     if (!walletAddress) {
-      error = 'Please connect MetaMask first';
-      return;
+      error = "Please connect MetaMask first"
+      return
     }
 
     loading = true
@@ -35,10 +34,10 @@
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          action: 'getSafesForOwner',
-          ownerAddress: walletAddress
-        })
-      });
+          action: "getSafesForOwner",
+          ownerAddress: walletAddress,
+        }),
+      })
 
       const data = await response.json()
 
@@ -72,8 +71,8 @@
       const ethereum = (window as any).ethereum
       const accounts = await ethereum.request({ method: "eth_requestAccounts" })
       if (accounts.length > 0) {
-        walletAddress = accounts[0];
-        await loadSafes();
+        walletAddress = accounts[0]
+        await loadSafes()
       } else {
         error = "No accounts found in MetaMask"
       }
@@ -120,8 +119,8 @@
     }
 
     if (!walletAddress) {
-      error = 'Please connect MetaMask';
-      return;
+      error = "Please connect MetaMask"
+      return
     }
 
     loading = true
@@ -140,24 +139,24 @@
 
       // For MetaMask, create Safe instance with MetaMask provider
       if (!browser || !(window as any).ethereum) {
-        throw new Error('MetaMask not available');
+        throw new Error("MetaMask not available")
       }
 
-      const eip1193Provider = (window as any).ethereum;
-      const provider = new ethers.BrowserProvider(eip1193Provider);
-      const signer = await provider.getSigner();
+      const eip1193Provider = (window as any).ethereum
+      const provider = new ethers.BrowserProvider(eip1193Provider)
+      const signer = await provider.getSigner()
 
-      walletOwner = signer.address;
+      walletOwner = signer.address
 
       protocolKit = await Safe.init({
         provider: eip1193Provider,
         signer: walletOwner,
-        safeAddress: selectedSafe
-      });
+        safeAddress: selectedSafe,
+      })
 
-      const safeMessage = await protocolKit.createMessage(challenge.message);
-      const signedSafeMessage = await protocolKit.signMessage(safeMessage);
-      signature = signedSafeMessage.encodedSignatures();
+      const safeMessage = await protocolKit.createMessage(challenge.message)
+      const signedSafeMessage = await protocolKit.signMessage(safeMessage)
+      signature = signedSafeMessage.encodedSignatures()
 
       // Step 2: Authenticate with the signed challenge
       const result = await signIn("credentials", {
@@ -165,7 +164,7 @@
         signature: signature,
         walletOwner: walletOwner,
         safeAddress: selectedSafe.toLowerCase(),
-        authMethod: 'metamask',
+        authMethod: "metamask",
         redirect: false,
       })
 
@@ -174,10 +173,10 @@
       } else if (result?.ok) {
         // Store auth data
         storeAuthData({
-          sessionType: 'metamask',
-          safeAddress: selectedSafe
-        });
-        window.location.href = '/protected';
+          sessionType: "metamask",
+          safeAddress: selectedSafe,
+        })
+        window.location.href = "/protected"
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Sign in failed"
@@ -187,13 +186,13 @@
   }
 
   function resetForm() {
-    showSafeForm = false;
-    walletAddress = '';
-    safes = [];
-    selectedSafe = '';
-    error = '';
-    loading = false;
-    challenge = null;
+    showSafeForm = false
+    walletAddress = ""
+    safes = []
+    selectedSafe = ""
+    error = ""
+    loading = false
+    challenge = null
   }
 </script>
 
@@ -272,11 +271,10 @@
 
 <style>
   .signin-container {
-    min-height: 100vh;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 1rem;
+    padding: 2rem 1rem;
   }
 
   .signin-card {
@@ -312,7 +310,6 @@
     flex-direction: column;
     gap: 0.75rem;
   }
-
 
   .safe-form {
     display: flex;

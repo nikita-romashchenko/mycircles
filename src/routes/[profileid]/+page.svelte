@@ -12,6 +12,7 @@
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
+  import PlusIcon from "@lucide/svelte/icons/plus"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
   import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
   import { postReloadStore } from "$lib/stores/postReload.svelte"
@@ -29,10 +30,10 @@
   let posts = $state<PostType[]>([])
 
   // Use derived values to read from page data (avoid state sync loops)
-  let profile = $derived(($pageStore.data.profile as CirclesRpcProfile | null))
+  let profile = $derived($pageStore.data.profile as CirclesRpcProfile | null)
   let isOwnProfile = $derived(!!($pageStore.data.isOwnProfile as boolean))
   let isRpcProfile = $derived(!!($pageStore.data.isRpcProfile as boolean))
-  let error = $derived(($pageStore.data.error as string | null))
+  let error = $derived($pageStore.data.error as string | null)
 
   let form = $state($pageStore.data.form)
 
@@ -67,11 +68,14 @@
 
   // Track profile address changes to reset loading flag
   $effect.pre(() => {
-    const newAddress = ($pageStore.data.profile as CirclesRpcProfile | null)?.address
+    const newAddress = ($pageStore.data.profile as CirclesRpcProfile | null)
+      ?.address
 
     if (newAddress && newAddress !== lastProfileAddress) {
       lastProfileAddress = newAddress
       initialPostsLoaded = false
+      posts = [] // Clear old posts when switching profiles
+      allLoaded = false // Reset load state
     }
   })
 
@@ -86,8 +90,16 @@
   // Watch for post reload signals (e.g., after upload)
   $effect(() => {
     // Only trigger when signal value changes (increases), not on every render
-    if (browser && profile && reloadSignal > lastProcessedSignal && initialPostsLoaded) {
-      console.log("Post reload signal received, reloading posts...", reloadSignal)
+    if (
+      browser &&
+      profile &&
+      reloadSignal > lastProcessedSignal &&
+      initialPostsLoaded
+    ) {
+      console.log(
+        "Post reload signal received, reloading posts...",
+        reloadSignal,
+      )
       lastProcessedSignal = reloadSignal // Mark this signal as processed
       initialPostsLoaded = false
       loadInitialPosts()
@@ -177,7 +189,6 @@
     return () => observer.disconnect()
   })
 
-
   // RelationsModal state
   const openRelationsModal = () => {
     relationsModalOpen = true
@@ -202,7 +213,11 @@
 
       // Check if we trust this profile using the avatarStore (if not our own profile)
       // Skip this check if we just performed a trust/untrust action (to avoid race conditions)
-      if (!skipTrustCheck && !isOwnProfile && $pageStore.data.session?.user?.safeAddress) {
+      if (
+        !skipTrustCheck &&
+        !isOwnProfile &&
+        $pageStore.data.session?.user?.safeAddress
+      ) {
         await checkTrustStatusFromAvatar(address)
       }
 
@@ -309,15 +324,22 @@
       const res = await fetch(url)
 
       if (!res.ok) {
-        console.error("Failed to fetch max replenishable amount:", res.statusText)
+        console.error(
+          "Failed to fetch max replenishable amount:",
+          res.statusText,
+        )
         return
       }
 
       const data = await res.json()
       if (data.success) {
         maxReplenishableAmount = data.maxReplenishableAmount
-        console.log(`✅ Max replenishable amount: ${data.maxReplenishableAmount}`)
-        console.log(`  - Max flow: ${data.maxFlow}, Current balance: ${data.currentBalance}`)
+        console.log(
+          `✅ Max replenishable amount: ${data.maxReplenishableAmount}`,
+        )
+        console.log(
+          `  - Max flow: ${data.maxFlow}, Current balance: ${data.currentBalance}`,
+        )
       } else {
         console.error("Max replenishable amount error:", data.error)
       }
@@ -363,14 +385,18 @@
       const maxRetries = 10 // Wait up to 5 seconds
 
       while (!avatarStore.isReady && retries < maxRetries) {
-        console.log(`Avatar not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`)
-        await new Promise(resolve => setTimeout(resolve, 500))
+        console.log(
+          `Avatar not ready yet, waiting... (attempt ${retries + 1}/${maxRetries})`,
+        )
+        await new Promise((resolve) => setTimeout(resolve, 500))
         retries++
       }
 
       const avatar = avatarStore.getAvatar()
       if (!avatar) {
-        console.warn("Avatar not initialized after waiting, cannot check trust status")
+        console.warn(
+          "Avatar not initialized after waiting, cannot check trust status",
+        )
         // Don't set isTrusted, leave it as default (false)
         return
       }
@@ -389,7 +415,7 @@
     while (Date.now() - startTime < maxWaitTime) {
       const avatar = avatarStore.getAvatar()
       if (avatar) return avatar
-      await new Promise(resolve => setTimeout(resolve, 100))
+      await new Promise((resolve) => setTimeout(resolve, 100))
     }
     throw new Error("Avatar initialization timeout")
   }
@@ -414,7 +440,9 @@
 
       // Add trust using the SDK
       const receipt = await avatar.trust.add(targetAddress as `0x${string}`)
-      console.log(`✅ Trust transaction successful. Hash: ${receipt.transactionHash}`)
+      console.log(
+        `✅ Trust transaction successful. Hash: ${receipt.transactionHash}`,
+      )
 
       // Update UI state
       isTrusted = true
@@ -423,7 +451,7 @@
       await fetchRelations(targetAddress, true)
     } catch (err: any) {
       console.error("Error trusting user:", err)
-      alert(`Failed to trust: ${err.message || 'Please try again.'}`)
+      alert(`Failed to trust: ${err.message || "Please try again."}`)
     }
   }
 
@@ -447,7 +475,9 @@
 
       // Remove trust using the SDK
       const receipt = await avatar.trust.remove(targetAddress as `0x${string}`)
-      console.log(`✅ Untrust transaction successful. Hash: ${receipt.transactionHash}`)
+      console.log(
+        `✅ Untrust transaction successful. Hash: ${receipt.transactionHash}`,
+      )
 
       // Update UI state
       isTrusted = false
@@ -456,7 +486,7 @@
       await fetchRelations(targetAddress, true)
     } catch (err: any) {
       console.error("Error untrusting user:", err)
-      alert(`Failed to untrust: ${err.message || 'Please try again.'}`)
+      alert(`Failed to untrust: ${err.message || "Please try again."}`)
     }
   }
 
@@ -490,92 +520,109 @@
   <div class="w-full max-w-3xl">
     <!-- User info section -->
     <div class="flex flex-col">
+      <!-- Banner background -->
       <div
-        class="flex flex-col items-center justify-center md:flex-row md:items-start md:justify-start mx-auto gap-6"
+        class="relative w-full h-32 bg-gradient-to-r from-blue-400 to-purple-500"
       >
-        <div class="flex flex-col items-center">
-          <Avatar.Root class="relative w-24 h-24 rounded-full object-cover">
-            <Avatar.Fallback class="w-24 h-24 rounded-full object-cover"
-              ><ImageIcon /></Avatar.Fallback
+        <!-- Profile picture overlapping banner -->
+        <div class="absolute -bottom-16 left-4">
+          <Avatar.Root
+            class="w-32 h-32 rounded-full border-4 border-background"
+          >
+            <Avatar.Fallback
+              class="w-32 h-32 rounded-full object-cover bg-gray-200"
             >
+              <ImageIcon class="w-12 h-12 text-gray-400" />
+            </Avatar.Fallback>
             <Avatar.Image
               src={(profile as CirclesRpcProfile).previewImageUrl}
-              alt="@shadcn"
-              class="w-24 h-24 rounded-full object-cover"
+              alt={(profile as CirclesRpcProfile).name}
+              class="w-32 h-32 rounded-full object-cover"
             />
           </Avatar.Root>
-          {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
+        </div>
+
+        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
+          <div class="absolute top-2 right-4">
             <TrustButton
-              class="mt-2"
               {isTrusted}
               onTrust={handleTrust}
               onUntrust={handleUntrust}
             />
-          {/if}
-        </div>
+          </div>
+        {/if}
+      </div>
 
-        <div class="flex flex-col text-center md:text-left gap-1 md:w-[320px]">
-          <p>{(profile as CirclesRpcProfile).name || "Anonymous"}</p>
+      <!-- User info below banner -->
+      <div class="flex flex-col px-4 pt-20 gap-3">
+        <div class="flex flex-col gap-1">
+          <p class="text-xl font-bold">
+            {(profile as CirclesRpcProfile).name || "Anonymous"}
+          </p>
+          <p class="text-xs text-gray-500 font-mono">
+            {(profile as CirclesRpcProfile).address}
+          </p>
           {#if isOwnProfile}
             <span class="text-xs text-blue-500">(Your Profile)</span>
           {/if}
-          <hr />
-          {#if (profile as CirclesRpcProfile).description}
-            {@const description =
-              (profile as CirclesRpcProfile).description || ""}
-            {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
-            {@const displayText = isDescriptionExpanded
-              ? description
-              : isTooLong
-                ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
-                : description}
-            <div class="text-gray-500 text-xs break-words max-w-xs">
-              <p class="transition-all duration-300">
-                {displayText}
-              </p>
-              {#if isTooLong}
-                <button
-                  onclick={() =>
-                    (isDescriptionExpanded = !isDescriptionExpanded)}
-                  class="text-blue-500 hover:text-blue-700 text-xs mt-1"
-                >
-                  {isDescriptionExpanded ? "Show less" : "Show more"}
-                </button>
-              {/if}
-            </div>
-          {/if}
         </div>
+
+        {#if (profile as CirclesRpcProfile).description}
+          <!-- {@const description =
+            (profile as CirclesRpcProfile).description || ""} -->
+          {@const description =
+            (profile as CirclesRpcProfile).description || ""}
+          {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
+          {@const displayText = isDescriptionExpanded
+            ? description
+            : isTooLong
+              ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
+              : description}
+          <div class="text-gray-700 text-base font-medium break-words">
+            <p class="transition-all duration-300">
+              {displayText}
+            </p>
+            {#if isTooLong}
+              <button
+                onclick={() => (isDescriptionExpanded = !isDescriptionExpanded)}
+                class="text-blue-500 hover:text-blue-700 text-sm mt-1"
+              >
+                {isDescriptionExpanded ? "Show less" : "Show more"}
+              </button>
+            {/if}
+          </div>
+        {/if}
 
         <button
           onclick={openRelationsModal}
-          class="flex flex-row gap-6 cursor-pointer"
+          class="flex flex-row gap-3 cursor-pointer mt-2"
         >
           {#if isOwnProfile}
-            <div class="flex flex-col">
-              <p>mutuals</p>
-              <p>{contents[0]?.length || 0}</p>
+            <div class="flex flex-row gap-1 justify-center items-center">
+              <p class="text-gray-500 text-sm">mutuals</p>
+              <p class="font-semibold">{contents[0]?.length || 0}</p>
             </div>
-            <div class="flex flex-col">
-              <p>trusters</p>
-              <p>{contents[1]?.length || 0}</p>
+            <div class="flex flex-row gap-1 justify-center items-center">
+              <p class="text-gray-500 text-sm">trusters</p>
+              <p class="font-semibold">{contents[1]?.length || 0}</p>
             </div>
-            <div class="flex flex-col">
-              <p>trustouts</p>
-              <p>{contents[2]?.length || 0}</p>
+            <div class="flex flex-row gap-1 justify-center items-center">
+              <p class="text-gray-500 text-sm">trustouts</p>
+              <p class="font-semibold">{contents[2]?.length || 0}</p>
             </div>
           {:else}
-            <div class="flex flex-col">
-              <p>trusters</p>
-              <p>{contents[0]?.length || 0}</p>
+            <div class="flex flex-row gap-1 justify-center items-center">
+              <p class="text-gray-500 text-sm">trusters</p>
+              <p class="font-semibold">{contents[0]?.length || 0}</p>
             </div>
-            <div class="flex flex-col">
-              <p>trustouts</p>
-              <p>{contents[1]?.length || 0}</p>
+            <div class="flex flex-row gap-1 justify-center items-center">
+              <p class="text-gray-500 text-sm">trustouts</p>
+              <p class="font-semibold">{contents[1]?.length || 0}</p>
             </div>
           {/if}
         </button>
       </div>
-      <hr class="mt-4 hidden md:block" />
+      <hr class="mt-4" />
     </div>
 
     <!-- Max Flow and Max Replenishable Amount section -->
@@ -589,7 +636,11 @@
               <p class="text-gray-500">Loading...</p>
             {:else if maxFlow}
               <p class="text-lg font-semibold text-blue-600">
-                {Number(maxFlow) / 1e18 > 1e15 ? '∞' : (Number(maxFlow) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                {Number(maxFlow) / 1e18 > 1e15
+                  ? "∞"
+                  : (Number(maxFlow) / 1e18).toLocaleString("en-US", {
+                      maximumFractionDigits: 2,
+                    })}
               </p>
             {/if}
           </div>
@@ -603,7 +654,12 @@
               <p class="text-gray-500">Loading...</p>
             {:else if maxReplenishableAmount}
               <p class="text-lg font-semibold text-green-600">
-                {Number(maxReplenishableAmount) / 1e18 > 1e15 ? '∞' : (Number(maxReplenishableAmount) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })}
+                {Number(maxReplenishableAmount) / 1e18 > 1e15
+                  ? "∞"
+                  : (Number(maxReplenishableAmount) / 1e18).toLocaleString(
+                      "en-US",
+                      { maximumFractionDigits: 2 },
+                    )}
               </p>
             {/if}
           </div>
@@ -611,34 +667,9 @@
       </div>
     {/if}
 
-    <!-- Upload bttn section -->
-    <div class="mt-4 flex flex-row justify-center items-center gap-10">
-      <div class="flex flex-col items-center justify-center mt-4">
-        <!-- svelte-ignore a11y_consider_explicit_label -->
-        <Button
-          class="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
-          onclick={openUploadMediaModal}
-        >
-          <svg
-            class="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 4v16m8-8H4"
-            />
-          </svg>
-        </Button>
-      </div>
-    </div>
-
     <!-- User posts section -->
     <div class="flex-1 mx-auto p-4 w-full">
-      {#if posts.length === 0}
+      {#if posts.length === 0 && !loading && initialPostsLoaded}
         <p class="text-center mt-4 text-gray-500">No posts available</p>
       {/if}
 
@@ -673,6 +704,23 @@
       {loadingMoreProfiles}
       {isOwnProfile}
     />
-    <UploadMediaDialog pageForm={form} bind:open={uploadModalOpen} profileAddress={profile?.address} />
+    <UploadMediaDialog
+      pageForm={form}
+      bind:open={uploadModalOpen}
+      profileAddress={profile?.address}
+    />
+
+    <!-- Floating upload button -->
+    <div
+      class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
+    >
+      <button
+        onclick={openUploadMediaModal}
+        class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
+        aria-label="Create post"
+      >
+        <PlusIcon class="w-8 h-8 text-white" />
+      </button>
+    </div>
   {/if}
 {/if}

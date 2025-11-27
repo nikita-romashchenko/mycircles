@@ -102,7 +102,7 @@
 <main class="flex-1 max-w-4xl mx-auto p-4">
   <h1 class="text-3xl font-bold mb-6">All Posts</h1>
 
-  {#if posts.length === 0}
+  {#if posts.length === 0 && !loading && initialPostsLoaded}
     <p class="text-gray-500">No posts available.</p>
   {/if}
 
@@ -117,7 +117,7 @@
     <p class="text-center mt-4 text-gray-500">Loading...</p>
   {/if}
 
-  {#if allLoaded}
+  {#if allLoaded && posts.length > 0}
     <p class="text-center mt-4 text-gray-500">No more posts</p>
   {/if}
 </main>

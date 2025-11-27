@@ -6,6 +6,8 @@
 
 :root {
   --radius: 0.625rem;
+  --color-beige-10: #faf5f1;
+  --color-bg-subtle: var(--color-beige-10);
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
@@ -111,11 +113,54 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* Desktop viewport constraint - makes desktop look like mobile app */
+.DESKTOP_VIEWPORT {
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Hide scrollbar while keeping functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    background-color: var(--color-bg-subtle);
+  }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Default scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 #f1f5f9;
+  }
+
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
   }
 }
