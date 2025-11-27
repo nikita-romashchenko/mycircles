@@ -719,7 +719,7 @@
         class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
         aria-label="Create post"
       >
-        <PlusIcon class="w-6 h-6 text-white" />
+        <PlusIcon class="w-8 h-8 text-white" />
       </button>
     </div>
   {/if}
