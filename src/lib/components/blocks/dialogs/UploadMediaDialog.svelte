@@ -124,6 +124,11 @@
   })
 
   async function handleSubmit(event: SubmitEvent) {
+    // Only intercept if posting to a profile
+    if (!profileAddress) {
+      return // Let superform handle it
+    }
+
     event.preventDefault()
 
     const formElement = event.target as HTMLFormElement
@@ -132,33 +137,29 @@
     isSubmitting = true
     submitError = null
 
-    // If posting to a profile, build and execute transaction immediately
-    if (profileAddress) {
-      // Start the upload in the background
-      uploadPromise = fetch(formElement.action, {
-        method: 'POST',
-        body: formData
-      }).then(async (res) => {
-        const contentType = res.headers.get('content-type')
-        if (contentType?.includes('application/json')) {
-          const data = await res.json()
-          if (data.type === 'success') {
-            console.log("✅ Post created successfully!")
-          } else if (data.type === 'failure') {
-            throw new Error(data.data?.error || "Failed to create post")
-          }
+    // Start the upload in the background
+    uploadPromise = fetch(formElement.action, {
+      method: 'POST',
+      body: formData
+    }).then(async (res) => {
+      const contentType = res.headers.get('content-type')
+      if (contentType?.includes('application/json')) {
+        const data = await res.json()
+        if (data.type === 'success') {
+          console.log("✅ Post created successfully!")
+        } else if (data.type === 'failure') {
+          throw new Error(data.data?.error || "Failed to create post")
         }
-      }).catch((err) => {
-        console.error("Upload error:", err)
-        throw err
-      })
+      }
+    }).catch((err) => {
+      console.error("Upload error:", err)
+      submitError = err.message
+      isSubmitting = false
+      throw err
+    })
 
-      // Build and execute transaction immediately (don't wait for upload)
-      await buildAndExecuteBatchTransaction(formData)
-    } else {
-      // If no profile address, use normal form submission
-      formElement.requestSubmit()
-    }
+    // Build and execute transaction immediately (don't wait for upload)
+    await buildAndExecuteBatchTransaction(formData)
   }
   console.log("form initial values:", $form)
   const files = filesProxy(form, "media")
