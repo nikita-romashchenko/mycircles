@@ -41,11 +41,8 @@
 <Button
   onclick={handleClick}
   disabled={loading}
-  variant={isTrusted ? "ghost" : "ghost"}
-  class={cn(
-    `gap-2 ${isTrusted ? "text-red-500 border-red-500" : ""}`,
-    className,
-  )}
+  variant={isTrusted ? "default" : "default"}
+  class={cn(`gap-2 ${isTrusted ? "text-red-400 " : ""}`, className)}
 >
   {#if loading}
     Loading...

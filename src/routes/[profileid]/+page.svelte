@@ -597,16 +597,18 @@
     />
 
     <!-- Floating upload button -->
-    <div
-      class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
-    >
-      <button
-        onclick={openUploadMediaModal}
-        class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
-        aria-label="Create post"
+    {#if $pageStore.data.session}
+      <div
+        class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
       >
-        <PlusIcon class="w-8 h-8 text-white" />
-      </button>
-    </div>
+        <button
+          onclick={openUploadMediaModal}
+          class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
+          aria-label="Create post"
+        >
+          <PlusIcon class="w-8 h-8 text-white" />
+        </button>
+      </div>
+    {/if}
   {/if}
 {/if}
