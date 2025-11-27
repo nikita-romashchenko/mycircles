@@ -568,6 +568,8 @@
         </div>
 
         {#if (profile as CirclesRpcProfile).description}
+          <!-- {@const description =
+            (profile as CirclesRpcProfile).description || ""} -->
           {@const description =
             (profile as CirclesRpcProfile).description || ""}
           {@const isTooLong = description.length > MAX_DESCRIPTION_LENGTH}
@@ -709,86 +711,16 @@
     />
 
     <!-- Floating upload button -->
-    <div class="DESKTOP_VIEWPORT fixed bottom-20 left-1/2 -translate-x-1/2 z-40">
+    <div
+      class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
+    >
       <button
         onclick={openUploadMediaModal}
-        class="iridescent-upload-btn w-14 h-14 rounded-full flex items-center justify-center cursor-pointer"
+        class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
         aria-label="Create post"
       >
-        <div class="iridescent-plus"></div>
+        <PlusIcon class="w-6 h-6 text-white" />
       </button>
     </div>
   {/if}
 {/if}
-
-<style>
-  @keyframes colorCycle {
-    0% {
-      border-color: #CC99FF;
-      color: #CC99FF;
-    }
-    20% {
-      border-color: #66CCFF;
-      color: #66CCFF;
-    }
-    40% {
-      border-color: #66FFB3;
-      color: #66FFB3;
-    }
-    60% {
-      border-color: #FFCC66;
-      color: #FFCC66;
-    }
-    80% {
-      border-color: #FF99DD;
-      color: #FF99DD;
-    }
-    100% {
-      border-color: #CC99FF;
-      color: #CC99FF;
-    }
-  }
-
-  .iridescent-upload-btn {
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border: 3px solid #CC99FF;
-    animation: colorCycle 6s ease infinite;
-    transition: filter 0.3s ease;
-  }
-
-  .iridescent-upload-btn:hover {
-    filter: brightness(1.2);
-  }
-
-  .iridescent-plus {
-    position: relative;
-    width: 28px;
-    height: 28px;
-  }
-
-  .iridescent-plus::before,
-  .iridescent-plus::after {
-    content: "";
-    position: absolute;
-    background-color: currentColor;
-    animation: colorCycle 6s ease infinite;
-    border-radius: 2px;
-  }
-
-  .iridescent-plus::before {
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 3px;
-    transform: translateY(-50%);
-  }
-
-  .iridescent-plus::after {
-    top: 0;
-    bottom: 0;
-    left: 50%;
-    width: 3px;
-    transform: translateX(-50%);
-  }
-</style>

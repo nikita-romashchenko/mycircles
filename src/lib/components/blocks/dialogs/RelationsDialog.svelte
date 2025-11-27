@@ -88,7 +88,7 @@
 
 <Dialog.Root bind:open>
   <!-- <Dialog.Trigger>Open</Dialog.Trigger> -->
-  <Dialog.Content class="DESKTOP_VIEWPORT h-[70vh] max-h-[90vh] w-full max-w-full flex flex-col overflow-hidden">
+  <Dialog.Content class="DESKTOP_VIEWPORT !top-0 !translate-y-0 h-[100dvh] w-full !rounded-none z-[60] flex flex-col overflow-hidden">
     <Dialog.Header class="flex-shrink-0">
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
