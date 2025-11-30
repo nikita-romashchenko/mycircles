@@ -89,7 +89,7 @@
 </script>
 
 {#if post}
-  <Card.Root class="p-0 overflow-hidden w-full">
+  <Card.Root class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)]">
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
@@ -185,7 +185,7 @@
       {/if}
     </Card.Header>
     <Card.Footer
-      class="flex justify-between items-center px-3 py-2 text-gray-500 text-sm"
+      class="flex justify-between items-center px-3 py-2 text-gray-400 text-xs"
     >
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
     </Card.Footer>

@@ -106,7 +106,7 @@
     <p class="text-gray-500">No posts available.</p>
   {/if}
 
-  <div class="space-y-8">
+  <div class="space-y-3">
     {#each posts as post}
       <PostCard {post} />
     {/each}

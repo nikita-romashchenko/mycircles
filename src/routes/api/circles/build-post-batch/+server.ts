@@ -45,48 +45,30 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const sdk = new Sdk()
     const transferBuilder = new TransferBuilder(sdk.core)
 
-    // Amount to burn: 1 CRC per post
-    const crcAmount = 1
+    // Amount to transfer: 10 CRC per post
+    const crcAmount = 10
     const attoAmount = CirclesConverter.circlesToAttoCircles(crcAmount)
 
-    console.log(`Building burn transaction for post:`)
+    console.log(`Building transfer transaction for post:`)
     console.log(`- From: ${fromAddress}`)
-    console.log(`- Token: ${toAddr}`)
-    console.log(`- Amount to burn: ${crcAmount} CRC`)
+    console.log(`- To: ${toAddr}`)
+    console.log(`- Amount to transfer: ${crcAmount} CRC`)
 
-    // Build transactions
-    // User pays to post: burn 1 CRC total from user account
-    // This transaction is required for ALL posts (own profile or others)
-
-    // 0. Get enough tokens on the account first (replenish/convert if needed)
-    const replenishTokensForTransferTxs = await transferBuilder.constructAdvancedTransfer(
+    // Build transfer transaction
+    // User transfers 10 CRC to the profile they want to post on
+    const transferTxs = await transferBuilder.constructAdvancedTransfer(
       fromAddress,
-      fromAddress,
+      toAddr,
       attoAmount,
       {
         useWrappedBalances: true,
-        toTokens: [toAddr]
       }
     )
 
-    // 1. Burn the tokens using SDK core burn function
-    // Burns the specified amount of the profile's personal tokens
-    // Convert address to token ID (uint256)
-    const tokenId = BigInt(toAddr)
+    console.log(`Built transfer transaction for ${CirclesConverter.attoCirclesToCircles(attoAmount)} CRC to ${toAddr}`)
 
-    const burnTx = sdk.core.hubV2.burn(
-      tokenId,       // Token ID (profile address as uint256)
-      attoAmount,    // Amount to burn
-      "0x"          // Empty data
-    )
-
-    console.log(`Built burn transaction for ${CirclesConverter.attoCirclesToCircles(attoAmount)} CRC of token ${toAddr}`)
-
-    // Combine all transactions in order
-    const allTransactions = [
-      ...replenishTokensForTransferTxs,
-      burnTx
-    ]
+    // Return the transfer transactions
+    const allTransactions = transferTxs
 
     console.log(`Built batch transaction with ${allTransactions.length} transaction steps`)
 
@@ -102,7 +84,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         fromAddress,
         toAddress: toAddr,
         totalAmount: CirclesConverter.attoCirclesToCircles(attoAmount),
-        burnedAmount: CirclesConverter.attoCirclesToCircles(attoAmount),
+        transferredAmount: CirclesConverter.attoCirclesToCircles(attoAmount),
         transactionCount: allTransactions.length,
       },
     })

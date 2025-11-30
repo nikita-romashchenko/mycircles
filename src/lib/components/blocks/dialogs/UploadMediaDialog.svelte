@@ -35,7 +35,7 @@
   let maxReplenishableAmount = $state<string | null>(null)
   let loadingBalance = $state(false)
   let showBalanceDetails = $state(false)
-  const POST_COST_CRC = 1 // Cost per post in CRC
+  const POST_COST_CRC = 10 // Cost per post in CRC (transferred to profile owner)
   let availablePosts = $derived(
     maxReplenishableAmount
       ? Math.floor(Number(maxReplenishableAmount) / 1e18 / POST_COST_CRC)
@@ -168,12 +168,12 @@
     batchError = null  // Clear previous batch errors
 
     try {
-      // All posts require a transaction (costs 5 CRC)
+      // All posts require a transaction (costs 10 CRC transferred to profile owner)
       if (!profileAddress) {
         throw new Error("No profile address found")
       }
 
-      console.log("Executing transaction for post (costs 5 CRC)")
+      console.log("Executing transaction for post (transfers 10 CRC to profile owner)")
       const txHash = await buildAndExecuteBatchTransaction(formData)
       console.log("Transaction successful, now uploading post with tx hash:", txHash)
       formData.append('transactionHash', txHash)
@@ -389,7 +389,7 @@
               </p>
               {#if showBalanceDetails}
                 <p class="mt-2">
-                  There are {(Number(maxReplenishableAmount) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })} personal CRC of this user available to you, the post costs {POST_COST_CRC} CRC which results in {availablePosts} {availablePosts === 1 ? 'post' : 'posts'} possible to make on this user page.
+                  Each post costs {POST_COST_CRC} CRC. Through your network of trust, you can send up to {(Number(maxReplenishableAmount) / 1e18).toLocaleString('en-US', { maximumFractionDigits: 2 })} CRC to this user, allowing you to create {availablePosts} {availablePosts === 1 ? 'post' : 'posts'}.
                 </p>
               {/if}
               {#if availablePosts === 0}

@@ -176,7 +176,7 @@
           sessionType: "metamask",
           safeAddress: selectedSafe,
         })
-        window.location.href = "/protected"
+        window.location.href = "/"
       }
     } catch (err) {
       error = err instanceof Error ? err.message : "Sign in failed"

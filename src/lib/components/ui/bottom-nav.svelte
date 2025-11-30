@@ -1,10 +1,9 @@
 <script lang="ts">
   import { page } from "$app/state"
-  import { signIn, signOut } from "@auth/sveltekit/client"
+  import { signIn } from "@auth/sveltekit/client"
   import HomeIcon from "@lucide/svelte/icons/home"
   import UserIcon from "@lucide/svelte/icons/user"
   import LogIn from "@lucide/svelte/icons/log-in"
-  import LogOut from "@lucide/svelte/icons/log-out"
 
   // Derive safeAddress and pathname from page state (note: page without $ prefix)
   const safeAddress = $derived(page.data.session?.user?.safeAddress)
@@ -37,12 +36,7 @@
       title: "Profile",
       url: `/${safeAddress}`,
       icon: UserIcon,
-    },
-    {
-      title: "Sign out",
-      icon: LogOut,
-      action: () => signOut(),
-    },
+    }
   ])
 
   const navItems = $derived(isLoggedIn ? loggedInItems : loggedOutItems)
@@ -57,23 +51,21 @@
         <!-- Navigation link -->
         <a
           href={item.url}
-          class="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors hover:bg-accent min-w-[4rem]"
+          class="flex items-center justify-center px-4 py-2 rounded-lg transition-colors hover:bg-accent"
           class:text-primary={pathname === item.url}
-          class:font-semibold={pathname === item.url}
+          aria-label={item.title}
         >
-          <item.icon class="h-5 w-5" />
-          <span class="text-xs">{item.title}</span>
+          <item.icon class="h-6 w-6" />
         </a>
-      {:else}
+      {:else if 'action' in item && item.action}
         <!-- Action button -->
         <button
           onclick={item.action}
-          class="flex flex-col items-center justify-center gap-1 px-4 py-2 rounded-lg transition-colors hover:bg-accent min-w-[4rem] cursor-pointer"
+          class="flex items-center justify-center px-4 py-2 rounded-lg transition-colors hover:bg-accent cursor-pointer"
           class:text-primary={item.title === "Sign in" && isOnSigninPage}
-          class:font-semibold={item.title === "Sign in" && isOnSigninPage}
+          aria-label={item.title}
         >
-          <item.icon class="h-5 w-5" />
-          <span class="text-xs">{item.title}</span>
+          <item.icon class="h-6 w-6" />
         </button>
       {/if}
     {/each}
