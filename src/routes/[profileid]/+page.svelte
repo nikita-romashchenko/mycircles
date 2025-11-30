@@ -54,6 +54,8 @@
   let sentinel = $state<HTMLDivElement>()
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
+  let canReceiveAmount = $state<string | null>(null)
+  let loadingCanReceive = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 150
 
@@ -200,6 +202,25 @@
     uploadModalOpen = true
   }
 
+  async function fetchCanReceiveAmount(fromAddress: string) {
+    if (isOwnProfile) return // Don't fetch for own profile
+
+    loadingCanReceive = true
+    try {
+      const res = await fetch(`/api/circles/can-receive?from=${fromAddress}`)
+      if (!res.ok) throw new Error("Failed to fetch can-receive amount")
+
+      const data = await res.json()
+      canReceiveAmount = data.maxFlow
+      console.log(`Can receive from ${fromAddress}: ${canReceiveAmount}`)
+    } catch (err) {
+      console.error("Error fetching can-receive amount:", err)
+      canReceiveAmount = null
+    } finally {
+      loadingCanReceive = false
+    }
+  }
+
   async function fetchRelations(address: string, skipTrustCheck = false) {
     try {
       const res = await fetch(`/api/circles/relations?address=${address}`)
@@ -215,6 +236,11 @@
         $pageStore.data.session?.user?.safeAddress
       ) {
         await checkTrustStatusFromAvatar(address)
+      }
+
+      // Fetch can-receive amount for non-own profiles
+      if (!isOwnProfile && $pageStore.data.session?.user?.safeAddress) {
+        await fetchCanReceiveAmount(address)
       }
 
       // Sort relations by type (but don't fetch profiles yet)
@@ -470,19 +496,25 @@
           </Avatar.Root>
         </div>
 
-        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
-          <div class="absolute top-2 right-4">
-            <TrustButton
-              {isTrusted}
-              onTrust={handleTrust}
-              onUntrust={handleUntrust}
-            />
+        <!-- Can receive amount in top right corner -->
+        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
+          {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+          {@const amount = parseFloat(amountInCrc)}
+          {@const trustLevel =
+            amount < 100 ? "🪨" :
+            amount < 1000 ? "🟡" :
+            "💎"}
+          <div class="absolute top-4 right-4" style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;">
+            <p class="text-2xl font-bold flex items-center gap-1" style="color: #191568;">
+              <span>{trustLevel}</span>
+              <span>{amountInCrc}</span>
+            </p>
           </div>
         {/if}
       </div>
 
       <!-- User info below banner -->
-      <div class="flex flex-col px-4 pt-20 gap-3">
+      <div class="flex flex-col px-4 pt-20">
         <div class="flex flex-col gap-1">
           <p class="text-xl font-bold">
             {(profile as CirclesRpcProfile).name || "Anonymous"}
@@ -506,7 +538,7 @@
             : isTooLong
               ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
               : description}
-          <div class="text-gray-700 text-base font-medium break-words">
+          <div class="text-gray-700 text-sm font-normal break-words mt-2">
             <p class="transition-all duration-300">
               {displayText}
             </p>
@@ -549,6 +581,27 @@
             </div>
           {/if}
         </button>
+
+        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
+          <div class="flex flex-row gap-2 mt-2">
+            <TrustButton
+              {isTrusted}
+              onTrust={handleTrust}
+              onUntrust={handleUntrust}
+              class="opacity-60 hover:opacity-100 transition-opacity text-sm"
+            />
+            <Button
+              onclick={() => {
+                // TODO: Implement vouch functionality
+                console.log("Vouch clicked")
+              }}
+              variant="secondary"
+              class="text-sm"
+            >
+              Vouch
+            </Button>
+          </div>
+        {/if}
       </div>
       <hr class="mt-4" />
     </div>
