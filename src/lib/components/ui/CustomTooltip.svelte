@@ -4,9 +4,10 @@
   interface Props {
     content: string
     children: any
+    position?: "auto" | "below"
   }
 
-  let { content, children }: Props = $props()
+  let { content, children, position = "auto" }: Props = $props()
 
   let showTooltip = $state(false)
   let isMobile = $state(false)
@@ -45,7 +46,9 @@
       const viewportWidth = window.innerWidth
 
       // Check if tooltip overflows the top of viewport
-      if (tooltipRect.top < 8) {
+      if (position === "below") {
+        positionBelow = true
+      } else if (tooltipRect.top < 8) {
         positionBelow = true
       } else {
         positionBelow = false

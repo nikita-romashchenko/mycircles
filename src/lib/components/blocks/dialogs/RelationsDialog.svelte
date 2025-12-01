@@ -93,6 +93,7 @@
       <div class="flex items-center gap-2">
         <Dialog.Title>Relations</Dialog.Title>
         <CustomTooltip
+          position="below"
           content={isOwnProfile
             ? "<div class='text-xs'><strong>Mutuals:</strong> Trust each other<br /><strong>Trusters:</strong> Trust you<br /><strong>Trustouts:</strong> You trust them</div>"
             : "<div class='text-xs'><strong>Trusters:</strong> Trust this person<br /><strong>Trustouts:</strong> This person trusts them</div>"}
