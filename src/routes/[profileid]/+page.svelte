@@ -751,7 +751,7 @@
             />
             <Button
               onclick={() => vouchModalOpen = true}
-              variant="secondary"
+              variant="default"
               class="text-sm flex-1 gap-2"
             >
               <HandHeart class="w-4 h-4" />
