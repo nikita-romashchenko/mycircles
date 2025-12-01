@@ -13,6 +13,8 @@
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
   import ImageIcon from "@lucide/svelte/icons/image"
   import PlusIcon from "@lucide/svelte/icons/plus"
+  import HandHeart from "@lucide/svelte/icons/hand-heart"
+  import Settings from "@lucide/svelte/icons/settings"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
   import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
   import { postReloadStore } from "$lib/stores/postReload.svelte"
@@ -54,6 +56,13 @@
   let sentinel = $state<HTMLDivElement>()
   let isDescriptionExpanded = $state(false)
   let isTrusted = $state(false)
+  let canReceiveAmount = $state<string | null>(null)
+  let loadingCanReceive = $state(false)
+  let totalBalance = $state<string | null>(null)
+  let loadingBalance = $state(false)
+  let issuanceAmount = $state<string | null>(null)
+  let loadingIssuance = $state(false)
+  let loadingMint = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 150
 
@@ -200,6 +209,63 @@
     uploadModalOpen = true
   }
 
+  async function fetchCanReceiveAmount(fromAddress: string) {
+    if (isOwnProfile) return // Don't fetch for own profile
+
+    loadingCanReceive = true
+    try {
+      const res = await fetch(`/api/circles/can-receive?from=${fromAddress}`)
+      if (!res.ok) throw new Error("Failed to fetch can-receive amount")
+
+      const data = await res.json()
+      canReceiveAmount = data.maxFlow
+      console.log(`Can receive from ${fromAddress}: ${canReceiveAmount}`)
+    } catch (err) {
+      console.error("Error fetching can-receive amount:", err)
+      canReceiveAmount = null
+    } finally {
+      loadingCanReceive = false
+    }
+  }
+
+  async function fetchTotalBalance() {
+    if (!isOwnProfile) return // Only fetch for own profile
+
+    loadingBalance = true
+    try {
+      const res = await fetch(`/api/circles/balance`)
+      if (!res.ok) throw new Error("Failed to fetch total balance")
+
+      const data = await res.json()
+      totalBalance = data.totalBalance
+      console.log(`Total balance: ${totalBalance}`)
+    } catch (err) {
+      console.error("Error fetching total balance:", err)
+      totalBalance = null
+    } finally {
+      loadingBalance = false
+    }
+  }
+
+  async function fetchIssuanceAmount() {
+    if (!isOwnProfile) return // Only fetch for own profile
+
+    loadingIssuance = true
+    try {
+      const res = await fetch(`/api/circles/issuance`)
+      if (!res.ok) throw new Error("Failed to fetch issuance amount")
+
+      const data = await res.json()
+      issuanceAmount = data.issuance
+      console.log(`Issuance amount: ${issuanceAmount}`)
+    } catch (err) {
+      console.error("Error fetching issuance amount:", err)
+      issuanceAmount = null
+    } finally {
+      loadingIssuance = false
+    }
+  }
+
   async function fetchRelations(address: string, skipTrustCheck = false) {
     try {
       const res = await fetch(`/api/circles/relations?address=${address}`)
@@ -215,6 +281,16 @@
         $pageStore.data.session?.user?.safeAddress
       ) {
         await checkTrustStatusFromAvatar(address)
+      }
+
+      // Fetch can-receive amount for non-own profiles
+      if (!isOwnProfile && $pageStore.data.session?.user?.safeAddress) {
+        await fetchCanReceiveAmount(address)
+      }
+
+      // Fetch balance and issuance for own profile
+      if (isOwnProfile && $pageStore.data.session?.user?.safeAddress) {
+        await Promise.all([fetchTotalBalance(), fetchIssuanceAmount()])
       }
 
       // Sort relations by type (but don't fetch profiles yet)
@@ -422,6 +498,39 @@
     }
   }
 
+  async function handleMint() {
+    if (!isOwnProfile) return
+
+    loadingMint = true
+    try {
+      // Wait for avatar to be ready (with timeout)
+      console.log("⏳ Waiting for avatar to be ready...")
+      const avatar = await waitForAvatar()
+
+      if (!avatar) {
+        const error = avatarStore.initError
+        alert(error || "Avatar not ready. Please try again.")
+        return
+      }
+
+      console.log("💎 Minting personal tokens...")
+
+      // Mint tokens using the SDK
+      const receipt = await avatar.personalToken.mint()
+      console.log(
+        `✅ Mint transaction successful. Hash: ${receipt.transactionHash}`,
+      )
+
+      // Refresh issuance and balance
+      await Promise.all([fetchIssuanceAmount(), fetchTotalBalance()])
+    } catch (err: any) {
+      console.error("Error minting tokens:", err)
+      alert(`Failed to mint: ${err.message || "Please try again."}`)
+    } finally {
+      loadingMint = false
+    }
+  }
+
   $effect(() => {
     console.log("Form:", form)
   })
@@ -450,7 +559,7 @@
     <div class="flex flex-col">
       <!-- Banner background -->
       <div
-        class="relative w-full h-32 bg-gradient-to-r from-blue-400 to-purple-500"
+        class="relative w-full h-32 bg-gray-200"
       >
         <!-- Profile picture overlapping banner -->
         <div class="absolute -bottom-16 left-4">
@@ -470,19 +579,36 @@
           </Avatar.Root>
         </div>
 
-        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
-          <div class="absolute top-2 right-4">
-            <TrustButton
-              {isTrusted}
-              onTrust={handleTrust}
-              onUntrust={handleUntrust}
-            />
+        <!-- Can receive amount in top right corner (for other profiles) -->
+        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
+          {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+          {@const amount = parseFloat(amountInCrc)}
+          {@const trustLevel =
+            amount < 100 ? "🪨" :
+            amount < 1000 ? "🟡" :
+            "💎"}
+          <div class="absolute top-4 right-4" style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;">
+            <p class="text-2xl font-bold flex items-center gap-1" style="color: #191568;">
+              <span>{trustLevel}</span>
+              <span>{amountInCrc}</span>
+            </p>
+          </div>
+        {/if}
+
+        <!-- Total balance in top right corner (for own profile) -->
+        {#if isOwnProfile && totalBalance !== null && !loadingBalance}
+          {@const balanceInCrc = (parseFloat(totalBalance) / 1e18).toFixed(1)}
+          <div class="absolute top-4 right-4" style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;">
+            <p class="text-2xl font-bold flex items-center gap-1" style="color: #191568;">
+              <span>💰</span>
+              <span>{balanceInCrc}</span>
+            </p>
           </div>
         {/if}
       </div>
 
       <!-- User info below banner -->
-      <div class="flex flex-col px-4 pt-20 gap-3">
+      <div class="flex flex-col px-4 pt-20">
         <div class="flex flex-col gap-1">
           <p class="text-xl font-bold">
             {(profile as CirclesRpcProfile).name || "Anonymous"}
@@ -506,7 +632,7 @@
             : isTooLong
               ? description.slice(0, MAX_DESCRIPTION_LENGTH) + "..."
               : description}
-          <div class="text-gray-700 text-base font-medium break-words">
+          <div class="text-gray-700 text-sm font-normal break-words mt-2">
             <p class="transition-all duration-300">
               {displayText}
             </p>
@@ -549,6 +675,56 @@
             </div>
           {/if}
         </button>
+
+        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingRelations}
+          <div class="flex flex-row gap-2 mt-2 w-full">
+            <TrustButton
+              {isTrusted}
+              onTrust={handleTrust}
+              onUntrust={handleUntrust}
+              class="text-sm flex-1"
+            />
+            <Button
+              onclick={() => {
+                // TODO: Implement vouch functionality
+                console.log("Vouch clicked")
+              }}
+              variant="secondary"
+              class="text-sm flex-1 gap-2"
+            >
+              <HandHeart class="w-4 h-4" />
+              Vouch
+            </Button>
+          </div>
+        {/if}
+
+        {#if isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingIssuance}
+          <div class="flex flex-row gap-2 mt-2 w-full">
+            <Button
+              onclick={() => window.location.href = '/settings'}
+              variant="outline"
+              size="icon"
+              class="h-9 w-9"
+              aria-label="Settings"
+            >
+              <Settings />
+            </Button>
+            <Button
+              onclick={handleMint}
+              variant="default"
+              class="text-sm flex-1 gap-2"
+              disabled={loadingMint || !issuanceAmount || parseFloat(issuanceAmount) === 0}
+            >
+              {#if loadingMint}
+                Creating...
+              {:else if issuanceAmount && parseFloat(issuanceAmount) > 0}
+                Create {(parseFloat(issuanceAmount) / 1e18).toFixed(1)} CRC
+              {:else}
+                No CRC to Create
+              {/if}
+            </Button>
+          </div>
+        {/if}
       </div>
       <hr class="mt-4" />
     </div>
@@ -559,7 +735,7 @@
         <p class="text-center mt-4 text-gray-500">No posts available</p>
       {/if}
 
-      <div class="space-y-8">
+      <div class="space-y-3">
         {#each posts as post (post._id)}
           <PostCard {post} />
         {/each}
@@ -590,11 +766,13 @@
       {loadingMoreProfiles}
       {isOwnProfile}
     />
-    <UploadMediaDialog
-      pageForm={form}
-      bind:open={uploadModalOpen}
-      profileAddress={profile?.address}
-    />
+    <!-- Only show upload dialog and button for other profiles (not own profile) -->
+    {#if !isOwnProfile}
+      <UploadMediaDialog
+        pageForm={form}
+        bind:open={uploadModalOpen}
+        profileAddress={profile?.address}
+      />
 
     <!-- Floating upload button -->
     {#if $pageStore.data.session}
