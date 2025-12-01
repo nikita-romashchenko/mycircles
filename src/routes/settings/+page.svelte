@@ -3,9 +3,20 @@
   import { Button } from "$lib/components/ui/button"
   import LogOut from "@lucide/svelte/icons/log-out"
   import { goto } from "$app/navigation"
+  import { clearAuthData } from "$lib/utils/authStorage"
+  import { avatarStore } from "$lib/stores/safe4337.svelte"
 
   async function handleSignOut() {
+    // Clear auth data from localStorage (including private key)
+    clearAuthData()
+
+    // Clear avatar store
+    avatarStore.clear()
+
+    // Sign out from auth session
     await signOut({ redirect: false })
+
+    // Redirect to home
     goto('/')
   }
 </script>

@@ -37,6 +37,8 @@ import { Core } from '@aboutcircles/sdk-core';
 import { createPublicClient, http } from 'viem';
 import { gnosis } from 'viem/chains';
 import { PUBLIC_RPC_URL } from '$env/static/public';
+import { getAuthData } from '$lib/utils/authStorage';
+import { createPrivateKeyProvider } from '$lib/utils/privateKeyProvider';
 
 class CirclesAvatarStore {
   private avatar = $state<HumanAvatar | null>(null);
@@ -84,9 +86,22 @@ class CirclesAvatarStore {
     try {
       console.log('🔧 Initializing Safe 4337 Avatar...', { safeAddress });
 
-      const ethereum = (window as any).ethereum;
-      if (!ethereum) {
-        throw new Error('MetaMask not found. Please install MetaMask.');
+      // Get auth data to determine provider type
+      const authData = getAuthData();
+      let eip1193Provider: any;
+
+      if (authData?.sessionType === 'privatekey' && authData.privateKey) {
+        // Use private key provider
+        console.log('🔑 Using private key provider');
+        eip1193Provider = createPrivateKeyProvider(authData.privateKey);
+      } else {
+        // Use MetaMask provider
+        const ethereum = (window as any).ethereum;
+        if (!ethereum) {
+          throw new Error('MetaMask not found. Please install MetaMask or sign in with a private key.');
+        }
+        console.log('🦊 Using MetaMask provider');
+        eip1193Provider = ethereum;
       }
 
       // Create public client
@@ -98,7 +113,7 @@ class CirclesAvatarStore {
       // Create Safe4337Runner for sponsored transactions
       const runner = new Safe4337Runner(
         publicClient,
-        ethereum,
+        eip1193Provider,
         safeAddress as `0x${string}`,
         'https://api.pimlico.io/v2/100/rpc?apikey=pim_2Zdnmr93fLfjgqHF9cDqKb',
         {

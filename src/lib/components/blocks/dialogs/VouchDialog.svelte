@@ -9,7 +9,9 @@
   import { hubV2Abi } from "@aboutcircles/sdk-abis"
   import { encodeFunctionData } from "viem"
   import { page } from "$app/stores"
-  import type { TokenBalance } from "@aboutcircles/sdk-types"
+  import type { TokenBalance, Profile } from "@aboutcircles/sdk-types"
+  import * as Avatar from "$lib/components/ui/avatar"
+  import ImageIcon from "@lucide/svelte/icons/image"
 
   interface Props {
     open?: boolean
@@ -31,7 +33,7 @@
   let tokenBalances = $state<TokenBalance[]>([])
   let selectedToken = $state<TokenBalance | null>(null)
   let isLoadingBalances = $state(false)
-  let tokenNames = $state<Map<string, string>>(new Map())
+  let tokenProfiles = $state<Map<string, Profile | null>>(new Map())
 
   // Fetch token balances when dialog opens
   $effect(() => {
@@ -71,19 +73,13 @@
       if (tokenOwners.length > 0) {
         const profiles = await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
 
-        // Build name map
-        const nameMap = new Map<string, string>()
+        // Build profile map with full profile objects (for images)
+        const profileMap = new Map<string, Profile | null>()
         profiles.forEach((profile, index) => {
           const address = tokenOwners[index].toLowerCase()
-          if (profile && profile.name) {
-            nameMap.set(address, profile.name)
-          } else {
-            // Fallback to shortened address
-            const addr = tokenOwners[index]
-            nameMap.set(address, `${addr.slice(0, 6)}...${addr.slice(-4)}`)
-          }
+          profileMap.set(address, profile)
         })
-        tokenNames = nameMap
+        tokenProfiles = profileMap
       }
 
       tokenBalances = filteredBalances
@@ -167,6 +163,7 @@
       amount = ""
       selectedToken = null
       tokenBalances = []
+      tokenProfiles = new Map()
       open = false
     } catch (err: any) {
       console.error("Error vouching:", err)
@@ -188,6 +185,7 @@
       amount = ""
       selectedToken = null
       tokenBalances = []
+      tokenProfiles = new Map()
       error = null
     }
   }
@@ -204,20 +202,21 @@
 
     <div class="flex flex-col gap-4 py-4">
       {#if isLoadingBalances}
-        <p class="text-sm text-gray-500">Loading your Circles tokens...</p>
+        <p class="text-sm text-gray-500 text-center">Loading your Circles tokens...</p>
       {:else if tokenBalances.length === 0}
-        <p class="text-sm text-gray-500">No Circles tokens available to transfer.</p>
+        <p class="text-sm text-gray-500 text-center">No Circles tokens available to transfer.</p>
       {:else}
         <!-- Token Selection -->
         <div class="flex flex-col gap-2">
           <Label>Select Token</Label>
-          <div class="flex flex-col gap-2 max-h-48 overflow-y-auto border rounded-md p-2">
+          <div class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2">
             {#each tokenBalances as token}
               {@const tokenBalance = Number(CirclesConverter.attoCirclesToCircles(token.attoCircles)).toFixed(2)}
-              {@const ownerName = tokenNames.get(token.tokenOwner.toLowerCase()) || token.tokenOwner}
+              {@const ownerProfile = tokenProfiles.get(token.tokenOwner.toLowerCase())}
+              {@const ownerName = ownerProfile?.name || `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
               <button
                 type="button"
-                class="flex items-center justify-between p-3 border rounded-md hover:bg-gray-50 transition-colors {selectedToken?.tokenId === token.tokenId ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}"
+                class="flex items-center gap-2 p-3 border rounded-md hover:bg-muted transition-colors {selectedToken?.tokenId === token.tokenId ? 'border-primary bg-primary/10' : 'border-border'}"
                 onclick={() => {
                   selectedToken = token
                   amount = ""
@@ -225,7 +224,22 @@
                 disabled={isTransferring}
               >
                 <span class="text-sm font-medium">
-                  {tokenBalance} <span class="text-gray-500">{ownerName}</span>CRC
+                  {tokenBalance}
+                </span>
+                <Avatar.Root class="w-8 h-8 rounded-full border">
+                  <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-black">
+                    <ImageIcon class="w-4 h-4 text-white" />
+                  </Avatar.Fallback>
+                  {#if ownerProfile?.previewImageUrl}
+                    <Avatar.Image
+                      src={ownerProfile.previewImageUrl}
+                      alt={ownerName}
+                      class="w-8 h-8 rounded-full object-cover"
+                    />
+                  {/if}
+                </Avatar.Root>
+                <span class="text-sm text-gray-500">
+                  {ownerName}
                 </span>
               </button>
             {/each}

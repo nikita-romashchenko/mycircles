@@ -21,7 +21,7 @@
       <div>
         <h2 class="font-semibold text-lg">{profile.name || "Anonymous"}</h2>
         {#if isOwnProfile}
-          <p class="text-blue-500 text-sm">(Your Profile)</p>
+          <p class="text-primary text-sm">(Your Profile)</p>
         {/if}
       </div>
     </a>

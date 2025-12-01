@@ -704,7 +704,7 @@
             {#if isTooLong}
               <button
                 onclick={() => (isDescriptionExpanded = !isDescriptionExpanded)}
-                class="text-blue-500 hover:text-blue-700 text-sm mt-1"
+                class="text-primary hover:text-primary/80 text-sm mt-1"
               >
                 {isDescriptionExpanded ? "Show less" : "Show more"}
               </button>
@@ -866,8 +866,8 @@
                       {tokenBalance}
                     </span>
                     <Avatar.Root class="w-8 h-8 rounded-full border">
-                      <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-gray-200">
-                        <ImageIcon class="w-4 h-4 text-gray-400" />
+                      <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-black">
+                        <ImageIcon class="w-4 h-4 text-white" />
                       </Avatar.Fallback>
                       {#if ownerProfile?.previewImageUrl}
                         <Avatar.Image
@@ -904,7 +904,7 @@
         >
           <button
             onclick={openUploadMediaModal}
-            class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
+            class="w-14 h-14 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-lg hover:bg-primary/90 transition-colors"
             aria-label="Create post"
           >
             <PenSquare class="w-6 h-6 text-white" />
