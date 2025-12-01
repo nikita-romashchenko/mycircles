@@ -2,7 +2,6 @@
   import { signIn } from "@auth/sveltekit/client"
   import Safe from "@safe-global/protocol-kit"
   import { browser } from "$app/environment"
-  import { ethers } from "ethers"
   import { storeAuthData } from "$lib/utils/authStorage"
 
   const API_ENDPOINTS = {
@@ -143,10 +142,8 @@
       }
 
       const eip1193Provider = (window as any).ethereum
-      const provider = new ethers.BrowserProvider(eip1193Provider)
-      const signer = await provider.getSigner()
-
-      walletOwner = signer.address
+      const accounts = await eip1193Provider.request({ method: 'eth_requestAccounts' })
+      walletOwner = accounts[0]
 
       protocolKit = await Safe.init({
         provider: eip1193Provider,
