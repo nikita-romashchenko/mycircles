@@ -558,9 +558,7 @@
     <!-- User info section -->
     <div class="flex flex-col">
       <!-- Banner background -->
-      <div
-        class="relative w-full h-32 bg-gray-200"
-      >
+      <div class="relative w-full h-32 bg-gray-200">
         <!-- Profile picture overlapping banner -->
         <div class="absolute -bottom-16 left-4">
           <Avatar.Root
@@ -581,14 +579,20 @@
 
         <!-- Can receive amount in top right corner (for other profiles) -->
         {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
-          {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+          {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(
+            1,
+          )}
           {@const amount = parseFloat(amountInCrc)}
           {@const trustLevel =
-            amount < 100 ? "🪨" :
-            amount < 1000 ? "🟡" :
-            "💎"}
-          <div class="absolute top-4 right-4" style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;">
-            <p class="text-2xl font-bold flex items-center gap-1" style="color: #191568;">
+            amount < 100 ? "🪨" : amount < 1000 ? "🟡" : "💎"}
+          <div
+            class="absolute top-4 right-4"
+            style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;"
+          >
+            <p
+              class="text-2xl font-bold flex items-center gap-1"
+              style="color: #191568;"
+            >
               <span>{trustLevel}</span>
               <span>{amountInCrc}</span>
             </p>
@@ -598,8 +602,14 @@
         <!-- Total balance in top right corner (for own profile) -->
         {#if isOwnProfile && totalBalance !== null && !loadingBalance}
           {@const balanceInCrc = (parseFloat(totalBalance) / 1e18).toFixed(1)}
-          <div class="absolute top-4 right-4" style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;">
-            <p class="text-2xl font-bold flex items-center gap-1" style="color: #191568;">
+          <div
+            class="absolute top-4 right-4"
+            style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;"
+          >
+            <p
+              class="text-2xl font-bold flex items-center gap-1"
+              style="color: #191568;"
+            >
               <span>💰</span>
               <span>{balanceInCrc}</span>
             </p>
@@ -701,7 +711,7 @@
         {#if isOwnProfile && $pageStore.data.session?.user?.safeAddress && !loadingIssuance}
           <div class="flex flex-row gap-2 mt-2 w-full">
             <Button
-              onclick={() => window.location.href = '/settings'}
+              onclick={() => (window.location.href = "/settings")}
               variant="outline"
               size="icon"
               class="h-9 w-9"
@@ -713,7 +723,9 @@
               onclick={handleMint}
               variant="default"
               class="text-sm flex-1 gap-2"
-              disabled={loadingMint || !issuanceAmount || parseFloat(issuanceAmount) === 0}
+              disabled={loadingMint ||
+                !issuanceAmount ||
+                parseFloat(issuanceAmount) === 0}
             >
               {#if loadingMint}
                 Creating...
@@ -774,19 +786,20 @@
         profileAddress={profile?.address}
       />
 
-    <!-- Floating upload button -->
-    {#if $pageStore.data.session}
-      <div
-        class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
-      >
-        <button
-          onclick={openUploadMediaModal}
-          class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
-          aria-label="Create post"
+      <!-- Floating upload button -->
+      {#if $pageStore.data.session}
+        <div
+          class="DESKTOP_VIEWPORT fixed bottom-20 left-0 right-0 z-40 flex justify-end px-6"
         >
-          <PlusIcon class="w-8 h-8 text-white" />
-        </button>
-      </div>
+          <button
+            onclick={openUploadMediaModal}
+            class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
+            aria-label="Create post"
+          >
+            <PlusIcon class="w-8 h-8 text-white" />
+          </button>
+        </div>
+      {/if}
     {/if}
   {/if}
 {/if}
