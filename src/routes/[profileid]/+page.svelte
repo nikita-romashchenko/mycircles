@@ -47,6 +47,7 @@
   let uploadModalOpen = $state(false)
   let vouchModalOpen = $state(false)
   let balanceDialogOpen = $state(false)
+  let trustScoreModalOpen = $state(false)
   let contents = $state<
     {
       relation: Relation
@@ -634,64 +635,78 @@
       <div class="relative w-full h-26 bg-gray-200">
         <!-- Profile picture overlapping banner - centered -->
         <div class="absolute -bottom-16 left-1/2 -translate-x-1/2">
-          <Avatar.Root
-            class="w-32 h-32 rounded-full border-4 border-background"
-          >
-            <Avatar.Fallback
-              class="w-32 h-32 rounded-full object-cover bg-gray-200"
-            >
-              <ImageIcon class="w-12 h-12 text-gray-400" />
-            </Avatar.Fallback>
-            <Avatar.Image
-              src={(profile as CirclesRpcProfile).previewImageUrl}
-              alt={(profile as CirclesRpcProfile).name}
-              class="w-32 h-32 rounded-full object-cover"
-            />
-          </Avatar.Root>
-
-          <!-- Balance/Trust score overlapping profile picture -->
           {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
             {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(
               1,
             )}
             {@const amount = parseFloat(amountInCrc)}
-            {@const trustLevel =
-              amount < 100 ? "🪨" : amount < 1000 ? "🟡" : "💎"}
-            <div
-              class="absolute left-1/2 -translate-x-1/2"
-              style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+            {@const trustScore = Math.min(amount, 5000)}
+            {@const shadowSpread = Math.round((trustScore / 5000) * 10)}
+            <button
+              onclick={() => trustScoreModalOpen = true}
+              class="cursor-pointer block"
+              style="transition: all 0.3s;"
             >
-              <p
-                class="text-xl font-bold flex items-center gap-1"
-                style="color: #191568;"
+              <Avatar.Root
+                class="w-32 h-32 rounded-full"
+                style="border-width: 2px; box-sizing: content-box; box-shadow: 0px 0px 0px {shadowSpread}px #ff491b; transition: 0.3s all;"
               >
-                <span>{trustLevel}</span>
-                <span>{amountInCrc}</span>
-              </p>
-            </div>
-          {/if}
-
-          {#if isOwnProfile && totalBalance !== null && !loadingBalance}
-            {@const balanceInCrc = (parseFloat(totalBalance) / 1e18).toFixed(1)}
+                <Avatar.Fallback
+                  class="w-32 h-32 rounded-full object-cover bg-gray-200"
+                >
+                  <ImageIcon class="w-12 h-12 text-gray-400" />
+                </Avatar.Fallback>
+                <Avatar.Image
+                  src={(profile as CirclesRpcProfile).previewImageUrl}
+                  alt={(profile as CirclesRpcProfile).name}
+                  class="w-32 h-32 rounded-full object-cover"
+                />
+              </Avatar.Root>
+            </button>
+          {:else if isOwnProfile && totalBalance !== null && !loadingBalance}
             <button
               onclick={openBalanceDialog}
-              class="absolute left-1/2 -translate-x-1/2 cursor-pointer hover:scale-105 transition-transform"
-              style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+              class="cursor-pointer block"
+              style="transition: all 0.3s;"
             >
-              <p
-                class="text-xl font-bold flex items-center gap-1"
-                style="color: #191568;"
+              <Avatar.Root
+                class="w-32 h-32 rounded-full"
+                style="border-width: 2px; box-sizing: content-box; transition: all 0.3s;"
               >
-                <span>💰</span>
-                <span>{balanceInCrc}</span>
-              </p>
+                <Avatar.Fallback
+                  class="w-32 h-32 rounded-full object-cover bg-gray-200"
+                >
+                  <ImageIcon class="w-12 h-12 text-gray-400" />
+                </Avatar.Fallback>
+                <Avatar.Image
+                  src={(profile as CirclesRpcProfile).previewImageUrl}
+                  alt={(profile as CirclesRpcProfile).name}
+                  class="w-32 h-32 rounded-full object-cover"
+                />
+              </Avatar.Root>
             </button>
+          {:else}
+            <Avatar.Root
+              class="w-32 h-32 rounded-full"
+              style="border-width: 2px; box-sizing: content-box; transition: all 0.3s;"
+            >
+              <Avatar.Fallback
+                class="w-32 h-32 rounded-full object-cover bg-gray-200"
+              >
+                <ImageIcon class="w-12 h-12 text-gray-400" />
+              </Avatar.Fallback>
+              <Avatar.Image
+                src={(profile as CirclesRpcProfile).previewImageUrl}
+                alt={(profile as CirclesRpcProfile).name}
+                class="w-32 h-32 rounded-full object-cover"
+              />
+            </Avatar.Root>
           {/if}
         </div>
       </div>
 
       <!-- User info below banner - centered -->
-      <div class="flex flex-col items-center text-center px-4 pt-24">
+      <div class="flex flex-col items-center text-center px-4 pt-20">
         <div class="flex flex-col gap-1">
           <p class="text-xl font-bold">
             {(profile as CirclesRpcProfile).name || "Anonymous"}
@@ -850,6 +865,57 @@
         recipientAddress={(profile as CirclesRpcProfile).address}
         recipientName={(profile as CirclesRpcProfile).name || "this person"}
       />
+
+      <Dialog.Root bind:open={trustScoreModalOpen}>
+        <Dialog.Content class="sm:max-w-lg">
+          <Dialog.Header>
+            <Dialog.Title>Trust Score</Dialog.Title>
+            <Dialog.Description class="text-gray-500">
+              This is the trust score. The bigger the nimbus, the more trustworthy the account according to the trust network.
+            </Dialog.Description>
+          </Dialog.Header>
+
+          <div class="flex flex-col gap-4 py-4">
+            {#if canReceiveAmount !== null && !loadingCanReceive}
+              {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+              {@const amount = parseFloat(amountInCrc)}
+              {@const trustScore = Math.min(amount, 5000)}
+              {@const shadowSpread = Math.round((trustScore / 5000) * 10)}
+
+              <div class="flex flex-col items-center gap-4">
+                <div class="relative">
+                  <Avatar.Root
+                    class="w-32 h-32 rounded-full"
+                    style="border-width: 2px; box-sizing: content-box; box-shadow: 0px 0px 0px {shadowSpread}px #ff491b; transition: box-shadow 0.3s ease;"
+                  >
+                    <Avatar.Fallback
+                      class="w-32 h-32 rounded-full object-cover bg-gray-200"
+                    >
+                      <ImageIcon class="w-12 h-12 text-gray-400" />
+                    </Avatar.Fallback>
+                    <Avatar.Image
+                      src={(profile as CirclesRpcProfile).previewImageUrl}
+                      alt={(profile as CirclesRpcProfile).name}
+                      class="w-32 h-32 rounded-full object-cover"
+                    />
+                  </Avatar.Root>
+                </div>
+
+                <div class="text-center">
+                  <p class="text-2xl font-bold" style="color: #191568;">
+                    {amountInCrc}
+                  </p>
+                  <p class="text-sm text-gray-500 mt-1">
+                    Trust Flow
+                  </p>
+                </div>
+              </div>
+            {:else}
+              <p class="text-sm text-gray-500 text-center">Loading trust score...</p>
+            {/if}
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
     {/if}
 
     {#if isOwnProfile}

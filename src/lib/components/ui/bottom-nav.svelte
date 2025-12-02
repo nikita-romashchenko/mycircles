@@ -2,6 +2,7 @@
   import { page } from "$app/state"
   import { signIn } from "@auth/sveltekit/client"
   import HomeIcon from "@lucide/svelte/icons/home"
+  import MapIcon from "@lucide/svelte/icons/map"
   import UserIcon from "@lucide/svelte/icons/user"
   import LogIn from "@lucide/svelte/icons/log-in"
   import BellIcon from "@lucide/svelte/icons/bell"
@@ -47,6 +48,11 @@
       icon: HomeIcon,
     },
     {
+      title: "Map",
+      url: "/map",
+      icon: MapIcon,
+    },
+    {
       title: "Sign in",
       icon: LogIn,
       action: () => signIn(),
@@ -59,6 +65,11 @@
       title: "Feed",
       url: "/",
       icon: HomeIcon,
+    },
+    {
+      title: "Map",
+      url: "/map",
+      icon: MapIcon,
     },
     {
       title: "Profile",
@@ -86,7 +97,7 @@
         <a
           href={item.url}
           class="flex items-center justify-center px-4 py-2 rounded-lg transition-colors hover:bg-accent"
-          class:text-primary={pathname === item.url}
+          class:text-primary={item.url === '/' ? pathname === '/' : pathname.startsWith(item.url)}
           aria-label={item.title}
         >
           <div class="relative">
