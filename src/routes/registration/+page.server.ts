@@ -7,12 +7,14 @@ import { registrationSchema } from '$lib/validation/schemas';
 import { superValidate } from 'sveltekit-superforms';
 import { zod } from 'sveltekit-superforms/adapters';
 
-import { ethers } from 'ethers'
 import Safe from '@safe-global/protocol-kit'
 
 import { Sdk, type HumanAvatar } from '@aboutcircles/sdk';
 import { SafeContractRunner } from '@aboutcircles/sdk-runner';
 import type { TransactionRequest } from '@aboutcircles/sdk-types';
+import { createPublicClient, http, parseEther } from 'viem';
+import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { gnosis } from 'viem/chains';
 
 // @todo I've no idea why we need it but circles sdk doesn;t work without it
 import WebSocket from 'ws';
@@ -79,19 +81,16 @@ export const actions: Actions = {
       // check if there is no safe already created for this user
       if (!safeAddress || safeAddress === "0x") {
 
-        // Generate a new private key for the user
-        const newWallet = ethers.Wallet.createRandom();
-        privateKey = newWallet.privateKey;
-        const walletAddress = newWallet.address;
+        // Generate a new private key for the user using viem
+        privateKey = generatePrivateKey();
+        const account = privateKeyToAccount(privateKey);
+        const walletAddress = account.address;
         console.log("Generated new wallet with private key:", privateKey, walletAddress);
         // Use the global owner private key for inviter
         try {
           // @todo add type safety
           // @todo take it from the list of controlled safes
           const inviterAddress = env.GLOBAL_OWNER;
-
-          const { createPublicClient, http } = await import('viem');
-          const { gnosis } = await import('viem/chains');
 
           const publicClient = createPublicClient({
             chain: gnosis,
@@ -117,7 +116,7 @@ export const actions: Actions = {
           const transferTx: TransactionRequest = {
             to: walletAddress as `0x${string}`,
             data: "0x",
-            value: ethers.parseEther("0.01")
+            value: parseEther("0.01")
           };
           batch.addTransaction(transferTx);
 

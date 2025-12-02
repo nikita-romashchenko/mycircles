@@ -11,14 +11,18 @@
   import * as Avatar from "$lib/components/ui/avatar/index"
   import UploadMediaDialog from "$lib/components/blocks/dialogs/UploadMediaDialog.svelte"
   import RelationsDialog from "$lib/components/blocks/dialogs/RelationsDialog.svelte"
+  import VouchDialog from "$lib/components/blocks/dialogs/VouchDialog.svelte"
+  import * as Dialog from "$lib/components/ui/dialog/index"
   import ImageIcon from "@lucide/svelte/icons/image"
-  import PlusIcon from "@lucide/svelte/icons/plus"
+  import PenSquare from "@lucide/svelte/icons/pen-square"
   import HandHeart from "@lucide/svelte/icons/hand-heart"
   import Settings from "@lucide/svelte/icons/settings"
   import TrustButton from "$lib/components/blocks/TrustButton.svelte"
-  import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
+  import { avatarStore } from "$lib/stores/safe4337.svelte"
   import { postReloadStore } from "$lib/stores/postReload.svelte"
   import { DEFAULT_LIMIT } from "$lib/constants"
+  import { Sdk } from "@aboutcircles/sdk"
+  import { CirclesConverter } from "@aboutcircles/sdk-utils"
 
   // Subscribe to reload signals
   let reloadSignal = $derived.by(() => {
@@ -41,6 +45,8 @@
 
   let relationsModalOpen = $state(false)
   let uploadModalOpen = $state(false)
+  let vouchModalOpen = $state(false)
+  let balanceDialogOpen = $state(false)
   let contents = $state<
     {
       relation: Relation
@@ -63,6 +69,9 @@
   let issuanceAmount = $state<string | null>(null)
   let loadingIssuance = $state(false)
   let loadingMint = $state(false)
+  let tokenBalances = $state<any[]>([])
+  let tokenProfiles = $state<Map<string, CirclesRpcProfile | null>>(new Map())
+  let loadingTokens = $state(false)
 
   const MAX_DESCRIPTION_LENGTH = 150
 
@@ -110,6 +119,9 @@
       loadInitialPosts()
     }
   })
+
+  // Avatar is automatically initialized in +layout.svelte
+  // No need for separate initialization here
 
   async function loadInitialPosts() {
     if (!profile || loading) return
@@ -513,6 +525,7 @@
         return
       }
 
+      console.log("✅ Using Safe 4337 Avatar for sponsored mint transaction")
       console.log("💎 Minting personal tokens...")
 
       // Mint tokens using the SDK
@@ -531,6 +544,60 @@
     }
   }
 
+  async function openBalanceDialog() {
+    if (!isOwnProfile) return
+
+    balanceDialogOpen = true
+
+    // Load token balances if opening dialog for the first time
+    if (tokenBalances.length === 0) {
+      await loadTokenBalances()
+    }
+  }
+
+  async function loadTokenBalances() {
+    if (!$pageStore.data.session?.user?.safeAddress) return
+
+    loadingTokens = true
+    try {
+      const fromAddress = $pageStore.data.session.user.safeAddress.toLowerCase() as `0x${string}`
+
+      // Initialize SDK to get RPC access
+      const sdk = new Sdk()
+
+      // Get token balances from RPC
+      const balances = await sdk.rpc.balance.getTokenBalances(fromAddress)
+
+      // Filter to only ERC1155 tokens with balance >= 1 CRC
+      const MIN_BALANCE = CirclesConverter.circlesToAttoCircles(1)
+      const filteredBalances = balances.filter(
+        token => token.isErc1155 && token.attoCircles >= MIN_BALANCE
+      )
+
+      console.log(`Found ${filteredBalances.length} ERC1155 Circles tokens with >= 1 CRC`)
+
+      // Get profiles for all token owners
+      const tokenOwners = [...new Set(filteredBalances.map(t => t.tokenOwner))]
+      if (tokenOwners.length > 0) {
+        const profiles = await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
+
+        // Build profile map
+        const profileMap = new Map<string, CirclesRpcProfile | null>()
+        profiles.forEach((profile, index) => {
+          const address = tokenOwners[index].toLowerCase()
+          profileMap.set(address, profile)
+        })
+        tokenProfiles = profileMap
+      }
+
+      tokenBalances = filteredBalances
+    } catch (err: any) {
+      console.error("Error loading token balances:", err)
+    } finally {
+      loadingTokens = false
+    }
+  }
+
   $effect(() => {
     console.log("Form:", form)
   })
@@ -544,6 +611,7 @@
       }
     }
   })
+
 </script>
 
 <!-- Error screen -->
@@ -558,9 +626,11 @@
     <!-- User info section -->
     <div class="flex flex-col">
       <!-- Banner background -->
-      <div class="relative w-full h-32 bg-gray-200">
-        <!-- Profile picture overlapping banner -->
-        <div class="absolute -bottom-16 left-4">
+      <div
+        class="relative w-full h-26 bg-gray-200"
+      >
+        <!-- Profile picture overlapping banner - centered -->
+        <div class="absolute -bottom-16 left-1/2 -translate-x-1/2">
           <Avatar.Root
             class="w-32 h-32 rounded-full border-4 border-background"
           >
@@ -575,60 +645,45 @@
               class="w-32 h-32 rounded-full object-cover"
             />
           </Avatar.Root>
+
+          <!-- Balance/Trust score overlapping profile picture -->
+          {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
+            {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+            {@const amount = parseFloat(amountInCrc)}
+            {@const trustLevel =
+              amount < 100 ? "🪨" :
+              amount < 1000 ? "🟡" :
+              "💎"}
+            <div class="absolute left-1/2 -translate-x-1/2" style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+              <p class="text-xl font-bold flex items-center gap-1" style="color: #191568;">
+                <span>{trustLevel}</span>
+                <span>{amountInCrc}</span>
+              </p>
+            </div>
+          {/if}
+
+          {#if isOwnProfile && totalBalance !== null && !loadingBalance}
+            {@const balanceInCrc = (parseFloat(totalBalance) / 1e18).toFixed(1)}
+            <button
+              onclick={openBalanceDialog}
+              class="absolute left-1/2 -translate-x-1/2 cursor-pointer hover:scale-105 transition-transform"
+              style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+            >
+              <p class="text-xl font-bold flex items-center gap-1" style="color: #191568;">
+                <span>💰</span>
+                <span>{balanceInCrc}</span>
+              </p>
+            </button>
+          {/if}
         </div>
-
-        <!-- Can receive amount in top right corner (for other profiles) -->
-        {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
-          {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(
-            1,
-          )}
-          {@const amount = parseFloat(amountInCrc)}
-          {@const trustLevel =
-            amount < 100 ? "🪨" : amount < 1000 ? "🟡" : "💎"}
-          <div
-            class="absolute top-4 right-4"
-            style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;"
-          >
-            <p
-              class="text-2xl font-bold flex items-center gap-1"
-              style="color: #191568;"
-            >
-              <span>{trustLevel}</span>
-              <span>{amountInCrc}</span>
-            </p>
-          </div>
-        {/if}
-
-        <!-- Total balance in top right corner (for own profile) -->
-        {#if isOwnProfile && totalBalance !== null && !loadingBalance}
-          {@const balanceInCrc = (parseFloat(totalBalance) / 1e18).toFixed(1)}
-          <div
-            class="absolute top-4 right-4"
-            style="background-color: #fff7f6; padding: 5px 10px; border-radius: 10px;"
-          >
-            <p
-              class="text-2xl font-bold flex items-center gap-1"
-              style="color: #191568;"
-            >
-              <span>💰</span>
-              <span>{balanceInCrc}</span>
-            </p>
-          </div>
-        {/if}
       </div>
 
-      <!-- User info below banner -->
-      <div class="flex flex-col px-4 pt-20">
+      <!-- User info below banner - centered -->
+      <div class="flex flex-col items-center text-center px-4 pt-24">
         <div class="flex flex-col gap-1">
           <p class="text-xl font-bold">
             {(profile as CirclesRpcProfile).name || "Anonymous"}
           </p>
-          <p class="text-xs text-gray-500 font-mono">
-            {(profile as CirclesRpcProfile).address}
-          </p>
-          {#if isOwnProfile}
-            <span class="text-xs text-blue-500">(Your Profile)</span>
-          {/if}
         </div>
 
         {#if (profile as CirclesRpcProfile).description}
@@ -649,7 +704,7 @@
             {#if isTooLong}
               <button
                 onclick={() => (isDescriptionExpanded = !isDescriptionExpanded)}
-                class="text-blue-500 hover:text-blue-700 text-sm mt-1"
+                class="text-primary hover:text-primary/80 text-sm mt-1"
               >
                 {isDescriptionExpanded ? "Show less" : "Show more"}
               </button>
@@ -695,11 +750,8 @@
               class="text-sm flex-1"
             />
             <Button
-              onclick={() => {
-                // TODO: Implement vouch functionality
-                console.log("Vouch clicked")
-              }}
-              variant="secondary"
+              onclick={() => vouchModalOpen = true}
+              variant="default"
               class="text-sm flex-1 gap-2"
             >
               <HandHeart class="w-4 h-4" />
@@ -778,6 +830,65 @@
       {loadingMoreProfiles}
       {isOwnProfile}
     />
+
+    {#if !isOwnProfile && profile}
+      <VouchDialog
+        bind:open={vouchModalOpen}
+        maxFlowAmount={canReceiveAmount}
+        recipientAddress={(profile as CirclesRpcProfile).address}
+        recipientName={(profile as CirclesRpcProfile).name || "this person"}
+      />
+    {/if}
+
+    {#if isOwnProfile}
+      <Dialog.Root bind:open={balanceDialogOpen}>
+        <Dialog.Content class="sm:max-w-lg">
+          <Dialog.Header>
+            <Dialog.Title>Your Circles Tokens</Dialog.Title>
+            <Dialog.Description>
+              View all your Circles tokens and balances.
+            </Dialog.Description>
+          </Dialog.Header>
+
+          <div class="flex flex-col gap-4 py-4">
+            {#if loadingTokens}
+              <p class="text-sm text-gray-500 text-center">Loading your tokens...</p>
+            {:else if tokenBalances.length === 0}
+              <p class="text-sm text-gray-500 text-center">No Circles tokens available.</p>
+            {:else}
+              <div class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2">
+                {#each tokenBalances as token}
+                  {@const tokenBalance = Number(CirclesConverter.attoCirclesToCircles(token.attoCircles)).toFixed(2)}
+                  {@const ownerProfile = tokenProfiles.get(token.tokenOwner.toLowerCase())}
+                  {@const ownerName = ownerProfile?.name || `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
+                  <div class="flex items-center gap-2 p-3 border rounded-md hover:bg-gray-50">
+                    <span class="text-sm font-medium">
+                      {tokenBalance}
+                    </span>
+                    <Avatar.Root class="w-8 h-8 rounded-full border">
+                      <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-black">
+                        <ImageIcon class="w-4 h-4 text-white" />
+                      </Avatar.Fallback>
+                      {#if ownerProfile?.previewImageUrl}
+                        <Avatar.Image
+                          src={ownerProfile.previewImageUrl}
+                          alt={ownerName}
+                          class="w-8 h-8 rounded-full object-cover"
+                        />
+                      {/if}
+                    </Avatar.Root>
+                    <span class="text-sm text-gray-500">
+                      {ownerName}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </div>
+        </Dialog.Content>
+      </Dialog.Root>
+    {/if}
+
     <!-- Only show upload dialog and button for other profiles (not own profile) -->
     {#if !isOwnProfile}
       <UploadMediaDialog
@@ -793,10 +904,10 @@
         >
           <button
             onclick={openUploadMediaModal}
-            class="w-14 h-14 rounded-full bg-blue-500 flex items-center justify-center cursor-pointer shadow-lg hover:bg-blue-600 transition-colors"
+            class="w-14 h-14 rounded-full bg-primary flex items-center justify-center cursor-pointer shadow-lg hover:bg-primary/90 transition-colors"
             aria-label="Create post"
           >
-            <PlusIcon class="w-8 h-8 text-white" />
+            <PenSquare class="w-6 h-6 text-white" />
           </button>
         </div>
       {/if}

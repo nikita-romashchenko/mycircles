@@ -1,4 +1,5 @@
-import { ethers } from 'ethers';
+import { privateKeyToAccount } from 'viem/accounts';
+import { verifyMessage, recoverMessageAddress } from 'viem';
 import mongoose from 'mongoose';
 import { Profile } from '$lib/models/Profile';
 import { env } from '$env/dynamic/private';
@@ -157,8 +158,8 @@ export class Auth {
         };
       }
 
-      const wallet = new ethers.Wallet(profile.privateKey);
-      const ownerAddress = wallet.address;
+      const account = privateKeyToAccount(profile.privateKey as `0x${string}`);
+      const ownerAddress = account.address;
 
       return {
         success: true,
@@ -277,7 +278,10 @@ export class Auth {
       // Verify signature
       let recoveredAddress: string;
       try {
-        recoveredAddress = ethers.verifyMessage(message, signature);
+        recoveredAddress = await recoverMessageAddress({
+          message,
+          signature: signature as `0x${string}`
+        });
       } catch (error) {
         return {
           success: false,
@@ -286,8 +290,8 @@ export class Auth {
       }
 
       // Verify the signature was made with the private key that controls this Safe
-      const expectedWallet = new ethers.Wallet(profile.privateKey);
-      if (recoveredAddress.toLowerCase() !== expectedWallet.address.toLowerCase()) {
+      const expectedAccount = privateKeyToAccount(profile.privateKey as `0x${string}`);
+      if (recoveredAddress.toLowerCase() !== expectedAccount.address.toLowerCase()) {
         return {
           success: false,
           error: 'Signature does not match Safe owner'

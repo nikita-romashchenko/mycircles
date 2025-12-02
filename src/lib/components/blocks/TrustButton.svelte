@@ -41,7 +41,7 @@
 <Button
   onclick={handleClick}
   disabled={loading}
-  variant="secondary"
+  variant="default"
   class={cn("gap-2", className)}
 >
   {#if loading}

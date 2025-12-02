@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { safeApiService } from '$lib/services/SafeApiService';
-import { ethers } from 'ethers';
+import { privateKeyToAccount } from 'viem/accounts';
 
 export const POST: RequestHandler = async ({ request }) => {
   try {
@@ -19,8 +19,8 @@ export const POST: RequestHandler = async ({ request }) => {
         // If private key provided, extract address from it
         if (privateKey && !ownerAddress) {
           try {
-            const wallet = new ethers.Wallet(privateKey);
-            targetAddress = wallet.address;
+            const account = privateKeyToAccount(privateKey as `0x${string}`);
+            targetAddress = account.address;
           } catch (error) {
             return json({ error: 'Invalid private key format' }, { status: 400 });
           }
@@ -61,8 +61,8 @@ export const POST: RequestHandler = async ({ request }) => {
         // If private key provided, extract address from it
         if (privateKey && !ownerAddress) {
           try {
-            const wallet = new ethers.Wallet(privateKey);
-            targetAddress = wallet.address;
+            const account = privateKeyToAccount(privateKey as `0x${string}`);
+            targetAddress = account.address;
           } catch (error) {
             return json({ error: 'Invalid private key format' }, { status: 400 });
           }

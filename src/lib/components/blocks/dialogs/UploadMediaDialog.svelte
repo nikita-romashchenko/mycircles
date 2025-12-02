@@ -11,6 +11,7 @@
   import { page } from "$app/stores"
   import ImageIcon from "@lucide/svelte/icons/image"
   import XIcon from "@lucide/svelte/icons/x"
+  import { avatarStore } from "$lib/stores/safe4337.svelte"
 
   import type { UploadMediaSchema } from "$lib/validation/schemas"
   import type { Infer, SuperValidated } from "sveltekit-superforms"
@@ -117,17 +118,20 @@
       batchSummary = data.summary
       console.log("✅ Batch transaction built:", data)
 
-      // Execute the transaction
-      const { getRunner } = await import("$lib/stores/safeBrowserRunner.svelte")
-
-      const runner = getRunner()
-      if (!runner) {
-        throw new Error("SafeBrowserRunner not initialized. Please refresh the page.")
+      // Execute the transaction using Safe4337 avatar
+      const avatar = avatarStore.getAvatar()
+      if (!avatar) {
+        throw new Error("Avatar not initialized. Please refresh the page.")
       }
 
       console.log(`Executing batch transaction with ${batchTransactions.length} operations`)
 
-      // Send all transactions as one batch (user signs once)
+      // Get the runner from the avatar and send all transactions as one batch (user signs once)
+      const runner = (avatar as any).runner // Access the runner from the avatar
+      if (!runner || !runner.sendTransaction) {
+        throw new Error("Runner not available. Please refresh the page.")
+      }
+
       const receipt = await runner.sendTransaction(batchTransactions as any)
 
       console.log("✅ Batch transaction executed:", receipt.transactionHash)
@@ -325,7 +329,7 @@
           disabled={(!$form.caption && $form.media.length === 0) || isSubmitting || isExecutingBatch}
           type="submit">
           {#if isExecutingBatch}
-            Signing Transaction...
+            Posting...
           {:else if isSubmitting}
             Processing...
           {:else}

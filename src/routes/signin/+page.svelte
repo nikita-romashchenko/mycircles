@@ -2,14 +2,18 @@
   import { signIn } from "@auth/sveltekit/client"
   import Safe from "@safe-global/protocol-kit"
   import { browser } from "$app/environment"
-  import { ethers } from "ethers"
   import { storeAuthData } from "$lib/utils/authStorage"
+  import { createPrivateKeyProvider, isValidPrivateKey } from "$lib/utils/privateKeyProvider"
+  import { privateKeyToAccount } from "viem/accounts"
 
   const API_ENDPOINTS = {
     CHALLENGE: "/api/auth/challenge",
     SAFES: "/api/safes",
   }
 
+  type AuthMethod = 'metamask' | 'privatekey'
+
+  let authMethod: AuthMethod | null = null
   let showSafeForm = false
   let walletAddress = ""
   let safes: string[] = []
@@ -17,6 +21,10 @@
   let loading = false
   let error = ""
   let challenge: any = null
+
+  // Private key auth
+  let privateKey = ""
+  let showPrivateKey = false
 
   async function loadSafes() {
     if (!walletAddress) {
@@ -85,8 +93,64 @@
   }
 
   function handleMetaMaskLogin() {
+    authMethod = 'metamask'
     showSafeForm = true
     connectMetaMask()
+  }
+
+  function handlePrivateKeyLogin() {
+    authMethod = 'privatekey'
+    showSafeForm = true
+  }
+
+  async function loadSafesWithPrivateKey() {
+    if (!privateKey) {
+      error = "Please enter your private key"
+      return
+    }
+
+    if (!isValidPrivateKey(privateKey)) {
+      error = "Invalid private key format"
+      return
+    }
+
+    loading = true
+    error = ""
+
+    try {
+      const account = privateKeyToAccount(
+        (privateKey.startsWith('0x') ? privateKey : `0x${privateKey}`) as `0x${string}`
+      )
+      walletAddress = account.address
+
+      const response = await fetch(API_ENDPOINTS.SAFES, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          action: "getSafesForOwner",
+          ownerAddress: walletAddress,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to fetch safes")
+      }
+
+      safes = data.safes || []
+
+      if (safes.length === 0) {
+        error = "No safes found for this private key"
+      }
+    } catch (err) {
+      error = err instanceof Error ? err.message : "Failed to load safes"
+      safes = []
+    } finally {
+      loading = false
+    }
   }
 
   async function generateChallenge() {
@@ -119,7 +183,7 @@
     }
 
     if (!walletAddress) {
-      error = "Please connect MetaMask"
+      error = authMethod === 'metamask' ? "Please connect MetaMask" : "Please enter your private key"
       return
     }
 
@@ -136,17 +200,32 @@
       let signature: string
       let walletOwner: string
       let protocolKit
+      let eip1193Provider: any
 
-      // For MetaMask, create Safe instance with MetaMask provider
-      if (!browser || !(window as any).ethereum) {
-        throw new Error("MetaMask not available")
+      // Create provider based on auth method
+      if (authMethod === 'privatekey') {
+        if (!privateKey) {
+          throw new Error("Private key is required")
+        }
+
+        if (!isValidPrivateKey(privateKey)) {
+          throw new Error("Invalid private key format")
+        }
+
+        // Create EIP-1193 provider from private key
+        eip1193Provider = createPrivateKeyProvider(privateKey)
+        const accounts = await eip1193Provider.request({ method: 'eth_accounts' })
+        walletOwner = accounts[0]
+      } else {
+        // MetaMask provider
+        if (!browser || !(window as any).ethereum) {
+          throw new Error("MetaMask not available")
+        }
+
+        eip1193Provider = (window as any).ethereum
+        const accounts = await eip1193Provider.request({ method: 'eth_requestAccounts' })
+        walletOwner = accounts[0]
       }
-
-      const eip1193Provider = (window as any).ethereum
-      const provider = new ethers.BrowserProvider(eip1193Provider)
-      const signer = await provider.getSigner()
-
-      walletOwner = signer.address
 
       protocolKit = await Safe.init({
         provider: eip1193Provider,
@@ -164,7 +243,7 @@
         signature: signature,
         walletOwner: walletOwner,
         safeAddress: selectedSafe.toLowerCase(),
-        authMethod: "metamask",
+        authMethod: authMethod,
         redirect: false,
       })
 
@@ -173,8 +252,9 @@
       } else if (result?.ok) {
         // Store auth data
         storeAuthData({
-          sessionType: "metamask",
+          sessionType: authMethod === 'privatekey' ? 'privatekey' : 'metamask',
           safeAddress: selectedSafe,
+          privateKey: authMethod === 'privatekey' ? privateKey : undefined,
         })
         window.location.href = "/"
       }
@@ -186,6 +266,7 @@
   }
 
   function resetForm() {
+    authMethod = null
     showSafeForm = false
     walletAddress = ""
     safes = []
@@ -193,6 +274,8 @@
     error = ""
     loading = false
     challenge = null
+    privateKey = ""
+    showPrivateKey = false
   }
 </script>
 
@@ -207,6 +290,14 @@
       <div class="auth-methods">
         <button class="metamask-button" onclick={handleMetaMaskLogin}>
           Sign in with MetaMask
+        </button>
+
+        <div class="divider">
+          <span>or</span>
+        </div>
+
+        <button class="privatekey-button" onclick={handlePrivateKeyLogin}>
+          Sign in with Private Key
         </button>
       </div>
     {:else}
@@ -226,12 +317,46 @@
           Back to login options
         </button>
 
-        <div class="form-section">
-          <div class="connected-wallet">
-            <div class="form-label">Connected Wallet</div>
-            <div class="wallet-address">{walletAddress}</div>
+        {#if authMethod === 'privatekey'}
+          <div class="form-section">
+            <label for="privateKeyInput" class="form-label">Private Key</label>
+            <div class="private-key-input-wrapper">
+              <input
+                id="privateKeyInput"
+                type={showPrivateKey ? "text" : "password"}
+                bind:value={privateKey}
+                placeholder="Enter your private key (0x...)"
+                class="form-input"
+                disabled={loading || safes.length > 0}
+              />
+              <button
+                type="button"
+                class="toggle-visibility"
+                onclick={() => showPrivateKey = !showPrivateKey}
+                disabled={loading}
+              >
+                {showPrivateKey ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {#if !walletAddress}
+              <button
+                class="load-safes-button"
+                onclick={loadSafesWithPrivateKey}
+                disabled={loading || !privateKey}
+              >
+                {loading ? "Loading..." : "Load Safes"}
+              </button>
+            {/if}
           </div>
-        </div>
+        {:else}
+          <div class="form-section">
+            <div class="connected-wallet">
+              <div class="form-label">Connected Wallet</div>
+              <div class="wallet-address">{walletAddress}</div>
+            </div>
+          </div>
+        {/if}
 
         {#if error}
           <div class="error-message">{error}</div>
@@ -363,7 +488,7 @@
 
   .signin-button {
     padding: 0.75rem 1rem;
-    background: #1f2937;
+    background: var(--circles-blue);
     border: none;
     border-radius: 8px;
     color: white;
@@ -375,7 +500,7 @@
   }
 
   .signin-button:hover:not(:disabled) {
-    background: #111827;
+    opacity: 0.9;
   }
 
   .signin-button:disabled {
@@ -392,7 +517,32 @@
     font-size: 0.875rem;
   }
 
-  .metamask-button {
+  .divider {
+    position: relative;
+    text-align: center;
+    margin: 0.5rem 0;
+  }
+
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #e5e7eb;
+  }
+
+  .divider span {
+    position: relative;
+    background: white;
+    padding: 0 1rem;
+    color: #9ca3af;
+    font-size: 0.875rem;
+  }
+
+  .metamask-button,
+  .privatekey-button {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -409,9 +559,83 @@
     transition: all 0.15s ease;
   }
 
-  .metamask-button:hover {
+  .metamask-button:hover,
+  .privatekey-button:hover {
     background: #f9fafb;
     border-color: #9ca3af;
+  }
+
+  .private-key-input-wrapper {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .form-input {
+    flex: 1;
+    padding: 0.75rem 0.875rem;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: monospace;
+    background: white;
+    transition: all 0.15s ease;
+  }
+
+  .form-input:focus {
+    outline: none;
+    border-color: #6b7280;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+  }
+
+  .form-input:disabled {
+    background: #f9fafb;
+    color: #9ca3af;
+  }
+
+  .toggle-visibility {
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    color: #6b7280;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  .toggle-visibility:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #9ca3af;
+  }
+
+  .toggle-visibility:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .load-safes-button {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: var(--circles-blue);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 0.5rem;
+  }
+
+  .load-safes-button:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .load-safes-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .connected-wallet {

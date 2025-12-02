@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
-import { ethers } from 'ethers';
+import { createPublicClient, http, getAddress, formatEther, type PublicClient } from 'viem';
+import { gnosis } from 'viem/chains';
 
 export interface SafeInfo {
   address: string;
@@ -18,10 +19,13 @@ export interface SafeApiResponse {
 export class SafeApiService {
   private static readonly BASE_URL = 'https://safe-transaction-gnosis-chain.safe.global/api/v1';
   private static instance: SafeApiService;
-  private provider: ethers.JsonRpcProvider;
+  private publicClient: PublicClient;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(env.RPC_URL);
+    this.publicClient = createPublicClient({
+      chain: gnosis,
+      transport: http(env.RPC_URL)
+    });
   }
 
   static getInstance(): SafeApiService {
@@ -36,7 +40,7 @@ export class SafeApiService {
    */
   async getSafesForOwner(ownerAddress: string): Promise<string[]> {
     try {
-      const checksumAddress = ethers.getAddress(ownerAddress);
+      const checksumAddress = getAddress(ownerAddress);
       const response = await fetch(
         `${SafeApiService.BASE_URL}/owners/${checksumAddress}/safes/`,
         {
@@ -63,7 +67,7 @@ export class SafeApiService {
    */
   async getSafeInfo(safeAddress: string): Promise<SafeInfo> {
     try {
-      const checksumAddress = ethers.getAddress(safeAddress);
+      const checksumAddress = getAddress(safeAddress);
 
       // Get safe info from API
       const safeResponse = await fetch(
@@ -89,8 +93,10 @@ export class SafeApiService {
       // Get balance from RPC
       let balance = '0';
       try {
-        const balanceWei = await this.provider.getBalance(checksumAddress);
-        balance = ethers.formatEther(balanceWei);
+        const balanceWei = await this.publicClient.getBalance({
+          address: checksumAddress as `0x${string}`
+        });
+        balance = formatEther(balanceWei);
       } catch (error) {
         console.warn(`Failed to fetch balance for safe ${checksumAddress}:`, error);
       }

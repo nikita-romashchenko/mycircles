@@ -2,34 +2,24 @@
   import "../app.css"
   import AuthDataManager from "$lib/components/AuthDataManager.svelte"
   import BottomNav from "$lib/components/ui/bottom-nav.svelte"
-  import { avatarStore } from "$lib/stores/circlesAvatar.svelte"
-  import { initializeSafeBrowserRunner } from "$lib/stores/safeBrowserRunner.svelte"
+  import { avatarStore } from "$lib/stores/safe4337.svelte"
   import { page } from "$app/stores"
   import { browser } from "$app/environment"
 
   let { data }: { data: any } = $props()
 
-  // Initialize avatar and SafeBrowserRunner when user is logged in
-  // Track only the safeAddress to avoid unnecessary re-initializations
+  // Initialize avatar with Safe4337Runner when user is logged in
+  // This provides gasless transactions through account abstraction
   $effect(() => {
     if (!browser) return
 
     const safeAddress = $page.data.session?.user?.safeAddress
     if (safeAddress) {
-      console.log('🔄 Initializing avatar for user:', safeAddress)
+      console.log('🔄 Initializing Safe 4337 avatar for user:', safeAddress)
       avatarStore.initialize(safeAddress)
-
-      // Initialize SafeBrowserRunner for batch transactions
-      initializeSafeBrowserRunner(safeAddress)
-        .then(() => {
-          console.log('✅ SafeBrowserRunner initialized for user:', safeAddress)
-        })
-        .catch((err) => {
-          console.error('❌ Failed to initialize SafeBrowserRunner:', err)
-        })
     } else {
-      console.log('🔄 No session, resetting avatar')
-      avatarStore.reset()
+      console.log('🔄 No session, clearing avatar')
+      avatarStore.clear()
     }
   })
 </script>
