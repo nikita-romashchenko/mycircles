@@ -58,7 +58,7 @@ export async function POST({ request, locals }: RequestEvent) {
 
   try {
     const body = await request.json()
-    const { recipientId, type, postId, message } = body
+    const { recipientId, type, postId, message, amount } = body
 
     // Validate required fields
     if (!recipientId || !type) {
@@ -66,7 +66,7 @@ export async function POST({ request, locals }: RequestEvent) {
     }
 
     // Validate type
-    if (type !== "post_on_profile" && type !== "vote") {
+    if (type !== "post_on_profile" && type !== "vote" && type !== "vouch") {
       return json({ error: "Invalid notification type" }, { status: 400 })
     }
 
@@ -76,6 +76,7 @@ export async function POST({ request, locals }: RequestEvent) {
       senderId: session.user.safeAddress,
       type,
       postId,
+      amount,
       message,
       read: false,
     })

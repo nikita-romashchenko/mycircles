@@ -67,7 +67,12 @@
         allLoaded = true
         console.log("No more notifications to load")
       } else {
-        notifications = [...notifications, ...data.notifications]
+        // Deduplicate notifications by _id
+        const existingIds = new Set(notifications.map((n) => n._id))
+        const newNotifications = data.notifications.filter(
+          (n) => !existingIds.has(n._id),
+        )
+        notifications = [...notifications, ...newNotifications]
         allLoaded = false
         console.log(
           "Loaded more notifications, total now:",

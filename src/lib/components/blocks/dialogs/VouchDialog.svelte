@@ -176,6 +176,28 @@
         `✅ Vouch transaction successful. Hash: ${receipt.transactionHash}`,
       )
 
+      // Send notification to recipient
+      try {
+        const senderName = session.user.name ||
+                          `${session.user.safeAddress.slice(0, 6)}...${session.user.safeAddress.slice(-4)}`
+
+        await fetch("/api/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            recipientId: recipientAddress.toLowerCase(),
+            type: "vouch",
+            amount: amountNum.toFixed(2),
+            message: `${senderName} vouched for you with ${amountNum.toFixed(2)} CRC`,
+          }),
+        })
+      } catch (notifErr) {
+        console.error("Failed to send notification:", notifErr)
+        // Don't block the UI if notification fails
+      }
+
       // Reset and close on success
       amount = ""
       selectedToken = null
