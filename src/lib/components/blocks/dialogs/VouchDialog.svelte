@@ -24,7 +24,7 @@
     open = $bindable(false),
     maxFlowAmount,
     recipientAddress,
-    recipientName
+    recipientName,
   }: Props = $props()
 
   let amount = $state("")
@@ -52,7 +52,8 @@
         throw new Error("User session not found.")
       }
 
-      const fromAddress = session.user.safeAddress.toLowerCase() as `0x${string}`
+      const fromAddress =
+        session.user.safeAddress.toLowerCase() as `0x${string}`
 
       // Initialize SDK to get RPC access
       const sdk = new Sdk()
@@ -63,15 +64,20 @@
       // Filter to only ERC1155 tokens with balance >= 1 CRC
       const MIN_BALANCE = CirclesConverter.circlesToAttoCircles(1)
       const filteredBalances = balances.filter(
-        token => token.isErc1155 && token.attoCircles >= MIN_BALANCE
+        (token) => token.isErc1155 && token.attoCircles >= MIN_BALANCE,
       )
 
-      console.log(`Found ${filteredBalances.length} ERC1155 Circles tokens with >= 1 CRC`)
+      console.log(
+        `Found ${filteredBalances.length} ERC1155 Circles tokens with >= 1 CRC`,
+      )
 
       // Get profiles for all token owners
-      const tokenOwners = [...new Set(filteredBalances.map(t => t.tokenOwner))]
+      const tokenOwners = [
+        ...new Set(filteredBalances.map((t) => t.tokenOwner)),
+      ]
       if (tokenOwners.length > 0) {
-        const profiles = await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
+        const profiles =
+          await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
 
         // Build profile map with full profile objects (for images)
         const profileMap = new Map<string, Profile | null>()
@@ -105,7 +111,9 @@
     }
 
     const amountNum = parseFloat(amount)
-    const maxNum = Number(CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles))
+    const maxNum = Number(
+      CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles),
+    )
 
     if (amountNum > maxNum) {
       error = `Amount cannot exceed ${maxNum.toFixed(2)} CRC`
@@ -126,7 +134,8 @@
         throw new Error("User session not found.")
       }
 
-      const fromAddress = session.user.safeAddress.toLowerCase() as `0x${string}`
+      const fromAddress =
+        session.user.safeAddress.toLowerCase() as `0x${string}`
       const toAddr = recipientAddress.toLowerCase() as `0x${string}`
       const transferAmount = CirclesConverter.circlesToAttoCircles(amountNum)
 
@@ -139,14 +148,20 @@
       // Build ERC1155 safeTransferFrom transaction
       const data = encodeFunctionData({
         abi: hubV2Abi,
-        functionName: 'safeTransferFrom',
-        args: [fromAddress, toAddr, selectedToken.tokenId, transferAmount, '0x']
+        functionName: "safeTransferFrom",
+        args: [
+          fromAddress,
+          toAddr,
+          selectedToken.tokenId,
+          transferAmount,
+          "0x",
+        ],
       })
 
       const transaction = {
         to: hubAddress,
         data,
-        value: BigInt(0)
+        value: BigInt(0),
       }
 
       // Execute the transaction using Safe4337Runner
@@ -157,7 +172,9 @@
 
       const receipt = await runner.sendTransaction([transaction] as any)
 
-      console.log(`✅ Vouch transaction successful. Hash: ${receipt.transactionHash}`)
+      console.log(
+        `✅ Vouch transaction successful. Hash: ${receipt.transactionHash}`,
+      )
 
       // Reset and close on success
       amount = ""
@@ -175,7 +192,9 @@
 
   function setMaxAmount() {
     if (selectedToken) {
-      amount = Number(CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles)).toFixed(2)
+      amount = Number(
+        CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles),
+      ).toFixed(2)
     }
   }
 
@@ -202,21 +221,36 @@
 
     <div class="flex flex-col gap-4 py-4">
       {#if isLoadingBalances}
-        <p class="text-sm text-gray-500 text-center">Loading your Circles tokens...</p>
+        <p class="text-sm text-gray-500 text-center">
+          Loading your Circles tokens...
+        </p>
       {:else if tokenBalances.length === 0}
-        <p class="text-sm text-gray-500 text-center">No Circles tokens available to transfer.</p>
+        <p class="text-sm text-gray-500 text-center">
+          No Circles tokens available to transfer.
+        </p>
       {:else}
         <!-- Token Selection -->
         <div class="flex flex-col gap-2">
           <Label>Select Token</Label>
-          <div class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2">
+          <div
+            class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2"
+          >
             {#each tokenBalances as token}
-              {@const tokenBalance = Number(CirclesConverter.attoCirclesToCircles(token.attoCircles)).toFixed(2)}
-              {@const ownerProfile = tokenProfiles.get(token.tokenOwner.toLowerCase())}
-              {@const ownerName = ownerProfile?.name || `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
+              {@const tokenBalance = Number(
+                CirclesConverter.attoCirclesToCircles(token.attoCircles),
+              ).toFixed(2)}
+              {@const ownerProfile = tokenProfiles.get(
+                token.tokenOwner.toLowerCase(),
+              )}
+              {@const ownerName =
+                ownerProfile?.name ||
+                `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
               <button
                 type="button"
-                class="flex items-center gap-2 p-3 border rounded-md hover:bg-muted transition-colors {selectedToken?.tokenId === token.tokenId ? 'border-primary bg-primary/10' : 'border-border'}"
+                class="flex items-center gap-2 p-3 border rounded-md hover:bg-muted transition-colors {selectedToken?.tokenId ===
+                token.tokenId
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border'}"
                 onclick={() => {
                   selectedToken = token
                   amount = ""
@@ -227,7 +261,9 @@
                   {tokenBalance}
                 </span>
                 <Avatar.Root class="w-8 h-8 rounded-full border">
-                  <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-black">
+                  <Avatar.Fallback
+                    class="w-8 h-8 rounded-full object-cover bg-black"
+                  >
                     <ImageIcon class="w-4 h-4 text-white" />
                   </Avatar.Fallback>
                   {#if ownerProfile?.previewImageUrl}
@@ -256,7 +292,11 @@
                 type="number"
                 step="0.01"
                 min="0"
-                max={Number(CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles))}
+                max={Number(
+                  CirclesConverter.attoCirclesToCircles(
+                    selectedToken.attoCircles,
+                  ),
+                )}
                 bind:value={amount}
                 placeholder="0.0"
                 disabled={isTransferring}
@@ -270,7 +310,11 @@
               </Button>
             </div>
             <p class="text-xs text-gray-500">
-              Available: {Number(CirclesConverter.attoCirclesToCircles(selectedToken.attoCircles)).toFixed(2)} CRC
+              Available: {Number(
+                CirclesConverter.attoCirclesToCircles(
+                  selectedToken.attoCircles,
+                ),
+              ).toFixed(2)} CRC
             </p>
           </div>
         {/if}
@@ -284,13 +328,16 @@
     <Dialog.Footer>
       <Button
         onclick={handleVouch}
-        disabled={isTransferring || !selectedToken || !amount || parseFloat(amount) <= 0}
+        disabled={isTransferring ||
+          !selectedToken ||
+          !amount ||
+          parseFloat(amount) <= 0}
         class="w-full"
       >
         {#if isTransferring}
           Sending...
         {:else}
-          Vouch {amount ? `${amount} CRC` : ''}
+          Vouch {amount ? `${amount} CRC` : ""}
         {/if}
       </Button>
     </Dialog.Footer>

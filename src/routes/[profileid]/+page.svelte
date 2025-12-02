@@ -560,7 +560,8 @@
 
     loadingTokens = true
     try {
-      const fromAddress = $pageStore.data.session.user.safeAddress.toLowerCase() as `0x${string}`
+      const fromAddress =
+        $pageStore.data.session.user.safeAddress.toLowerCase() as `0x${string}`
 
       // Initialize SDK to get RPC access
       const sdk = new Sdk()
@@ -571,15 +572,20 @@
       // Filter to only ERC1155 tokens with balance >= 1 CRC
       const MIN_BALANCE = CirclesConverter.circlesToAttoCircles(1)
       const filteredBalances = balances.filter(
-        token => token.isErc1155 && token.attoCircles >= MIN_BALANCE
+        (token) => token.isErc1155 && token.attoCircles >= MIN_BALANCE,
       )
 
-      console.log(`Found ${filteredBalances.length} ERC1155 Circles tokens with >= 1 CRC`)
+      console.log(
+        `Found ${filteredBalances.length} ERC1155 Circles tokens with >= 1 CRC`,
+      )
 
       // Get profiles for all token owners
-      const tokenOwners = [...new Set(filteredBalances.map(t => t.tokenOwner))]
+      const tokenOwners = [
+        ...new Set(filteredBalances.map((t) => t.tokenOwner)),
+      ]
       if (tokenOwners.length > 0) {
-        const profiles = await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
+        const profiles =
+          await sdk.rpc.profile.getProfileByAddressBatch(tokenOwners)
 
         // Build profile map
         const profileMap = new Map<string, CirclesRpcProfile | null>()
@@ -611,7 +617,6 @@
       }
     }
   })
-
 </script>
 
 <!-- Error screen -->
@@ -626,9 +631,7 @@
     <!-- User info section -->
     <div class="flex flex-col">
       <!-- Banner background -->
-      <div
-        class="relative w-full h-26 bg-gray-200"
-      >
+      <div class="relative w-full h-26 bg-gray-200">
         <!-- Profile picture overlapping banner - centered -->
         <div class="absolute -bottom-16 left-1/2 -translate-x-1/2">
           <Avatar.Root
@@ -648,14 +651,20 @@
 
           <!-- Balance/Trust score overlapping profile picture -->
           {#if !isOwnProfile && $pageStore.data.session?.user?.safeAddress && canReceiveAmount !== null && !loadingCanReceive}
-            {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(1)}
+            {@const amountInCrc = (parseFloat(canReceiveAmount) / 1e18).toFixed(
+              1,
+            )}
             {@const amount = parseFloat(amountInCrc)}
             {@const trustLevel =
-              amount < 100 ? "🪨" :
-              amount < 1000 ? "🟡" :
-              "💎"}
-            <div class="absolute left-1/2 -translate-x-1/2" style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-              <p class="text-xl font-bold flex items-center gap-1" style="color: #191568;">
+              amount < 100 ? "🪨" : amount < 1000 ? "🟡" : "💎"}
+            <div
+              class="absolute left-1/2 -translate-x-1/2"
+              style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+            >
+              <p
+                class="text-xl font-bold flex items-center gap-1"
+                style="color: #191568;"
+              >
                 <span>{trustLevel}</span>
                 <span>{amountInCrc}</span>
               </p>
@@ -669,7 +678,10 @@
               class="absolute left-1/2 -translate-x-1/2 cursor-pointer hover:scale-105 transition-transform"
               style="top: 115px; background-color: #fff7f6; padding: 5px 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
             >
-              <p class="text-xl font-bold flex items-center gap-1" style="color: #191568;">
+              <p
+                class="text-xl font-bold flex items-center gap-1"
+                style="color: #191568;"
+              >
                 <span>💰</span>
                 <span>{balanceInCrc}</span>
               </p>
@@ -750,7 +762,7 @@
               class="text-sm flex-1"
             />
             <Button
-              onclick={() => vouchModalOpen = true}
+              onclick={() => (vouchModalOpen = true)}
               variant="default"
               class="text-sm flex-1 gap-2"
             >
@@ -852,21 +864,37 @@
 
           <div class="flex flex-col gap-4 py-4">
             {#if loadingTokens}
-              <p class="text-sm text-gray-500 text-center">Loading your tokens...</p>
+              <p class="text-sm text-gray-500 text-center">
+                Loading your tokens...
+              </p>
             {:else if tokenBalances.length === 0}
-              <p class="text-sm text-gray-500 text-center">No Circles tokens available.</p>
+              <p class="text-sm text-gray-500 text-center">
+                No Circles tokens available.
+              </p>
             {:else}
-              <div class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2">
+              <div
+                class="flex flex-col gap-2 max-h-96 overflow-y-auto border rounded-md p-2"
+              >
                 {#each tokenBalances as token}
-                  {@const tokenBalance = Number(CirclesConverter.attoCirclesToCircles(token.attoCircles)).toFixed(2)}
-                  {@const ownerProfile = tokenProfiles.get(token.tokenOwner.toLowerCase())}
-                  {@const ownerName = ownerProfile?.name || `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
-                  <div class="flex items-center gap-2 p-3 border rounded-md hover:bg-gray-50">
+                  {@const tokenBalance = Number(
+                    CirclesConverter.attoCirclesToCircles(token.attoCircles),
+                  ).toFixed(2)}
+                  {@const ownerProfile = tokenProfiles.get(
+                    token.tokenOwner.toLowerCase(),
+                  )}
+                  {@const ownerName =
+                    ownerProfile?.name ||
+                    `${token.tokenOwner.slice(0, 6)}...${token.tokenOwner.slice(-4)}`}
+                  <div
+                    class="flex items-center gap-2 p-3 border rounded-md hover:bg-gray-50"
+                  >
                     <span class="text-sm font-medium">
                       {tokenBalance}
                     </span>
                     <Avatar.Root class="w-8 h-8 rounded-full border">
-                      <Avatar.Fallback class="w-8 h-8 rounded-full object-cover bg-black">
+                      <Avatar.Fallback
+                        class="w-8 h-8 rounded-full object-cover bg-black"
+                      >
                         <ImageIcon class="w-4 h-4 text-white" />
                       </Avatar.Fallback>
                       {#if ownerProfile?.previewImageUrl}

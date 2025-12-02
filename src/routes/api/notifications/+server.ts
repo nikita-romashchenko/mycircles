@@ -25,11 +25,24 @@ export async function GET({ request, locals }: RequestEvent) {
     const notifications = await Notification.find({
       recipientId: session.user.safeAddress,
     })
-      .sort({ createdAt: -1 })
+      .sort({ read: 1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean()
 
+    // Mark all unread notifications as read in the database
+    const unreadIds = notifications
+      .filter((n) => !n.read)
+      .map((n) => n._id)
+
+    if (unreadIds.length > 0) {
+      await Notification.updateMany(
+        { _id: { $in: unreadIds } },
+        { $set: { read: true } }
+      )
+    }
+
+    // Return the original notifications with unread flags intact
     return json({ notifications, skip, limit }, { status: 200 })
   } catch (err: any) {
     return json({ error: err.message }, { status: 400 })
