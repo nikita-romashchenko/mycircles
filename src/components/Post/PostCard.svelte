@@ -58,10 +58,10 @@
 
   async function fetchData() {
     try {
-      const response = await fetch('/api/circles/batchProfiles', {
-        method: 'POST',
+      const response = await fetch("/api/circles/batchProfiles", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           addresses: [post.creatorAddress, post.postedToAddress ?? null],
@@ -69,11 +69,12 @@
       })
 
       if (!response.ok) {
-        throw new Error('Failed to fetch profiles')
+        throw new Error("Failed to fetch profiles")
       }
 
       const data = await response.json()
       circlesProfiles = data.profiles
+      console.log("Fetched profiles:", circlesProfiles)
     } catch (e: any) {
       console.error(e.message)
     } finally {
@@ -89,7 +90,9 @@
 </script>
 
 {#if post}
-  <Card.Root class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)]">
+  <Card.Root
+    class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+  >
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
