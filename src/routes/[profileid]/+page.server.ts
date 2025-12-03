@@ -262,12 +262,15 @@ export const actions = {
       // Create notification if posting on someone else's profile
       if (postToAddress && postToAddress !== creatorAddress) {
         try {
+          const senderName = session.user.name ||
+                            `${creatorAddress.slice(0, 6)}...${creatorAddress.slice(-4)}`
+
           await Notification.create({
             recipientId: postToAddress,
             senderId: creatorAddress,
             type: "post_on_profile",
             postId: postDoc._id,
-            message: "Someone posted on your profile",
+            message: `${senderName} posted on your profile`,
             read: false,
           })
           console.log(`Created notification for post on profile ${postToAddress}`)

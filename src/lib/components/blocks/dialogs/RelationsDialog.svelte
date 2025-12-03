@@ -84,6 +84,31 @@
       scrollContainer.scrollTop = 0
     }
   })
+
+  // Auto-load more profiles if container isn't scrollable yet
+  $effect(() => {
+    // Watch for changes in loading state and displayed items
+    loadingMoreProfiles
+    displayedItems.length
+
+    if (!scrollContainer || loadingMoreProfiles || !hasMore) return
+
+    // Use setTimeout to ensure DOM has updated after rendering
+    const checkScrollable = setTimeout(() => {
+      if (!scrollContainer) return
+
+      const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight
+      const visibleItemsCount = displayedItems.filter(item => item.profile !== null).length
+
+      // Keep loading until container is scrollable OR we've loaded everything
+      if (!isScrollable && hasMore) {
+        console.log(`Container not scrollable (${visibleItemsCount} visible items), auto-loading more...`)
+        loadMore(activeTab)
+      }
+    }, 100)
+
+    return () => clearTimeout(checkScrollable)
+  })
 </script>
 
 <Dialog.Root bind:open>
@@ -135,12 +160,10 @@
                   class="my-2 flex flex-row gap-2 items-center border border-gray-300 rounded-md p-2 w-full overflow-hidden"
                   onclick={() => onLinkClick?.()}
                 >
-                  <Avatar.Root
-                    class="rounded-full object-cover flex-shrink-0 w-10 h-10"
-                  >
-                    <Avatar.Fallback class="rounded-full object-cover"
-                      ><ImageIcon /></Avatar.Fallback
-                    >
+                  <Avatar.Root class="w-10 h-10 rounded-full">
+                    <Avatar.Fallback>
+                      <ImageIcon class="w-5 h-5" />
+                    </Avatar.Fallback>
                     <Avatar.Image
                       src={relation.profile.previewImageUrl}
                       alt={`${relation.profile.name}'s avatar`}

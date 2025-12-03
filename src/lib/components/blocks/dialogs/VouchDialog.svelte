@@ -283,16 +283,14 @@
                   {tokenBalance}
                 </span>
                 <Avatar.Root class="w-8 h-8 rounded-full border">
-                  <Avatar.Fallback
-                    class="w-8 h-8 rounded-full object-cover bg-black"
-                  >
-                    <ImageIcon class="w-4 h-4 text-white" />
+                  <Avatar.Fallback>
+                    <ImageIcon class="w-4 h-4" />
                   </Avatar.Fallback>
                   {#if ownerProfile?.previewImageUrl}
                     <Avatar.Image
                       src={ownerProfile.previewImageUrl}
                       alt={ownerName}
-                      class="w-8 h-8 rounded-full object-cover"
+                      class="rounded-full object-cover"
                     />
                   {/if}
                 </Avatar.Root>

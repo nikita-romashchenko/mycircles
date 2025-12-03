@@ -122,9 +122,9 @@
   <!-- User info -->
   <div class="flex items-center gap-3 mb-4">
     <a href="/{profile.address}" class="flex items-center gap-3">
-      <Avatar.Root class="w-12 h-12 rounded-full">
-        <Avatar.Fallback class="rounded-full bg-gray-200">
-          <ImageIcon class="w-6 h-6 text-gray-500" />
+      <Avatar.Root class="w-10 h-10 rounded-full">
+        <Avatar.Fallback>
+          <ImageIcon class="w-5 h-5" />
         </Avatar.Fallback>
         <Avatar.Image
           src={profile.previewImageUrl}
@@ -156,7 +156,7 @@
         <Textarea
           bind:value={commentInput}
           placeholder="Write a comment..."
-          class="mb-2"
+          class="mb-2 resize-none"
           rows={3}
           maxlength={1000}
           disabled={isPostingComment}
@@ -188,8 +188,8 @@
             <div class="flex items-start gap-3">
               <a href="/{comment.authorAddress}">
                 <Avatar.Root class="w-10 h-10 rounded-full">
-                  <Avatar.Fallback class="rounded-full bg-gray-200">
-                    <ImageIcon class="w-5 h-5 text-gray-500" />
+                  <Avatar.Fallback>
+                    <ImageIcon class="w-5 h-5" />
                   </Avatar.Fallback>
                   <Avatar.Image
                     src={commentProfile?.image}

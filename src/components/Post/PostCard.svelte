@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invalidate } from "$app/navigation"
+  import { invalidate, goto } from "$app/navigation"
   import * as Card from "$lib/components/ui/card/index"
   import * as Carousel from "$lib/components/ui/carousel/index"
   import { theme } from "svelte-lexical/dist/themes/default"
@@ -91,7 +91,8 @@
 
 {#if post}
   <Card.Root
-    class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
+    class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)] cursor-pointer"
+    onclick={() => goto(`/post/${post._id}`)}
   >
     <Card.Content class="p-0">
       {#if post.type === "image"}
@@ -137,14 +138,14 @@
             href="/{post.creatorAddress}"
             class="flex flex-row items-center gap-2"
           >
-            <Avatar.Root class="rounded-full object-cover">
-              <Avatar.Fallback class="rounded-full object-cover"
-                ><ImageIcon /></Avatar.Fallback
-              >
+            <Avatar.Root class="w-10 h-10 rounded-full">
+              <Avatar.Fallback>
+                <ImageIcon class="w-5 h-5" />
+              </Avatar.Fallback>
               <Avatar.Image
                 src={circlesProfiles[0]?.previewImageUrl}
                 alt={`${circlesProfiles[0]?.name}'s avatar`}
-                class="w-24 h-24 rounded-full object-cover"
+                class="rounded-full object-cover"
               />
             </Avatar.Root>
             <div class="flex flex-col">
@@ -157,13 +158,14 @@
               href="/{post.postedToAddress}"
               class="flex flex-row items-center gap-2"
             >
-              <Avatar.Root>
-                <Avatar.Fallback class="rounded-full object-cover text-gray-500"
-                  ><ImageIcon /></Avatar.Fallback
-                >
+              <Avatar.Root class="w-10 h-10 rounded-full">
+                <Avatar.Fallback>
+                  <ImageIcon class="w-5 h-5" />
+                </Avatar.Fallback>
                 <Avatar.Image
                   src={circlesProfiles[1]?.previewImageUrl}
                   alt={`${circlesProfiles[1]?.name}'s avatar`}
+                  class="rounded-full object-cover"
                 />
               </Avatar.Root>
               <div class="flex flex-col">
