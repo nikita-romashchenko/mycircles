@@ -2,6 +2,7 @@
   import "../app.css"
   import AuthDataManager from "$lib/components/AuthDataManager.svelte"
   import BottomNav from "$lib/components/ui/bottom-nav.svelte"
+  import CommentsDialog from "$components/Post/CommentsDialog.svelte"
   import { avatarStore } from "$lib/stores/safe4337.svelte"
   import { page } from "$app/stores"
   import { browser } from "$app/environment"
@@ -30,3 +31,6 @@
   <slot />
 </div>
 <BottomNav />
+
+<!-- Single shared comments dialog for all posts -->
+<CommentsDialog />

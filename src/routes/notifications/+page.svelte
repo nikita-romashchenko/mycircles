@@ -220,25 +220,25 @@
       {#each notifications as notification}
         <button
           on:click={() => handleNotificationClick(notification)}
-          class="w-full text-left p-4 rounded-lg border transition cursor-pointer mb-4 {notification.read
+          class="w-full text-left p-2.5 rounded-lg border transition cursor-pointer mb-2 {notification.read
             ? 'bg-gray-100 border-gray-200'
-            : 'bg-white border-blue-200 hover:border-blue-300'}"
+            : 'bg-white border-gray-200 hover:border-gray-300'}"
         >
           <div class="flex justify-between items-start">
             <div class="flex-1">
               <p
-                class="font-medium {notification.read
-                  ? 'text-gray-600'
-                  : 'text-gray-900'}"
+                class="text-sm {notification.read
+                  ? 'text-gray-500'
+                  : 'text-gray-700'}"
               >
                 {getNotificationMessage(notification)}
               </p>
-              <p class="text-sm text-gray-500 mt-1">
+              <p class="text-xs text-gray-400 mt-0.5">
                 {formatDate(notification.createdAt)}
               </p>
             </div>
             {#if !notification.read}
-              <div class="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+              <div class="w-1.5 h-1.5 bg-blue-500 rounded-full mt-1.5"></div>
             {/if}
           </div>
         </button>

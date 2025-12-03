@@ -72,15 +72,15 @@
       icon: MapIcon,
     },
     {
-      title: "Profile",
-      url: `/${safeAddress}`,
-      icon: UserIcon,
-    },
-    {
       title: "Notifications",
       url: "/notifications",
       icon: BellIcon,
       hasBadge: true,
+    },
+    {
+      title: "Profile",
+      url: `/${safeAddress}`,
+      icon: UserIcon,
     },
   ])
 
@@ -100,7 +100,7 @@
           class:text-primary={item.url === '/' ? pathname === '/' : pathname.startsWith(item.url)}
           aria-label={item.title}
         >
-          <div class="relative">
+          <div class="relative" class:opacity-60={"hasBadge" in item && item.hasBadge}>
             <item.icon class="h-6 w-6" />
             {#if "hasBadge" in item && item.hasBadge && $unreadNotificationsCount > 0}
               <Badge

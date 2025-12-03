@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { invalidate, goto } from "$app/navigation"
+  import { goto } from "$app/navigation"
   import * as Card from "$lib/components/ui/card/index"
   import * as Carousel from "$lib/components/ui/carousel/index"
   import { theme } from "svelte-lexical/dist/themes/default"
@@ -8,6 +8,7 @@
   import * as Avatar from "$lib/components/ui/avatar/index"
   import ImageIcon from "@lucide/svelte/icons/image"
   import MessageCircle from "@lucide/svelte/icons/message-circle"
+  import { commentsDialog } from "$lib/stores/commentsDialog.svelte"
 
   import type { CirclesRpcProfile, Post } from "$lib/types"
   import { onMount } from "svelte"
@@ -96,25 +97,44 @@
     fetchData()
   })
 
+  function formatPostDate(dateString: string) {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMins / 60)
+    const diffDays = Math.floor(diffHours / 24)
+    const diffWeeks = Math.floor(diffDays / 7)
+
+    if (diffMins < 1) return "just now"
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return `${diffWeeks}w ago`
+  }
+
   let mainMedia = $derived(post?.mediaItems?.[0])
 </script>
 
 {#if post}
   <Card.Root
-    class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)] cursor-pointer"
-    onclick={() => goto(`/post/${post._id}`)}
+    class="p-0 overflow-hidden w-full border-0 shadow-[0_2px_4px_rgba(0,0,0,0.08)]"
   >
     <Card.Content class="p-0">
       {#if post.type === "image"}
         {#if mainMedia}
-          <a href="/post/{post._id}">
+          <button
+            onclick={() => goto(`/post/${post._id}`)}
+            class="w-full"
+            aria-label="View post"
+          >
             <img
               class="w-full cursor-pointer object-cover"
               src={mainMedia.url}
               alt={post.caption ?? "Post image"}
               loading="lazy"
             />
-          </a>
+          </button>
         {/if}
       {:else if post.type === "album"}
         <Carousel.Root opts={{ loop: true }} class="mx-auto w-full relative ">
@@ -143,45 +163,45 @@
     </Card.Content>
     <Card.Header class="flex flex-col gap-2 px-1">
       <div class="flex flex-col gap-1">
-        <div class="flex flex-row gap-1 items-center">
+        <div class="flex flex-row gap-1 items-center px-3">
           <a
             href="/{post.creatorAddress}"
             class="flex flex-row items-center gap-1"
           >
-            <Avatar.Root class="w-10 h-10 rounded-full">
+            <Avatar.Root class="w-6 h-6 rounded-full">
               <Avatar.Fallback>
-                <ImageIcon class="w-5 h-5" />
+                <ImageIcon class="w-3 h-3" />
               </Avatar.Fallback>
               <Avatar.Image
                 src={circlesProfiles[0]?.previewImageUrl}
                 alt={`${circlesProfiles[0]?.name}'s avatar`}
-                class="rounded-full object-cover"
+                class="aspect-square size-full rounded-full object-cover"
               />
             </Avatar.Root>
             <div class="flex flex-col">
-              <span class="font-medium text-sm"
+              <span class="text-xs"
                 >@{circlesProfiles[0]?.name}</span
               >
             </div>
           </a>
           {#if post.postedToAddress}
-            <ArrowRight class="w-4 h-4 text-gray-400" />
+            <ArrowRight class="w-3 h-3 text-gray-400" />
             <a
               href="/{post.postedToAddress}"
               class="flex flex-row items-center gap-1"
             >
-              <Avatar.Root class="w-10 h-10 rounded-full">
+              <Avatar.Root class="w-6 h-6 rounded-full">
                 <Avatar.Fallback>
-                  <ImageIcon class="w-5 h-5" />
+                  <ImageIcon class="w-3 h-3" />
                 </Avatar.Fallback>
                 <Avatar.Image
                   src={circlesProfiles[1]?.previewImageUrl}
                   alt={`${circlesProfiles[1]?.name}'s avatar`}
-                  class="rounded-full object-cover"
+                  class="aspect-square size-full rounded-full object-cover"
                 />
               </Avatar.Root>
               <div class="flex flex-col">
-                <span class="font-medium text-sm"
+                <span class="text-xs"
                   >@{circlesProfiles[1]?.name}</span
                 >
               </div>
@@ -200,7 +220,7 @@
         {/if}
       </div>
       {#if post.caption}
-        <div class="px-4">
+        <div class="px-3">
           <CaptionViewer {theme} captionJSONstring={post.caption} />
         </div>
       {/if}
@@ -208,11 +228,18 @@
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-400 text-xs"
     >
-      <span>{new Date(post.createdAt).toLocaleDateString()}</span>
-      <div class="flex items-center gap-1">
+      <span>{formatPostDate(post.createdAt)}</span>
+      <button
+        onclick={(e) => {
+          e.stopPropagation()
+          commentsDialog.open(post._id)
+        }}
+        class="flex items-center gap-1 hover:text-gray-600 transition-colors"
+        aria-label="View comments"
+      >
         <MessageCircle class="w-4 h-4" />
         <span>{commentCount}</span>
-      </div>
+      </button>
     </Card.Footer>
   </Card.Root>
 {/if}
