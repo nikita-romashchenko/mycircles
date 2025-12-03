@@ -7,6 +7,7 @@
   import ArrowRight from "@lucide/svelte/icons/arrow-right"
   import * as Avatar from "$lib/components/ui/avatar/index"
   import ImageIcon from "@lucide/svelte/icons/image"
+  import MessageCircle from "@lucide/svelte/icons/message-circle"
 
   import type { CirclesRpcProfile, Post } from "$lib/types"
   import { onMount } from "svelte"
@@ -23,6 +24,7 @@
 
   let loading = $state(true)
   let circlesProfiles: (CirclesRpcProfile | null)[] = $state([])
+  let commentCount = $state(0)
 
   async function handleLike() {
     if (!liked) {
@@ -58,23 +60,31 @@
 
   async function fetchData() {
     try {
-      const response = await fetch("/api/circles/batchProfiles", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          addresses: [post.creatorAddress, post.postedToAddress ?? null],
+      const [profilesResponse, commentsResponse] = await Promise.all([
+        fetch("/api/circles/batchProfiles", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            addresses: [post.creatorAddress, post.postedToAddress ?? null],
+          }),
         }),
-      })
+        fetch(`/api/comments/count?postId=${post._id}`),
+      ])
 
-      if (!response.ok) {
+      if (!profilesResponse.ok) {
         throw new Error("Failed to fetch profiles")
       }
 
-      const data = await response.json()
-      circlesProfiles = data.profiles
+      const profilesData = await profilesResponse.json()
+      circlesProfiles = profilesData.profiles
       console.log("Fetched profiles:", circlesProfiles)
+
+      if (commentsResponse.ok) {
+        const commentsData = await commentsResponse.json()
+        commentCount = commentsData.count
+      }
     } catch (e: any) {
       console.error(e.message)
     } finally {
@@ -131,12 +141,12 @@
         </Carousel.Root>
       {/if}
     </Card.Content>
-    <Card.Header class="flex flex-col gap-2">
+    <Card.Header class="flex flex-col gap-2 px-1">
       <div class="flex flex-col gap-1">
         <div class="flex flex-row gap-1 items-center">
           <a
             href="/{post.creatorAddress}"
-            class="flex flex-row items-center gap-2"
+            class="flex flex-row items-center gap-1"
           >
             <Avatar.Root class="w-10 h-10 rounded-full">
               <Avatar.Fallback>
@@ -149,14 +159,16 @@
               />
             </Avatar.Root>
             <div class="flex flex-col">
-              <Card.Title>@{circlesProfiles[0]?.name}</Card.Title>
+              <span class="font-medium text-sm"
+                >@{circlesProfiles[0]?.name}</span
+              >
             </div>
           </a>
           {#if post.postedToAddress}
             <ArrowRight class="w-4 h-4 text-gray-400" />
             <a
               href="/{post.postedToAddress}"
-              class="flex flex-row items-center gap-2"
+              class="flex flex-row items-center gap-1"
             >
               <Avatar.Root class="w-10 h-10 rounded-full">
                 <Avatar.Fallback>
@@ -169,7 +181,9 @@
                 />
               </Avatar.Root>
               <div class="flex flex-col">
-                <Card.Title>@{circlesProfiles[1]?.name}</Card.Title>
+                <span class="font-medium text-sm"
+                  >@{circlesProfiles[1]?.name}</span
+                >
               </div>
             </a>
           {/if}
@@ -186,13 +200,19 @@
         {/if}
       </div>
       {#if post.caption}
-        <CaptionViewer {theme} captionJSONstring={post.caption} />
+        <div class="px-4">
+          <CaptionViewer {theme} captionJSONstring={post.caption} />
+        </div>
       {/if}
     </Card.Header>
     <Card.Footer
       class="flex justify-between items-center px-3 py-2 text-gray-400 text-xs"
     >
       <span>{new Date(post.createdAt).toLocaleDateString()}</span>
+      <div class="flex items-center gap-1">
+        <MessageCircle class="w-4 h-4" />
+        <span>{commentCount}</span>
+      </div>
     </Card.Footer>
   </Card.Root>
 {/if}
